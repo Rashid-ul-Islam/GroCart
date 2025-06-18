@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ShoppingCart, Heart, User, PackageSearch } from "lucide-react";
+import { ShoppingCart, Heart, User, PackageSearch, Shield } from "lucide-react";
 import { Button } from "./components/ui/button.jsx";
 import { Input } from "./components/ui/input.jsx";
 
 export default function NavBar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(true); // Admin status (you can manage this with context/state)
   const cartItemCount = 3;
 
   return (
@@ -20,11 +21,15 @@ export default function NavBar() {
         </Link>
 
         {/* Search bar */}
-        <div className="flex-1 max-w-xl mx-8 hidden md:block">
+        <div className="flex-1 max-w-2xl mx-8 hidden md:block">
           <Input
             type="search"
             placeholder="Search for fresh groceries..."
-            className="bg-gray-50 rounded-full px-6 py-3 shadow-lg focus:ring-4 focus:ring-yellow-300 focus:outline-none transition"
+            className="bg-yellow-100 rounded-full px-8 py-4 shadow-lg focus:ring-4 focus:ring-yellow-300 focus:outline-none transition text-lg"
+            style={{
+              width: "450px",
+              maxWidth: "100%",
+            }}
           />
         </div>
 
@@ -34,15 +39,15 @@ export default function NavBar() {
           <div className="relative group">
             <Button
               variant="ghost"
-              className="text-base font-medium hover:text-green-600 focus:ring-2 focus:ring-green-400 transition"
+              className="text-base font-medium hover:text-yellow-400 focus:ring-2 focus:ring-yellow-300 transition"
             >
               🛍️ Categories
             </Button>
             <div className="absolute top-full left-0 mt-2 w-40 bg-white shadow-lg rounded-md border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <div className="hover:bg-green-50 px-4 py-2 cursor-pointer">Fruits</div>
-              <div className="hover:bg-green-50 px-4 py-2 cursor-pointer">Vegetables</div>
-              <div className="hover:bg-green-50 px-4 py-2 cursor-pointer">Dairy</div>
-              <div className="hover:bg-green-50 px-4 py-2 cursor-pointer">Meat</div>
+              <div className="hover:bg-yellow-50 px-4 py-2 cursor-pointer transition">Fruits</div>
+              <div className="hover:bg-yellow-50 px-4 py-2 cursor-pointer transition">Vegetables</div>
+              <div className="hover:bg-yellow-50 px-4 py-2 cursor-pointer transition">Dairy</div>
+              <div className="hover:bg-yellow-50 px-4 py-2 cursor-pointer transition">Meat</div>
             </div>
           </div>
 
@@ -66,6 +71,17 @@ export default function NavBar() {
               </span>
             )}
           </Link>
+
+          {/* Admin Panel - Only show if user is admin */}
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className="hover:text-yellow-400 transition duration-300"
+              title="Admin Panel"
+            >
+              <Shield className="w-7 h-7" />
+            </Link>
+          )}
 
           {/* Orders */}
           {isLoggedIn && (
@@ -91,6 +107,11 @@ export default function NavBar() {
                   <div className="hover:bg-yellow-50 px-4 py-2 cursor-pointer">
                     Profile
                   </div>
+                  {isAdmin && (
+                    <Link to="/admin" className="block hover:bg-yellow-50 px-4 py-2 cursor-pointer">
+                      Admin Panel
+                    </Link>
+                  )}
                   <div
                     onClick={() => setIsLoggedIn(false)}
                     className="hover:bg-yellow-50 px-4 py-2 cursor-pointer"
