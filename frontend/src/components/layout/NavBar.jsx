@@ -1,8 +1,9 @@
+// src/components/layout/NavBar.jsx
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingCart, Heart, User, PackageSearch, Shield } from "lucide-react";
-import { Button } from "./components/ui/button.jsx";
-import { Input } from "./components/ui/input.jsx";
+import { Button } from "../ui/button.jsx";
+import { Input } from "../ui/input.jsx";
 
 export default function NavBar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -41,7 +42,7 @@ export default function NavBar() {
               variant="ghost"
               className="text-base font-medium hover:text-yellow-400 focus:ring-2 focus:ring-yellow-300 transition"
             >
-              🛍️ Categories
+              🛍 Categories
             </Button>
             <div className="absolute top-full left-0 mt-2 w-40 bg-white shadow-lg rounded-md border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
               <div className="hover:bg-yellow-50 px-4 py-2 cursor-pointer transition">Fruits</div>
@@ -92,7 +93,6 @@ export default function NavBar() {
               <PackageSearch className="w-7 h-7" />
             </Link>
           )}
-
           {/* User Menu (on hover) */}
           <div className="relative group">
             <Button

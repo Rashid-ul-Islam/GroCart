@@ -1,8 +1,8 @@
 // src/components/AddProduct.jsx
 import React, { useState } from "react";
 import { ArrowLeft, Save, Package, DollarSign, Hash, Scale, MapPin, FileText, Shield, Eye } from "lucide-react";
-import { Button } from "./components/ui/button.jsx";
-import { Input } from "./components/ui/input.jsx";
+import { Button } from "../components/ui/button.jsx";
+import { Input } from "../components/ui/input.jsx";
 import { Link } from "react-router-dom";
 
 export default function AddProduct() {

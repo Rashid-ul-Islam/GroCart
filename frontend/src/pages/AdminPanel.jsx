@@ -1,15 +1,33 @@
 // src/components/AdminPanel.jsx
 import React, { useState } from "react";
 import { Plus, Edit3, Trash2, Package, Users, BarChart3 } from "lucide-react";
-import { Button } from "./components/ui/button.jsx";
+import { Button } from "../components/ui/button.jsx";
 import { Link } from "react-router-dom";
 
 export default function AdminPanel() {
   const [products] = useState([
-    { id: 1, name: "Fresh Apples", price: "$5.99", stock: 50, category: "Fruits" },
-    { id: 2, name: "Organic Carrots", price: "$3.49", stock: 30, category: "Vegetables" },
+    {
+      id: 1,
+      name: "Fresh Apples",
+      price: "$5.99",
+      stock: 50,
+      category: "Fruits",
+    },
+    {
+      id: 2,
+      name: "Organic Carrots",
+      price: "$3.49",
+      stock: 30,
+      category: "Vegetables",
+    },
     { id: 3, name: "Whole Milk", price: "$4.99", stock: 25, category: "Dairy" },
-    { id: 4, name: "Chicken Breast", price: "$12.99", stock: 15, category: "Meat" },
+    {
+      id: 4,
+      name: "Chicken Breast",
+      price: "$12.99",
+      stock: 15,
+      category: "Meat",
+    },
   ]);
 
   const handleEditProduct = (productId) => {
@@ -40,13 +58,17 @@ export default function AdminPanel() {
           <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-blue-500">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm font-medium">Total Products</p>
-                <p className="text-3xl font-bold text-blue-600">{products.length}</p>
+                <p className="text-gray-600 text-sm font-medium">
+                  Total Products
+                </p>
+                <p className="text-3xl font-bold text-blue-600">
+                  {products.length}
+                </p>
               </div>
               <Package className="w-12 h-12 text-blue-500" />
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-green-500">
             <div className="flex items-center justify-between">
               <div>
@@ -56,7 +78,7 @@ export default function AdminPanel() {
               <Users className="w-12 h-12 text-green-500" />
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-yellow-500">
             <div className="flex items-center justify-between">
               <div>
@@ -70,7 +92,9 @@ export default function AdminPanel() {
 
         {/* Main Action Buttons */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Product Management</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">
+            Product Management
+          </h2>
           <div className="flex flex-wrap gap-4">
             {/* Add Product Button with Link */}
             <Link to="/admin/add-product">
@@ -79,7 +103,7 @@ export default function AdminPanel() {
                 Add New Product
               </Button>
             </Link>
-            
+
             <Button
               onClick={() => alert("Bulk operations coming soon!")}
               className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3"
@@ -87,7 +111,7 @@ export default function AdminPanel() {
               <Package className="w-6 h-6" />
               Manage Inventory
             </Button>
-            
+
             <Button
               onClick={() => alert("Export functionality coming soon!")}
               className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3"
@@ -101,9 +125,11 @@ export default function AdminPanel() {
         {/* Products Table */}
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-2xl font-bold text-gray-800">Current Products</h2>
+            <h2 className="text-2xl font-bold text-gray-800">
+              Current Products
+            </h2>
           </div>
-          
+
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -127,9 +153,14 @@ export default function AdminPanel() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {products.map((product) => (
-                  <tr key={product.id} className="hover:bg-gray-50 transition duration-200">
+                  <tr
+                    key={product.id}
+                    className="hover:bg-gray-50 transition duration-200"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {product.name}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
