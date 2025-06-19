@@ -1,6 +1,18 @@
 // src/components/AddProduct.jsx
 import React, { useState } from "react";
-import { ArrowLeft, Save, Package, DollarSign, Hash, Scale, MapPin, FileText, Shield, Eye, Image } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  Package,
+  DollarSign,
+  Hash,
+  Scale,
+  MapPin,
+  FileText,
+  Shield,
+  Eye,
+  Image,
+} from "lucide-react";
 import { Button } from "../components/ui/button.jsx";
 import { Input } from "../components/ui/input.jsx";
 import { Link } from "react-router-dom";
@@ -20,6 +32,52 @@ export default function AddProduct() {
   });
 
   const [errors, setErrors] = useState({});
+  const handleAddProduct = async () => {
+    // Convert string values to appropriate types
+    const productData = {
+      ...formData,
+      price: parseFloat(formData.price),
+      quantity: parseInt(formData.quantity),
+      isRefundable: formData.isRefundable === "true",
+      isAvailable: formData.isAvailable === "true",
+    };
+
+    try {
+      const response = await fetch("/api/products", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(productData),
+      });
+
+      if (!response.ok) {
+        // Handle error response
+        const errorData = await response.json();
+        alert(
+          `Failed to add product: ${errorData.message || response.statusText}`
+        );
+        return;
+      }
+
+      // Success
+      alert("Product added successfully!");
+      // Optionally reset the form here
+      setFormData({
+        productName: "",
+        categoryId: "",
+        price: "",
+        quantity: "",
+        unitMeasure: "",
+        origin: "",
+        description: "",
+        isRefundable: "true",
+        isAvailable: "true",
+      });
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    }
+  };
 
   const categories = [
     { id: "1", name: "Fruits" },
@@ -167,9 +225,9 @@ export default function AddProduct() {
                   onChange={handleInputChange}
                   placeholder="Enter product name"
                   className={`w-full h-12 text-lg rounded-xl border-2 transition-all duration-300 focus:scale-105 ${
-                    errors.productName 
-                      ? 'border-red-400 focus:border-red-500 focus:ring-red-200' 
-                      : 'border-purple-200 focus:border-purple-400 focus:ring-purple-200'
+                    errors.productName
+                      ? "border-red-400 focus:border-red-500 focus:ring-red-200"
+                      : "border-purple-200 focus:border-purple-400 focus:ring-purple-200"
                   }`}
                 />
                 {errors.productName && (
@@ -191,9 +249,9 @@ export default function AddProduct() {
                   value={formData.categoryId}
                   onChange={handleInputChange}
                   className={`w-full h-12 text-lg rounded-xl border-2 px-4 transition-all duration-300 focus:scale-105 focus:outline-none ${
-                    errors.categoryId 
-                      ? 'border-red-400 focus:border-red-500 focus:ring-red-200' 
-                      : 'border-purple-200 focus:border-purple-400 focus:ring-purple-200'
+                    errors.categoryId
+                      ? "border-red-400 focus:border-red-500 focus:ring-red-200"
+                      : "border-purple-200 focus:border-purple-400 focus:ring-purple-200"
                   }`}
                 >
                   <option value="">Select Category</option>
@@ -226,9 +284,9 @@ export default function AddProduct() {
                   step="0.01"
                   min="0"
                   className={`w-full h-12 text-lg rounded-xl border-2 transition-all duration-300 focus:scale-105 ${
-                    errors.price 
-                      ? 'border-red-400 focus:border-red-500 focus:ring-red-200' 
-                      : 'border-green-200 focus:border-green-400 focus:ring-green-200'
+                    errors.price
+                      ? "border-red-400 focus:border-red-500 focus:ring-red-200"
+                      : "border-green-200 focus:border-green-400 focus:ring-green-200"
                   }`}
                 />
                 {errors.price && (
@@ -253,9 +311,9 @@ export default function AddProduct() {
                   placeholder="0"
                   min="0"
                   className={`w-full h-12 text-lg rounded-xl border-2 transition-all duration-300 focus:scale-105 ${
-                    errors.quantity 
-                      ? 'border-red-400 focus:border-red-500 focus:ring-red-200' 
-                      : 'border-blue-200 focus:border-blue-400 focus:ring-blue-200'
+                    errors.quantity
+                      ? "border-red-400 focus:border-red-500 focus:ring-red-200"
+                      : "border-blue-200 focus:border-blue-400 focus:ring-blue-200"
                   }`}
                 />
                 {errors.quantity && (
@@ -277,9 +335,9 @@ export default function AddProduct() {
                   value={formData.unitMeasure}
                   onChange={handleInputChange}
                   className={`w-full h-12 text-lg rounded-xl border-2 px-4 transition-all duration-300 focus:scale-105 focus:outline-none ${
-                    errors.unitMeasure 
-                      ? 'border-red-400 focus:border-red-500 focus:ring-red-200' 
-                      : 'border-orange-200 focus:border-orange-400 focus:ring-orange-200'
+                    errors.unitMeasure
+                      ? "border-red-400 focus:border-red-500 focus:ring-red-200"
+                      : "border-orange-200 focus:border-orange-400 focus:ring-orange-200"
                   }`}
                 >
                   <option value="">Select Unit Measure</option>
@@ -378,8 +436,8 @@ export default function AddProduct() {
                       alt="Product Preview"
                       className="w-32 h-32 object-cover rounded-lg border shadow-md"
                       onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'block';
+                        e.target.style.display = "none";
+                        e.target.nextSibling.style.display = "block";
                       }}
                     />
                     <div className="text-red-500 text-sm mt-2 hidden">
