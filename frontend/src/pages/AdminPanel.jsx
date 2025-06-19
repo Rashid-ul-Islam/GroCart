@@ -41,7 +41,7 @@ export default function AdminPanel() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-pink-300 via-purple-300 to-indigo-400 p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
@@ -161,7 +161,7 @@ export default function AdminPanel() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-200 text-green-900">
                         {product.category}
                       </span>
                     </td>
@@ -174,7 +174,7 @@ export default function AdminPanel() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                       <Button
                         onClick={() => handleEditProduct(product.id)}
-                        className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg shadow transform hover:scale-105 transition duration-200 inline-flex items-center gap-2"
+                        className="bg-green-600 hover:bg-yellow-500 text-white px-4 py-2 rounded-lg shadow transform hover:scale-105 transition duration-200 inline-flex items-center gap-2"
                       >
                         <Edit3 className="w-4 h-4" />
                         Edit
