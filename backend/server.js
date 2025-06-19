@@ -6,6 +6,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import addProductRoute from "./routes/addProductRoute.js";
+import addCategoryRoute from "./routes/addCategoryRoute.js";
 
 
 const app = express();
@@ -23,6 +24,7 @@ const port = process.env.PORT || 3000;
 
 
 app.use("/api/addProduct",addProductRoute);
+app.use("/api/addCategory", addCategoryRoute); // Assuming you have a similar route for categories
 
 app.listen(port, () => {
   console.log(`Server running on ${port}`);
