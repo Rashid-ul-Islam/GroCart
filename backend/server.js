@@ -24,7 +24,7 @@ const port = process.env.PORT || 3000;
 
 
 app.use("/api/addProduct",addProductRoute);
-app.use("/api/addCategory", addCategoryRoute); // Assuming you have a similar route for categories
+app.use("/api/categories", addCategoryRoute); // Assuming you have a similar route for categories
 
 app.listen(port, () => {
   console.log(`Server running on ${port}`);
