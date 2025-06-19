@@ -4,7 +4,7 @@ import {
   ArrowLeft,
   Save,
   Package,
-  DollarSign,
+  Banknote,
   Hash,
   Scale,
   MapPin,
@@ -272,7 +272,7 @@ export default function AddProduct() {
               {/* Price */}
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <DollarSign className="w-4 h-4 text-green-500" />
+                  <Banknote className="w-4 h-4 text-green-500" />
                   Price ($) *
                 </label>
                 <input
