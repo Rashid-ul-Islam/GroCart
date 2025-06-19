@@ -6,10 +6,28 @@ import { Link } from "react-router-dom";
 
 export default function AdminDashboard() {
   const [products] = useState([
-    { id: 1, name: "Fresh Apples", price: "$5.99", stock: 50, category: "Fruits" },
-    { id: 2, name: "Organic Carrots", price: "$3.49", stock: 30, category: "Vegetables" },
+    {
+      id: 1,
+      name: "Fresh Apples",
+      price: "$5.99",
+      stock: 50,
+      category: "Fruits",
+    },
+    {
+      id: 2,
+      name: "Organic Carrots",
+      price: "$3.49",
+      stock: 30,
+      category: "Vegetables",
+    },
     { id: 3, name: "Whole Milk", price: "$4.99", stock: 25, category: "Dairy" },
-    { id: 4, name: "Chicken Breast", price: "$12.99", stock: 15, category: "Meat" },
+    {
+      id: 4,
+      name: "Chicken Breast",
+      price: "$12.99",
+      stock: 15,
+      category: "Meat",
+    },
   ]);
 
   const handleEditProduct = (productId) => {
@@ -25,8 +43,12 @@ export default function AdminDashboard() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Admin Dashboard</h1>
-        <p className="text-gray-600">Manage your GroCart products and inventory</p>
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">
+          Admin Dashboard
+        </h1>
+        <p className="text-gray-600">
+          Manage your GroCart products and inventory
+        </p>
       </div>
 
       {/* Stats Cards */}
@@ -34,13 +56,17 @@ export default function AdminDashboard() {
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Products</p>
-              <p className="text-3xl font-bold text-green-600">{products.length}</p>
+              <p className="text-sm font-medium text-gray-600">
+                Total Products
+              </p>
+              <p className="text-3xl font-bold text-green-600">
+                {products.length}
+              </p>
             </div>
             <Package className="h-12 w-12 text-green-600" />
           </div>
         </div>
-        
+
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center justify-between">
             <div>
@@ -50,7 +76,7 @@ export default function AdminDashboard() {
             <Users className="h-12 w-12 text-blue-600" />
           </div>
         </div>
-        
+
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center justify-between">
             <div>

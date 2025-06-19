@@ -103,14 +103,12 @@ export default function AdminPanel() {
                 Add New Product
               </Button>
             </Link>
-
-            <Button
-              onClick={() => alert("Bulk operations coming soon!")}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3"
-            >
-              <Package className="w-6 h-6" />
-              Manage Inventory
-            </Button>
+            <Link to="/admin/add-category">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3">
+                <Plus className="w-6 h-6" />
+                Add Category
+              </Button>
+            </Link>
 
             <Button
               onClick={() => alert("Export functionality coming soon!")}

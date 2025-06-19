@@ -5,6 +5,7 @@ import NavBar from "./components/layout/NavBar.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import ProductManagement from "./pages/ProductManagement.jsx";
+import AddCategory from "./pages/AddCategory.jsx";  
 
 export default function App() {
   return (
@@ -15,6 +16,8 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/add-product" element={<ProductManagement />} />
+          <Route path="/admin/add-category" element={<AddCategory />} />
+          {/* Add more routes as needed */}
         </Routes>
       </div>
     </Router>

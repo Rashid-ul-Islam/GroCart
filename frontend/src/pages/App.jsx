@@ -3,6 +3,7 @@ import React from "react";
 import NavBar from "../components/layout/NavBar.jsx";
 import AdminPanel from "./AdminPanel.jsx";
 import AddProduct from "./AddProduct.jsx";
+import AddCategory from "./AddCategory.jsx";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 export default function App() {
@@ -53,6 +54,8 @@ export default function App() {
           />
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/admin/add-product" element={<AddProduct />} />
+          <Route path="/admin/add-category" element={<AddCategory />} />
+          {/* Add more routes as needed */}
         </Routes>
 
         <footer className="bg-purple-900 text-purple-100 py-6 text-center text-sm tracking-wide drop-shadow-lg">

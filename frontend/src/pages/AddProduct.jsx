@@ -1,6 +1,17 @@
 // src/components/AddProduct.jsx
 import React, { useState } from "react";
-import { ArrowLeft, Save, Package, DollarSign, Hash, Scale, MapPin, FileText, Shield, Eye } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  Package,
+  DollarSign,
+  Hash,
+  Scale,
+  MapPin,
+  FileText,
+  Shield,
+  Eye,
+} from "lucide-react";
 import { Button } from "../components/ui/button.jsx";
 import { Input } from "../components/ui/input.jsx";
 import { Link } from "react-router-dom";
@@ -15,10 +26,57 @@ export default function AddProduct() {
     origin: "",
     description: "",
     isRefundable: "true",
-    isAvailable: "true"
+    isAvailable: "true",
   });
 
   const [errors, setErrors] = useState({});
+
+  const handleAddProduct = async () => {
+    // Convert string values to appropriate types
+    const productData = {
+      ...formData,
+      price: parseFloat(formData.price),
+      quantity: parseInt(formData.quantity),
+      isRefundable: formData.isRefundable === "true",
+      isAvailable: formData.isAvailable === "true",
+    };
+
+    try {
+      const response = await fetch("http://localhost:3000/api/addProduct", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(productData),
+      });
+
+      if (!response.ok) {
+        // Handle error response
+        const errorData = await response.json();
+        alert(
+          `Failed to add product: ${errorData.message || response.statusText}`
+        );
+        return;
+      }
+
+      // Success
+      alert("Product added successfully!");
+      // Optionally reset the form here
+      setFormData({
+        productName: "",
+        categoryId: "",
+        price: "",
+        quantity: "",
+        unitMeasure: "",
+        origin: "",
+        description: "",
+        isRefundable: "true",
+        isAvailable: "true",
+      });
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    }
+  };
 
   const categories = [
     { id: "1", name: "Fruits" },
@@ -29,46 +87,61 @@ export default function AddProduct() {
     { id: "6", name: "Snacks" },
     { id: "7", name: "Frozen Foods" },
     { id: "8", name: "Bakery" },
-    { id: "9", name: "Other" }
+    { id: "9", name: "Other" },
   ];
 
   const unitMeasures = [
-    "kg", "g", "lb", "oz", "piece", "dozen", "liter", "ml", "pack", "box", "bottle", "can"
+    "kg",
+    "g",
+    "lb",
+    "oz",
+    "piece",
+    "dozen",
+    "liter",
+    "ml",
+    "pack",
+    "box",
+    "bottle",
+    "can",
   ];
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
-    
+
     // Clear error when user starts typing
     if (errors[name]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [name]: ""
+        [name]: "",
       }));
     }
   };
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     // Required fields validation
-    if (!formData.productName.trim()) newErrors.productName = "Product name is required";
+    if (!formData.productName.trim())
+      newErrors.productName = "Product name is required";
     if (!formData.categoryId) newErrors.categoryId = "Category is required";
-    if (!formData.price || parseFloat(formData.price) <= 0) newErrors.price = "Valid price is required";
-    if (!formData.quantity || parseInt(formData.quantity) < 0) newErrors.quantity = "Valid quantity is required";
-    if (!formData.unitMeasure) newErrors.unitMeasure = "Unit measure is required";
-    
+    if (!formData.price || parseFloat(formData.price) <= 0)
+      newErrors.price = "Valid price is required";
+    if (!formData.quantity || parseInt(formData.quantity) < 0)
+      newErrors.quantity = "Valid quantity is required";
+    if (!formData.unitMeasure)
+      newErrors.unitMeasure = "Unit measure is required";
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     if (validateForm()) {
       // Convert string values to appropriate types
       const productData = {
@@ -76,12 +149,12 @@ export default function AddProduct() {
         price: parseFloat(formData.price),
         quantity: parseInt(formData.quantity),
         isRefundable: formData.isRefundable === "true",
-        isAvailable: formData.isAvailable === "true"
+        isAvailable: formData.isAvailable === "true",
       };
-      
+
       console.log("Product Data:", productData);
       alert("Product added successfully! Check console for data.");
-      
+
       // Reset form
       setFormData({
         productName: "",
@@ -92,7 +165,7 @@ export default function AddProduct() {
         origin: "",
         description: "",
         isRefundable: "true",
-        isAvailable: "true"
+        isAvailable: "true",
       });
     }
   };
@@ -103,8 +176,8 @@ export default function AddProduct() {
         {/* Header */}
         <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl p-8 mb-8 border border-purple-200">
           <div className="flex items-center gap-4 mb-4">
-            <Link 
-              to="/admin" 
+            <Link
+              to="/admin"
               className="text-purple-600 hover:text-purple-800 transition duration-300 hover:scale-110"
             >
               <ArrowLeft className="w-7 h-7" />
@@ -128,12 +201,14 @@ export default function AddProduct() {
               <div className="bg-gradient-to-r from-red-500 to-pink-500 rounded-full p-3">
                 <Package className="w-6 h-6 text-white" />
               </div>
-              <h2 className="text-3xl font-bold text-gray-800">Required Information</h2>
+              <h2 className="text-3xl font-bold text-gray-800">
+                Required Information
+              </h2>
               <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm font-medium">
                 * Required
               </span>
             </div>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Product Name */}
               <div className="space-y-2">
@@ -148,9 +223,9 @@ export default function AddProduct() {
                   onChange={handleInputChange}
                   placeholder="Enter product name"
                   className={`w-full h-12 text-lg rounded-xl border-2 transition-all duration-300 focus:scale-105 ${
-                    errors.productName 
-                      ? 'border-red-400 focus:border-red-500 focus:ring-red-200' 
-                      : 'border-purple-200 focus:border-purple-400 focus:ring-purple-200'
+                    errors.productName
+                      ? "border-red-400 focus:border-red-500 focus:ring-red-200"
+                      : "border-purple-200 focus:border-purple-400 focus:ring-purple-200"
                   }`}
                 />
                 {errors.productName && (
@@ -172,13 +247,13 @@ export default function AddProduct() {
                   value={formData.categoryId}
                   onChange={handleInputChange}
                   className={`w-full h-12 text-lg rounded-xl border-2 px-4 transition-all duration-300 focus:scale-105 focus:outline-none ${
-                    errors.categoryId 
-                      ? 'border-red-400 focus:border-red-500 focus:ring-red-200' 
-                      : 'border-purple-200 focus:border-purple-400 focus:ring-purple-200'
+                    errors.categoryId
+                      ? "border-red-400 focus:border-red-500 focus:ring-red-200"
+                      : "border-purple-200 focus:border-purple-400 focus:ring-purple-200"
                   }`}
                 >
                   <option value="">Select Category</option>
-                  {categories.map(cat => (
+                  {categories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
                       {cat.name} (ID: {cat.id})
                     </option>
@@ -207,9 +282,9 @@ export default function AddProduct() {
                   step="0.01"
                   min="0"
                   className={`w-full h-12 text-lg rounded-xl border-2 transition-all duration-300 focus:scale-105 ${
-                    errors.price 
-                      ? 'border-red-400 focus:border-red-500 focus:ring-red-200' 
-                      : 'border-green-200 focus:border-green-400 focus:ring-green-200'
+                    errors.price
+                      ? "border-red-400 focus:border-red-500 focus:ring-red-200"
+                      : "border-green-200 focus:border-green-400 focus:ring-green-200"
                   }`}
                 />
                 {errors.price && (
@@ -234,9 +309,9 @@ export default function AddProduct() {
                   placeholder="0"
                   min="0"
                   className={`w-full h-12 text-lg rounded-xl border-2 transition-all duration-300 focus:scale-105 ${
-                    errors.quantity 
-                      ? 'border-red-400 focus:border-red-500 focus:ring-red-200' 
-                      : 'border-blue-200 focus:border-blue-400 focus:ring-blue-200'
+                    errors.quantity
+                      ? "border-red-400 focus:border-red-500 focus:ring-red-200"
+                      : "border-blue-200 focus:border-blue-400 focus:ring-blue-200"
                   }`}
                 />
                 {errors.quantity && (
@@ -258,14 +333,16 @@ export default function AddProduct() {
                   value={formData.unitMeasure}
                   onChange={handleInputChange}
                   className={`w-full h-12 text-lg rounded-xl border-2 px-4 transition-all duration-300 focus:scale-105 focus:outline-none ${
-                    errors.unitMeasure 
-                      ? 'border-red-400 focus:border-red-500 focus:ring-red-200' 
-                      : 'border-orange-200 focus:border-orange-400 focus:ring-orange-200'
+                    errors.unitMeasure
+                      ? "border-red-400 focus:border-red-500 focus:ring-red-200"
+                      : "border-orange-200 focus:border-orange-400 focus:ring-orange-200"
                   }`}
                 >
                   <option value="">Select Unit Measure</option>
-                  {unitMeasures.map(unit => (
-                    <option key={unit} value={unit}>{unit}</option>
+                  {unitMeasures.map((unit) => (
+                    <option key={unit} value={unit}>
+                      {unit}
+                    </option>
                   ))}
                 </select>
                 {errors.unitMeasure && (
@@ -284,12 +361,14 @@ export default function AddProduct() {
               <div className="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full p-3">
                 <FileText className="w-6 h-6 text-white" />
               </div>
-              <h2 className="text-3xl font-bold text-gray-800">Optional Information</h2>
+              <h2 className="text-3xl font-bold text-gray-800">
+                Optional Information
+              </h2>
               <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">
                 Optional
               </span>
             </div>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Origin */}
               <div className="space-y-2">
@@ -331,9 +410,11 @@ export default function AddProduct() {
               <div className="bg-gradient-to-r from-green-500 to-emerald-500 rounded-full p-3">
                 <Shield className="w-6 h-6 text-white" />
               </div>
-              <h2 className="text-3xl font-bold text-gray-800">Product Settings</h2>
+              <h2 className="text-3xl font-bold text-gray-800">
+                Product Settings
+              </h2>
             </div>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Is Refundable */}
               <div className="space-y-2">
@@ -381,10 +462,11 @@ export default function AddProduct() {
                 Cancel
               </Link>
               <Button
+                onClick={handleAddProduct}
                 type="submit"
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-12 py-4 text-lg font-bold rounded-xl shadow-lg transform hover:scale-110 transition-all duration-300 flex items-center gap-3"
               >
-                <Save className="w-6 h-6" />
+                {/* <Save className="w-6 h-6" /> */}
                 Add Product
               </Button>
             </div>
