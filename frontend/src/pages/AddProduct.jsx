@@ -20,7 +20,52 @@ export default function AddProduct() {
   });
 
   const [errors, setErrors] = useState({});
+  const handleAddProduct = async () => {
+    // Convert string values to appropriate types
+    const productData = {
+      ...formData,
+      price: parseFloat(formData.price),
+      quantity: parseInt(formData.quantity),
+      isRefundable: formData.isRefundable === "true",
+      isAvailable: formData.isAvailable === "true",
+    };
 
+    try {
+      const response = await fetch("http://localhost:3000/api/addProduct", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(productData),
+      });
+
+      if (!response.ok) {
+        // Handle error response
+        const errorData = await response.json();
+        alert(
+          `Failed to add product: ${errorData.message || response.statusText}`
+        );
+        return;
+      }
+
+      // Success
+      alert("Product added successfully!");
+      // Optionally reset the form here
+      setFormData({
+        productName: "",
+        categoryId: "",
+        price: "",
+        quantity: "",
+        unitMeasure: "",
+        origin: "",
+        description: "",
+        isRefundable: "true",
+        isAvailable: "true",
+      });
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    }
+  };
   const categories = [
     { id: "1", name: "Fruits" },
     { id: "2", name: "Vegetables" },
@@ -406,6 +451,7 @@ export default function AddProduct() {
                 Cancel
               </Link>
               <Button
+                onClick={handleAddProduct}
                 type="submit"
                 className="bg-yellow-400 hover:bg-yellow-300 text-purple-900 font-extrabold px-12 py-4 text-lg rounded-full shadow-lg transform hover:scale-110 transition duration-300 flex items-center gap-3"
               >
