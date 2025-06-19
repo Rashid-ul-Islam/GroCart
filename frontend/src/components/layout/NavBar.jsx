@@ -25,11 +25,12 @@ export default function NavBar() {
         <div className="flex-1 max-w-2xl mx-8 hidden md:block">
           <Input
             type="search"
-            placeholder="Search for fresh groceries..."
+            placeholder="Search for Fresh Groceries..."
             className="bg-yellow-100 rounded-full px-8 py-4 shadow-lg focus:ring-4 focus:ring-yellow-300 focus:outline-none transition text-lg"
             style={{
               width: "450px",
               maxWidth: "100%",
+              backgroundColor: "#FEFEFE",
             }}
           />
         </div>
@@ -40,7 +41,7 @@ export default function NavBar() {
           <div className="relative group">
             <Button
               variant="ghost"
-              className="text-base font-medium hover:text-yellow-400 focus:ring-2 focus:ring-yellow-300 transition"
+              className="text-base font-medium hover:text-yellow-400 focus:outline-none transition"
             >
               🛍 Categories
             </Button>
