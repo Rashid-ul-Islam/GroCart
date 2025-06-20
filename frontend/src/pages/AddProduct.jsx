@@ -216,7 +216,7 @@ export default function AddProduct() {
 
   const unitMeasures = [
     "kg",
-    "g",
+    "gm",
     "lb",
     "oz",
     "piece",
