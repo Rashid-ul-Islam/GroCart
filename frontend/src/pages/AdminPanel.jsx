@@ -1,6 +1,6 @@
 // src/components/AdminPanel.jsx
-import React, { useState } from "react";
-import { Plus, Edit3, Trash2, Package, Users, BarChart3 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Plus, Edit3, Trash2, Package, Users, BarChart3, RefreshCw } from "lucide-react";
 import { Button } from "../components/ui/button.jsx";
 import { Link } from "react-router-dom";
 
@@ -30,6 +30,64 @@ export default function AdminPanel() {
     },
   ]);
 
+  // Dashboard stats state
+  const [dashboardStats, setDashboardStats] = useState({
+    totalProducts: 0,
+    totalUsers: 0,
+    totalSales: 0
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState(null);
+
+  // Fetch dashboard stats on component mount
+  useEffect(() => {
+    fetchDashboardStats();
+  }, []);
+
+  const fetchDashboardStats = async () => {
+    setStatsLoading(true);
+    setStatsError(null);
+    try {
+      const response = await fetch("http://localhost:3000/api/adminDashboard/getDashboardStats");
+      if (response.ok) {
+        const data = await response.json();
+        setDashboardStats(data);
+      } else {
+        throw new Error("Failed to fetch dashboard stats");
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+      setStatsError("Failed to load dashboard statistics");
+      // Fallback to individual API calls if combined endpoint fails
+      try {
+        await fetchIndividualStats();
+      } catch (fallbackError) {
+        console.error("Fallback API calls also failed:", fallbackError);
+      }
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  const fetchIndividualStats = async () => {
+    const [productResponse, userResponse] = await Promise.all([
+      fetch("http://localhost:3000/api/adminDashboard/getProductCount"),
+      fetch("http://localhost:3000/api/adminDashboard/getUserCount")
+    ]);
+
+    if (productResponse.ok && userResponse.ok) {
+      const productData = await productResponse.json();
+      const userData = await userResponse.json();
+      
+      setDashboardStats(prev => ({
+        ...prev,
+        totalProducts: productData.totalProducts,
+        totalUsers: userData.totalUsers
+      }));
+      setStatsError(null);
+    }
+  };
+
   const handleEditProduct = (productId) => {
     alert(`Edit Product ID: ${productId}`);
   };
@@ -37,7 +95,16 @@ export default function AdminPanel() {
   const handleDeleteProduct = (productId) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
       alert(`Delete Product ID: ${productId}`);
+      // Refresh stats after deletion
+      fetchDashboardStats();
     }
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
   };
 
   return (
@@ -45,13 +112,35 @@ export default function AdminPanel() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <h1 className="text-4xl font-bold text-purple-800 mb-2">
-            🛡️ Admin Dashboard
-          </h1>
-          <p className="text-gray-600 text-lg">
-            Manage your GroCart products and inventory
-          </p>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-4xl font-bold text-purple-800 mb-2">
+                🛡️ Admin Dashboard
+              </h1>
+              <p className="text-gray-600 text-lg">
+                Manage your GroCart products and inventory
+              </p>
+            </div>
+            <Button
+              onClick={fetchDashboardStats}
+              disabled={statsLoading}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${statsLoading ? 'animate-spin' : ''}`} />
+              Refresh Stats
+            </Button>
+          </div>
         </div>
+
+        {/* Error Message */}
+        {statsError && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+            <div className="flex items-center">
+              <span className="mr-2">⚠️</span>
+              {statsError}
+            </div>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -62,7 +151,11 @@ export default function AdminPanel() {
                   Total Products
                 </p>
                 <p className="text-3xl font-bold text-blue-600">
-                  {products.length}
+                  {statsLoading ? (
+                    <span className="animate-pulse">Loading...</span>
+                  ) : (
+                    dashboardStats.totalProducts.toLocaleString()
+                  )}
                 </p>
               </div>
               <Package className="w-12 h-12 text-blue-500" />
@@ -73,7 +166,13 @@ export default function AdminPanel() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm font-medium">Total Users</p>
-                <p className="text-3xl font-bold text-green-600">1,234</p>
+                <p className="text-3xl font-bold text-green-600">
+                  {statsLoading ? (
+                    <span className="animate-pulse">Loading...</span>
+                  ) : (
+                    dashboardStats.totalUsers.toLocaleString()
+                  )}
+                </p>
               </div>
               <Users className="w-12 h-12 text-green-500" />
             </div>
@@ -83,7 +182,13 @@ export default function AdminPanel() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm font-medium">Total Sales</p>
-                <p className="text-3xl font-bold text-yellow-600">$45,678</p>
+                <p className="text-3xl font-bold text-yellow-600">
+                  {statsLoading ? (
+                    <span className="animate-pulse">Loading...</span>
+                  ) : (
+                    formatCurrency(dashboardStats.totalSales)
+                  )}
+                </p>
               </div>
               <BarChart3 className="w-12 h-12 text-yellow-500" />
             </div>
@@ -96,7 +201,6 @@ export default function AdminPanel() {
             Product Management
           </h2>
           <div className="flex flex-wrap gap-4">
-            {/* Add Product Button with Link */}
             <Link to="/admin/add-product">
               <Button className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3">
                 <Plus className="w-6 h-6" />
@@ -109,7 +213,6 @@ export default function AdminPanel() {
                 Add Category
               </Button>
             </Link>
-
             <Button
               onClick={() => alert("Export functionality coming soon!")}
               className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3"

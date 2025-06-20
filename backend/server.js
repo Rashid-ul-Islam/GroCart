@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import path from "path";
 import addProductRoute from "./routes/addProductRoute.js";
 import addCategoryRoute from "./routes/addCategoryRoute.js";
+import adminPanelRoute from "./routes/adminPanelRoute.js";
 
 
 const app = express();
@@ -24,7 +25,8 @@ const port = process.env.PORT || 3000;
 
 
 app.use("/api/products",addProductRoute);
-app.use("/api/categories", addCategoryRoute); // Assuming you have a similar route for categories
+app.use("/api/categories", addCategoryRoute);
+app.use("/api/adminDashboard",adminPanelRoute);
 
 app.listen(port, () => {
   console.log(`Server running on ${port}`);
