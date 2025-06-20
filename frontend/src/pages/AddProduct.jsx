@@ -1,5 +1,5 @@
 // src/components/AddProduct.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ArrowLeft,
   Save,
@@ -12,6 +12,10 @@ import {
   Shield,
   Eye,
   Image,
+  ChevronDown,
+  ChevronRight,
+  FolderOpen,
+  Folder,
 } from "lucide-react";
 import { Button } from "../components/ui/button.jsx";
 import { Input } from "../components/ui/input.jsx";
@@ -31,11 +35,139 @@ export default function AddProduct() {
     isAvailable: "true",
   });
 
+  // Category selection states
+  const [categoryLevels, setCategoryLevels] = useState([]);
+  const [selectedPath, setSelectedPath] = useState([]);
+  const [categoryBreadcrumb, setCategoryBreadcrumb] = useState([]);
+  const [finalCategorySelected, setFinalCategorySelected] = useState(false);
+
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [categoryLoading, setCategoryLoading] = useState(false);
+
+  // Initialize with root categories
+  useEffect(() => {
+    fetchRootCategories();
+  }, []);
+
+  const fetchRootCategories = async () => {
+    setCategoryLoading(true);
+    try {
+      const response = await fetch(
+        "http://localhost:3000/api/products/getRootCategories"
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setCategoryLevels([data]);
+        setSelectedPath([]);
+        setCategoryBreadcrumb([]);
+        setFinalCategorySelected(false);
+        setFormData((prev) => ({ ...prev, categoryId: "" }));
+      } else {
+        console.error("Failed to fetch root categories:", response.statusText);
+      }
+    } catch (error) {
+      console.error("Failed to fetch root categories:", error);
+    } finally {
+      setCategoryLoading(false);
+    }
+  };
+
+  const fetchChildCategories = async (parentId) => {
+    setCategoryLoading(true);
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/products/getChildCategories/${parentId}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      } else {
+        console.error("Failed to fetch child categories:", response.statusText);
+        return [];
+      }
+    } catch (error) {
+      console.error("Failed to fetch child categories:", error);
+      return [];
+    } finally {
+      setCategoryLoading(false);
+    }
+  };
+
+  const checkHasChildren = async (categoryId) => {
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/products/hasChildCategories/${categoryId}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        return data.hasChildren;
+      }
+      return false;
+    } catch (error) {
+      console.error("Failed to check child categories:", error);
+      return false;
+    }
+  };
+
+  const handleCategorySelect = async (category, level) => {
+    const hasChildren = await checkHasChildren(category.category_id);
+
+    if (hasChildren) {
+      // Category has children, show next level
+      const childCategories = await fetchChildCategories(category.category_id);
+
+      // Update selected path
+      const newPath = [...selectedPath.slice(0, level), category];
+      setSelectedPath(newPath);
+
+      // Update category levels (remove levels after current and add new level)
+      const newLevels = [
+        ...categoryLevels.slice(0, level + 1),
+        childCategories,
+      ];
+      setCategoryLevels(newLevels);
+
+      // Update breadcrumb
+      setCategoryBreadcrumb(newPath);
+      setFinalCategorySelected(false);
+      setFormData((prev) => ({ ...prev, categoryId: "" }));
+    } else {
+      // This is a leaf category (no children), select it as final
+      const newPath = [...selectedPath.slice(0, level), category];
+      setSelectedPath(newPath);
+      setCategoryBreadcrumb(newPath);
+      setFinalCategorySelected(true);
+      setFormData((prev) => ({
+        ...prev,
+        categoryId: category.category_id.toString(),
+      }));
+
+      // Remove levels after current selection
+      setCategoryLevels((prev) => prev.slice(0, level + 1));
+    }
+
+    // Clear category error
+    if (errors.categoryId) {
+      setErrors((prev) => ({ ...prev, categoryId: "" }));
+    }
+  };
+
+  const resetCategorySelection = () => {
+    fetchRootCategories();
+  };
+
   const handleAddProduct = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
+
     // Convert string values to appropriate types
     const productData = {
       ...formData,
+      categoryId: parseInt(formData.categoryId),
       price: parseFloat(formData.price),
       quantity: parseInt(formData.quantity),
       isRefundable: formData.isRefundable === "true",
@@ -43,7 +175,7 @@ export default function AddProduct() {
     };
 
     try {
-      const response = await fetch("/api/products", {
+      const response = await fetch("http://localhost:3000/api/products/addProduct", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -52,7 +184,6 @@ export default function AddProduct() {
       });
 
       if (!response.ok) {
-        // Handle error response
         const errorData = await response.json();
         alert(
           `Failed to add product: ${errorData.message || response.statusText}`
@@ -60,9 +191,8 @@ export default function AddProduct() {
         return;
       }
 
-      // Success
       alert("Product added successfully!");
-      // Optionally reset the form here
+      // Reset the form
       setFormData({
         productName: "",
         categoryId: "",
@@ -71,25 +201,18 @@ export default function AddProduct() {
         unitMeasure: "",
         origin: "",
         description: "",
+        imageUrl: "",
         isRefundable: "true",
         isAvailable: "true",
       });
+      setErrors({});
+      resetCategorySelection();
     } catch (error) {
       alert(`Error: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
-
-  const categories = [
-    { id: "1", name: "Fruits" },
-    { id: "2", name: "Vegetables" },
-    { id: "3", name: "Dairy" },
-    { id: "4", name: "Meat" },
-    { id: "5", name: "Beverages" },
-    { id: "6", name: "Snacks" },
-    { id: "7", name: "Frozen Foods" },
-    { id: "8", name: "Bakery" },
-    { id: "9", name: "Other" },
-  ];
 
   const unitMeasures = [
     "kg",
@@ -113,7 +236,6 @@ export default function AddProduct() {
       [name]: value,
     }));
 
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
@@ -125,10 +247,10 @@ export default function AddProduct() {
   const validateForm = () => {
     const newErrors = {};
 
-    // Required fields validation
     if (!formData.productName.trim())
       newErrors.productName = "Product name is required";
-    if (!formData.categoryId) newErrors.categoryId = "Category is required";
+    if (!formData.categoryId)
+      newErrors.categoryId = "Please select a final category";
     if (!formData.price || parseFloat(formData.price) <= 0)
       newErrors.price = "Valid price is required";
     if (!formData.quantity || parseInt(formData.quantity) < 0)
@@ -142,34 +264,7 @@ export default function AddProduct() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    if (validateForm()) {
-      // Convert string values to appropriate types
-      const productData = {
-        ...formData,
-        price: parseFloat(formData.price),
-        quantity: parseInt(formData.quantity),
-        isRefundable: formData.isRefundable === "true",
-        isAvailable: formData.isAvailable === "true",
-      };
-
-      console.log("Product Data:", productData);
-      alert("Product added successfully! Check console for data.");
-
-      // Reset form
-      setFormData({
-        productName: "",
-        categoryId: "",
-        price: "",
-        quantity: "",
-        unitMeasure: "",
-        origin: "",
-        description: "",
-        imageUrl: "",
-        isRefundable: "true",
-        isAvailable: "true",
-      });
-    }
+    handleAddProduct();
   };
 
   return (
@@ -224,7 +319,7 @@ export default function AddProduct() {
                   value={formData.productName}
                   onChange={handleInputChange}
                   placeholder="Enter product name"
-                  className={`w-full h-12 text-lg rounded-xl border-2 transition-all duration-300 focus:scale-105 ${
+                  className={`w-full h-12 text-lg rounded-xl border-2 px-4 transition-all duration-300 focus:scale-105 focus:outline-none ${
                     errors.productName
                       ? "border-red-400 focus:border-red-500 focus:ring-red-200"
                       : "border-purple-200 focus:border-purple-400 focus:ring-purple-200"
@@ -238,29 +333,101 @@ export default function AddProduct() {
                 )}
               </div>
 
-              {/* Category ID */}
-              <div className="space-y-2">
+              {/* Nested Category Selection */}
+              <div className="space-y-2 lg:col-span-2">
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <Hash className="w-4 h-4 text-purple-500" />
-                  Category *
+                  <FolderOpen className="w-4 h-4 text-purple-500" />
+                  Category Selection *
                 </label>
-                <select
-                  name="categoryId"
-                  value={formData.categoryId}
-                  onChange={handleInputChange}
-                  className={`w-full h-12 text-lg rounded-xl border-2 px-4 transition-all duration-300 focus:scale-105 focus:outline-none ${
-                    errors.categoryId
-                      ? "border-red-400 focus:border-red-500 focus:ring-red-200"
-                      : "border-purple-200 focus:border-purple-400 focus:ring-purple-200"
-                  }`}
-                >
-                  <option value="">Select Category</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name} (ID: {cat.id})
-                    </option>
+
+                {/* Category Breadcrumb */}
+                {categoryBreadcrumb.length > 0 && (
+                  <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <span className="text-sm font-medium text-blue-800">
+                      Selected Path:
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {categoryBreadcrumb.map((cat, index) => (
+                        <div
+                          key={cat.category_id}
+                          className="flex items-center gap-1"
+                        >
+                          <span className="text-sm text-blue-700 font-medium">
+                            {cat.name}
+                          </span>
+                          {index < categoryBreadcrumb.length - 1 && (
+                            <ChevronRight className="w-3 h-3 text-blue-500" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {finalCategorySelected && (
+                      <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
+                        ✓ Final Category
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Category Selection Levels */}
+                <div className="space-y-4">
+                  {categoryLevels.map((categories, levelIndex) => (
+                    <div key={levelIndex} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-950">
+                          {levelIndex === 0
+                            ? "Main Categories"
+                            : `Level ${levelIndex + 1} Categories`}
+                        </span>
+                        {categoryLoading &&
+                          levelIndex === categoryLevels.length - 1 && (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                          )}
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {categories.map((category) => (
+                          <button
+                            key={category.category_id}
+                            type="button"
+                            onClick={() =>
+                              handleCategorySelect(category, levelIndex)
+                            }
+                            className={`p-3 rounded-lg border-2 transition-all duration-300 hover:scale-105 text-left ${
+                              selectedPath[levelIndex]?.category_id ===
+                              category.category_id
+                                ? "border-purple-500 bg-purple-50 text-purple-800"
+                                : "border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Folder className="w-4 h-4 text-purple-500" />
+                              <span className="font-medium">
+                                {category.name}
+                              </span>
+                            </div>
+                            {category.description && (
+                              <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                                {category.description}
+                              </p>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   ))}
-                </select>
+                </div>
+
+                {/* Reset button */}
+                {categoryBreadcrumb.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={resetCategorySelection}
+                    className="text-sm text-purple-600 hover:text-purple-800 underline"
+                  >
+                    Reset Category Selection
+                  </button>
+                )}
+
                 {errors.categoryId && (
                   <p className="text-red-500 text-sm flex items-center gap-1">
                     <span className="w-4 h-4">⚠️</span>
@@ -283,7 +450,7 @@ export default function AddProduct() {
                   placeholder="0.00"
                   step="0.01"
                   min="0"
-                  className={`w-full h-12 text-lg rounded-xl border-2 transition-all duration-300 focus:scale-105 ${
+                  className={`w-full h-12 text-lg rounded-xl border-2 px-4 transition-all duration-300 focus:scale-105 focus:outline-none ${
                     errors.price
                       ? "border-red-400 focus:border-red-500 focus:ring-red-200"
                       : "border-green-200 focus:border-green-400 focus:ring-green-200"
@@ -310,7 +477,7 @@ export default function AddProduct() {
                   onChange={handleInputChange}
                   placeholder="0"
                   min="0"
-                  className={`w-full h-12 text-lg rounded-xl border-2 transition-all duration-300 focus:scale-105 ${
+                  className={`w-full h-12 text-lg rounded-xl border-2 px-4 transition-all duration-300 focus:scale-105 focus:outline-none ${
                     errors.quantity
                       ? "border-red-400 focus:border-red-500 focus:ring-red-200"
                       : "border-blue-200 focus:border-blue-400 focus:ring-blue-200"
@@ -325,7 +492,7 @@ export default function AddProduct() {
               </div>
 
               {/* Unit Measure */}
-              <div className="space-y-2 lg:col-span-2">
+              <div className="space-y-2 lg:col-span-2 relative">
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                   <Scale className="w-4 h-4 text-orange-500" />
                   Unit Measure *
@@ -334,7 +501,7 @@ export default function AddProduct() {
                   name="unitMeasure"
                   value={formData.unitMeasure}
                   onChange={handleInputChange}
-                  className={`w-full h-12 text-lg rounded-xl border-2 px-4 transition-all duration-300 focus:scale-105 focus:outline-none ${
+                  className={`w-full h-12 text-lg rounded-xl border-2 px-4 pr-10 transition-all duration-300 focus:scale-105 focus:outline-none appearance-none ${
                     errors.unitMeasure
                       ? "border-red-400 focus:border-red-500 focus:ring-red-200"
                       : "border-orange-200 focus:border-orange-400 focus:ring-orange-200"
@@ -347,6 +514,7 @@ export default function AddProduct() {
                     </option>
                   ))}
                 </select>
+                <ChevronDown className="w-5 h-5 text-gray-400 absolute right-3 top-9 pointer-events-none" />
                 {errors.unitMeasure && (
                   <p className="text-red-500 text-sm flex items-center gap-1">
                     <span className="w-4 h-4">⚠️</span>
@@ -357,7 +525,7 @@ export default function AddProduct() {
             </div>
           </div>
 
-          {/* Optional Fields Section */}
+          {/* Optional Fields Section (Origin, Description, Image, etc.) */}
           <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl p-8 border border-white/20">
             <div className="flex items-center gap-3 mb-8">
               <div className="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full p-3">
@@ -402,9 +570,6 @@ export default function AddProduct() {
                   placeholder="https://example.com/image.jpg"
                   className="w-full bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5"
                 />
-                <p className="text-xs text-gray-500">
-                  Enter a valid image URL (jpg, png, webp, etc.)
-                </p>
               </div>
 
               {/* Description */}
@@ -464,7 +629,6 @@ export default function AddProduct() {
               {/* Is Refundable */}
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <Shield className="w-4 h-4 text-green-500" />
                   Is Refundable
                 </label>
                 <select
@@ -507,12 +671,12 @@ export default function AddProduct() {
                 Cancel
               </Link>
               <Button
-                onClick={handleAddProduct}
                 type="submit"
-                className="bg-yellow-400 hover:bg-yellow-300 text-purple-900 font-extrabold px-12 py-4 text-lg rounded-full shadow-lg transform hover:scale-110 transition duration-300 flex items-center gap-3"
+                disabled={loading}
+                className="bg-yellow-400 hover:bg-yellow-300 text-purple-900 font-extrabold px-12 py-4 text-lg rounded-full shadow-lg transform hover:scale-110 transition duration-300 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
-                {/* <Save className="w-6 h-6" /> */}
-                Add Product
+                <Save className="w-6 h-6" />
+                {loading ? "Adding..." : "Add Product"}
               </Button>
             </div>
           </div>

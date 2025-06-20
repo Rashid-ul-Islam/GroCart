@@ -45,7 +45,7 @@ export const addCategory = async (req, res) => {
     }
 };
 
-export const setCategories = async (req, res) => {
+export const getCategories = async (req, res) => {
     try {
         const query = `
             SELECT category_id, name
