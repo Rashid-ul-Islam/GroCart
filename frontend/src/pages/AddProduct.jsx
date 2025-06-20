@@ -289,7 +289,6 @@ export default function AddProduct() {
             </div>
           </div>
         </div>
-
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Required Fields Section */}
@@ -319,7 +318,7 @@ export default function AddProduct() {
                   value={formData.productName}
                   onChange={handleInputChange}
                   placeholder="Enter product name"
-                  className={`w-full h-12 text-lg rounded-xl border-2 px-4 transition-all duration-300 focus:scale-105 focus:outline-none ${
+                  className={`w-full h-12 text-lg rounded-xl border-2 px-4 bg-white text-gray-900 transition-all duration-300 focus:scale-105 focus:outline-none ${
                     errors.productName
                       ? "border-red-400 focus:border-red-500 focus:ring-red-200"
                       : "border-purple-200 focus:border-purple-400 focus:ring-purple-200"
@@ -352,7 +351,7 @@ export default function AddProduct() {
                           key={cat.category_id}
                           className="flex items-center gap-1"
                         >
-                          <span className="text-sm text-blue-700 font-medium">
+                          <span className="text-sm text-blue-900 font-medium">
                             {cat.name}
                           </span>
                           {index < categoryBreadcrumb.length - 1 && (
@@ -395,18 +394,18 @@ export default function AddProduct() {
                             className={`p-3 rounded-lg border-2 transition-all duration-300 hover:scale-105 text-left ${
                               selectedPath[levelIndex]?.category_id ===
                               category.category_id
-                                ? "border-purple-500 bg-purple-50 text-purple-800"
-                                : "border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50"
+                                ? "border-purple-500 bg-white text-purple-800"
+                                : "border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50 text-gray-900"
                             }`}
                           >
                             <div className="flex items-center gap-2">
                               <Folder className="w-4 h-4 text-purple-500" />
-                              <span className="font-medium">
+                              <span className="font-medium text-gray-900">
                                 {category.name}
                               </span>
                             </div>
                             {category.description && (
-                              <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                              <p className="text-xs text-gray-700 mt-1 line-clamp-2">
                                 {category.description}
                               </p>
                             )}
@@ -416,7 +415,6 @@ export default function AddProduct() {
                     </div>
                   ))}
                 </div>
-
                 {/* Reset button */}
                 {categoryBreadcrumb.length > 0 && (
                   <button
@@ -450,7 +448,7 @@ export default function AddProduct() {
                   placeholder="0.00"
                   step="0.01"
                   min="0"
-                  className={`w-full h-12 text-lg rounded-xl border-2 px-4 transition-all duration-300 focus:scale-105 focus:outline-none ${
+                  className={`w-full h-12 text-lg rounded-xl border-2 px-4 bg-white text-gray-900 transition-all duration-300 focus:scale-105 focus:outline-none ${
                     errors.price
                       ? "border-red-400 focus:border-red-500 focus:ring-red-200"
                       : "border-green-200 focus:border-green-400 focus:ring-green-200"
@@ -477,7 +475,7 @@ export default function AddProduct() {
                   onChange={handleInputChange}
                   placeholder="0"
                   min="0"
-                  className={`w-full h-12 text-lg rounded-xl border-2 px-4 transition-all duration-300 focus:scale-105 focus:outline-none ${
+                  className={`w-full h-12 text-lg rounded-xl border-2 px-4 bg-white text-gray-900 transition-all duration-300 focus:scale-105 focus:outline-none ${
                     errors.quantity
                       ? "border-red-400 focus:border-red-500 focus:ring-red-200"
                       : "border-blue-200 focus:border-blue-400 focus:ring-blue-200"
@@ -490,7 +488,6 @@ export default function AddProduct() {
                   </p>
                 )}
               </div>
-
               {/* Unit Measure */}
               <div className="space-y-2 lg:col-span-2 relative">
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
@@ -501,7 +498,7 @@ export default function AddProduct() {
                   name="unitMeasure"
                   value={formData.unitMeasure}
                   onChange={handleInputChange}
-                  className={`w-full h-12 text-lg rounded-xl border-2 px-4 pr-10 transition-all duration-300 focus:scale-105 focus:outline-none appearance-none ${
+                  className={`w-full h-12 text-lg rounded-xl border-2 px-4 pr-10 bg-white text-gray-900 transition-all duration-300 focus:scale-105 focus:outline-none appearance-none ${
                     errors.unitMeasure
                       ? "border-red-400 focus:border-red-500 focus:ring-red-200"
                       : "border-orange-200 focus:border-orange-400 focus:ring-orange-200"
@@ -613,7 +610,6 @@ export default function AddProduct() {
               )}
             </div>
           </div>
-
           {/* Boolean Fields Section */}
           <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl p-8 border border-white/20">
             <div className="flex items-center gap-3 mb-8">
@@ -660,7 +656,6 @@ export default function AddProduct() {
               </div>
             </div>
           </div>
-
           {/* Submit Buttons */}
           <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl p-8 border border-white/20">
             <div className="flex gap-6 justify-end">
