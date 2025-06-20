@@ -29,7 +29,7 @@ export const getDashboardStats = async (req, res) => {
   try {
     const productCountQuery = `SELECT COUNT(*) as total FROM "Product"`;
     const userCountQuery = `SELECT COUNT(*) as total FROM "User"`;
-    const salesQuery = `SELECT SUM(total_amount) as total FROM "Order" WHERE status = 'completed'`;
+    const salesQuery = `SELECT SUM(total_amount) as total FROM "Order" WHERE payment_status = 'completed'`;
     const [productResult, userResult, salesResult] = await Promise.all([
       pool.query(productCountQuery),
       pool.query(userCountQuery),
