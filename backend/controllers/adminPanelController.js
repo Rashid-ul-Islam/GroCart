@@ -26,7 +26,6 @@ export const getUserCount = async (req, res) => {
 
 // Get dashboard stats (combined endpoint for better performance)
 export const getDashboardStats = async (req, res) => {
-<<<<<<< HEAD
     try {
         const productCountQuery = `SELECT COUNT(*) as total FROM "Product"`;
         const userCountQuery = `SELECT COUNT(*) as total FROM "User"`;
@@ -37,17 +36,6 @@ export const getDashboardStats = async (req, res) => {
             pool.query(userCountQuery),
             pool.query(salesQuery)
         ]);
-=======
-  try {
-    const productCountQuery = `SELECT COUNT(*) as total FROM "Product"`;
-    const userCountQuery = `SELECT COUNT(*) as total FROM "User"`;
-    const salesQuery = `SELECT SUM(total_amount) as total FROM "Order" WHERE payment_status = 'completed'`;
-    const [productResult, userResult, salesResult] = await Promise.all([
-      pool.query(productCountQuery),
-      pool.query(userCountQuery),
-      pool.query(salesQuery)
-    ]);
->>>>>>> 34e9f2c34f72a68f5b0da2191a86c69409e1c7fe
 
         res.status(200).json({
             totalProducts: parseInt(productResult.rows[0].total),
