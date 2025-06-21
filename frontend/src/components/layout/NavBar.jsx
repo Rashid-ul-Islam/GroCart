@@ -46,10 +46,18 @@ export default function NavBar() {
               🛍 Categories
             </Button>
             <div className="absolute top-full left-0 mt-2 w-40 bg-white shadow-lg rounded-md border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <div className="hover:bg-yellow-50 px-4 py-2 cursor-pointer transition">Fruits</div>
-              <div className="hover:bg-yellow-50 px-4 py-2 cursor-pointer transition">Vegetables</div>
-              <div className="hover:bg-yellow-50 px-4 py-2 cursor-pointer transition">Dairy</div>
-              <div className="hover:bg-yellow-50 px-4 py-2 cursor-pointer transition">Meat</div>
+              <div className="hover:bg-yellow-50 px-4 py-2 cursor-pointer transition">
+                Fruits
+              </div>
+              <div className="hover:bg-yellow-50 px-4 py-2 cursor-pointer transition">
+                Vegetables
+              </div>
+              <div className="hover:bg-yellow-50 px-4 py-2 cursor-pointer transition">
+                Dairy
+              </div>
+              <div className="hover:bg-yellow-50 px-4 py-2 cursor-pointer transition">
+                Meat
+              </div>
             </div>
           </div>
 
@@ -109,7 +117,10 @@ export default function NavBar() {
                     Profile
                   </div>
                   {isAdmin && (
-                    <Link to="/admin" className="block hover:bg-yellow-50 px-4 py-2 cursor-pointer">
+                    <Link
+                      to="/admin"
+                      className="block hover:bg-yellow-50 px-4 py-2 cursor-pointer"
+                    >
                       Admin Panel
                     </Link>
                   )}
@@ -126,7 +137,12 @@ export default function NavBar() {
                     Login
                   </div>
                   <div className="hover:bg-yellow-50 px-4 py-2 cursor-pointer">
-                    Register
+                    <Link
+                      to="/register"
+                      className="hover:bg-yellow-50 px-4 py-2 cursor-pointer"
+                    >
+                      Register
+                    </Link>
                   </div>
                 </>
               )}
