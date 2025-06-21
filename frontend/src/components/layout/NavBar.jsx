@@ -133,7 +133,7 @@ export default function NavBar() {
                 </>
               ) : (
                 <>
-                  <div className="hover:bg-yellow-50 px-4 py-2 cursor-pointer">
+                  <div className="hover:bg-yellow-50 px-8 py-2 cursor-pointer">
                     Login
                   </div>
                   <div className="hover:bg-yellow-50 px-4 py-2 cursor-pointer">
