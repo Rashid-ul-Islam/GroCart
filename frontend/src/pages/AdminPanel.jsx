@@ -156,7 +156,7 @@ export default function AdminPanel() {
         setProducts(data.products);
         setTotalPages(data.totalPages);
         setTotalProducts(data.totalProducts);
-        setTotalFilteredProducts(data.totalProducts); 
+        setTotalFilteredProducts(data.totalProducts);
       }
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -406,12 +406,28 @@ export default function AdminPanel() {
                 Add Category
               </Button>
             </Link>
+            <Link to="/address-management">
+              <Button className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3">
+                <BarChart3 className="w-6 h-6" />
+                Address book
+              </Button>
+            </Link>
+
             <Button
-              onClick={() => alert("Export functionality coming soon!")}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3"
+              onClick={() =>
+                alert("Manage inventory functionality coming soon!")
+              }
+              className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3"
+            >
+              <Package className="w-6 h-6" />
+              Manage Inventory
+            </Button>
+            <Button
+              onClick={() => alert("View analytics functionality coming soon!")}
+              className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3"
             >
               <BarChart3 className="w-6 h-6" />
-              Export Reports
+              View Analytics
             </Button>
           </div>
         </div>

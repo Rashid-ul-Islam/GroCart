@@ -8,6 +8,8 @@ import path from "path";
 import addProductRoute from "./routes/addProductRoute.js";
 import addCategoryRoute from "./routes/addCategoryRoute.js";
 import adminPanelRoute from "./routes/adminPanelRoute.js";
+import addressRoute from "./routes/addressRoute.js";
+import userRegRoute from "./routes/userRegRoute.js";
 
 
 const app = express();
@@ -27,6 +29,8 @@ const port = process.env.PORT || 3000;
 app.use("/api/products",addProductRoute);
 app.use("/api/categories", addCategoryRoute);
 app.use("/api/adminDashboard",adminPanelRoute);
+app.use("/api/address", addressRoute);
+app.use("/api/auth", userRegRoute);
 
 app.listen(port, () => {
   console.log(`Server running on ${port}`);

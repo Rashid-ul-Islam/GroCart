@@ -1,5 +1,16 @@
-import { useState } from "react";
-import { Eye, EyeOff, User, Mail, Phone, MapPin, ArrowLeft, Sparkles, Shield, CheckCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+  Eye,
+  EyeOff,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  ArrowLeft,
+  Sparkles,
+  Shield,
+  CheckCircle,
+} from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 
@@ -19,122 +30,226 @@ export default function RegisterPage() {
     cityId: "",
     regionId: "",
     address: "",
-    isPrimary: true
   });
+
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
-  // Mock data - corrected hierarchy: Division → District → City → Region
-  const divisions = [
-    { id: 1, name: "Dhaka" },
-    { id: 2, name: "Chittagong" },
-    { id: 3, name: "Rajshahi" },
-    { id: 4, name: "Khulna" },
-    { id: 5, name: "Sylhet" },
-    { id: 6, name: "Barisal" },
-    { id: 7, name: "Rangpur" },
-    { id: 8, name: "Mymensingh" }
-  ];
+  // API data states
+  const [divisions, setDivisions] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [cities, setCities] = useState([]);
+  const [regions, setRegions] = useState([]);
+  const [loadingStates, setLoadingStates] = useState({
+    divisions: false,
+    districts: false,
+    cities: false,
+    regions: false,
+  });
 
-  const districts = {
-    1: [ // Dhaka
-      { id: 1, name: "Dhaka", divisionId: 1 },
-      { id: 2, name: "Gazipur", divisionId: 1 },
-      { id: 3, name: "Narayanganj", divisionId: 1 },
-      { id: 4, name: "Manikganj", divisionId: 1 }
-    ],
-    2: [ // Chittagong
-      { id: 5, name: "Chittagong", divisionId: 2 },
-      { id: 6, name: "Cox's Bazar", divisionId: 2 },
-      { id: 7, name: "Comilla", divisionId: 2 }
-    ],
-    3: [ // Rajshahi
-      { id: 8, name: "Rajshahi", divisionId: 3 },
-      { id: 9, name: "Bogra", divisionId: 3 },
-      { id: 10, name: "Pabna", divisionId: 3 }
-    ]
+  // Fetch divisions on component mount
+  useEffect(() => {
+    fetchDivisions();
+  }, []);
+
+  // Fetch divisions
+  // In your fetchDivisions function, add this debugging:
+  // Add debugging to see what data you're receiving
+  const fetchDivisions = async () => {
+    setLoadingStates((prev) => ({ ...prev, divisions: true }));
+    try {
+      const response = await fetch(
+        "http://localhost:3000/api/address/divisions"
+      );
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Divisions data structure:", data); // Debug line
+        setDivisions(data);
+      } else {
+        console.error("Failed to fetch divisions");
+      }
+    } catch (error) {
+      console.error("Error fetching divisions:", error);
+    } finally {
+      setLoadingStates((prev) => ({ ...prev, divisions: false }));
+    }
   };
 
-  const cities = {
-    1: [ // Dhaka District
-      { id: 1, name: "Dhaka", districtId: 1 },
-      { id: 2, name: "Dhanmondi", districtId: 1 },
-      { id: 3, name: "Gulshan", districtId: 1 },
-      { id: 4, name: "Uttara", districtId: 1 }
-    ],
-    2: [ // Gazipur
-      { id: 5, name: "Gazipur Sadar", districtId: 2 },
-      { id: 6, name: "Sreepur", districtId: 2 }
-    ],
-    5: [ // Chittagong District
-      { id: 7, name: "Chittagong", districtId: 5 },
-      { id: 8, name: "Pahartali", districtId: 5 }
-    ]
+  // Fetch districts by division
+  const fetchDistricts = async (divisionId) => {
+    if (!divisionId) return;
+    setLoadingStates((prev) => ({ ...prev, districts: true }));
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/address/districts/${divisionId}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setDistricts(data);
+      } else {
+        console.error("Failed to fetch districts");
+        setDistricts([]);
+      }
+    } catch (error) {
+      console.error("Error fetching districts:", error);
+      setDistricts([]);
+    } finally {
+      setLoadingStates((prev) => ({ ...prev, districts: false }));
+    }
   };
 
-  const regions = {
-    1: [ // Dhaka City
-      { id: 1, name: "Old Dhaka", cityId: 1 },
-      { id: 2, name: "New Market Area", cityId: 1 },
-      { id: 3, name: "Ramna Area", cityId: 1 },
-      { id: 4, name: "Tejgaon Area", cityId: 1 }
-    ],
-    2: [ // Dhanmondi
-      { id: 5, name: "Dhanmondi 1", cityId: 2 },
-      { id: 6, name: "Dhanmondi 15", cityId: 2 },
-      { id: 7, name: "Dhanmondi 27", cityId: 2 }
-    ],
-    3: [ // Gulshan
-      { id: 8, name: "Gulshan 1", cityId: 3 },
-      { id: 9, name: "Gulshan 2", cityId: 3 },
-      { id: 10, name: "Banani", cityId: 3 }
-    ],
-    4: [ // Uttara
-      { id: 11, name: "Uttara Sector 1", cityId: 4 },
-      { id: 12, name: "Uttara Sector 7", cityId: 4 },
-      { id: 13, name: "Uttara Sector 12", cityId: 4 }
-    ],
-    7: [ // Chittagong City
-      { id: 14, name: "Agrabad", cityId: 7 },
-      { id: 15, name: "Kotwali", cityId: 7 },
-      { id: 16, name: "Panchlaish", cityId: 7 }
-    ]
+  // Fetch cities by district
+  const fetchCities = async (districtId) => {
+    if (!districtId) return;
+    setLoadingStates((prev) => ({ ...prev, cities: true }));
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/address/cities/${districtId}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setCities(data);
+      } else {
+        console.error("Failed to fetch cities");
+        setCities([]);
+      }
+    } catch (error) {
+      console.error("Error fetching cities:", error);
+      setCities([]);
+    } finally {
+      setLoadingStates((prev) => ({ ...prev, cities: false }));
+    }
+  };
+
+  // Fetch regions by city
+  const fetchRegions = async (cityId) => {
+    if (!cityId) return;
+    setLoadingStates((prev) => ({ ...prev, regions: true }));
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/address/regions/${cityId}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setRegions(data);
+      } else {
+        console.error("Failed to fetch regions");
+        setRegions([]);
+      }
+    } catch (error) {
+      console.error("Error fetching regions:", error);
+      setRegions([]);
+    } finally {
+      setLoadingStates((prev) => ({ ...prev, regions: false }));
+    }
+  };
+
+  // Check username availability
+  const checkUsernameAvailability = async (username) => {
+    if (!username || username.length < 3) return;
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/auth/check-username/${encodeURIComponent(
+          username
+        )}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (!data.available) {
+          setErrors((prev) => ({
+            ...prev,
+            username: "Username is already taken",
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Error checking username:", error);
+    }
+  };
+
+  // Check email availability
+  const checkEmailAvailability = async (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) return;
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/auth/check-email/${encodeURIComponent(
+          email
+        )}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (!data.available) {
+          setErrors((prev) => ({
+            ...prev,
+            email: "Email is already registered",
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Error checking email:", error);
+    }
   };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === "checkbox" ? checked : value,
     }));
 
-    // Clear related dropdowns when parent changes
-    if (name === 'divisionId') {
-      setFormData(prev => ({
+    // Handle location hierarchy
+    if (name === "divisionId") {
+      setFormData((prev) => ({
         ...prev,
         districtId: "",
         cityId: "",
-        regionId: ""
+        regionId: "",
       }));
-    } else if (name === 'districtId') {
-      setFormData(prev => ({
+      setDistricts([]);
+      setCities([]);
+      setRegions([]);
+      if (value) {
+        fetchDistricts(value);
+      }
+    } else if (name === "districtId") {
+      setFormData((prev) => ({
         ...prev,
         cityId: "",
-        regionId: ""
+        regionId: "",
       }));
-    } else if (name === 'cityId') {
-      setFormData(prev => ({
+      setCities([]);
+      setRegions([]);
+      if (value) {
+        fetchCities(value);
+      }
+    } else if (name === "cityId") {
+      setFormData((prev) => ({
         ...prev,
-        regionId: ""
+        regionId: "",
       }));
+      setRegions([]);
+      if (value) {
+        fetchRegions(value);
+      }
     }
 
     // Clear error when user starts typing
     if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ""
-      }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+
+    // Check availability for username and email with debounce
+    if (name === "username") {
+      clearTimeout(window.usernameTimeout);
+      window.usernameTimeout = setTimeout(() => {
+        checkUsernameAvailability(value);
+      }, 500);
+    } else if (name === "email") {
+      clearTimeout(window.emailTimeout);
+      window.emailTimeout = setTimeout(() => {
+        checkEmailAvailability(value);
+      }, 500);
     }
   };
 
@@ -145,15 +260,19 @@ export default function RegisterPage() {
     if (!formData.username.trim()) newErrors.username = "Username is required";
     if (!formData.email.trim()) newErrors.email = "Email is required";
     if (!formData.password) newErrors.password = "Password is required";
-    if (!formData.confirmPassword) newErrors.confirmPassword = "Please confirm your password";
-    if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
+    if (!formData.confirmPassword)
+      newErrors.confirmPassword = "Please confirm your password";
+    if (!formData.firstName.trim())
+      newErrors.firstName = "First name is required";
     if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
-    if (!formData.phoneNumber.trim()) newErrors.phoneNumber = "Phone number is required";
+    if (!formData.phoneNumber.trim())
+      newErrors.phoneNumber = "Phone number is required";
     if (!formData.divisionId) newErrors.divisionId = "Please select a division";
     if (!formData.districtId) newErrors.districtId = "Please select a district";
     if (!formData.cityId) newErrors.cityId = "Please select a city";
     if (!formData.regionId) newErrors.regionId = "Please select a region";
-    if (!formData.address.trim()) newErrors.address = "Street address is required";
+    if (!formData.address.trim())
+      newErrors.address = "Street address is required";
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -193,9 +312,38 @@ export default function RegisterPage() {
 
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log("Registration data:", formData);
-      alert("Registration successful! Please check your email for verification.");
+      const response = await fetch("http://localhost:3000/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phoneNumber: formData.phoneNumber,
+          divisionId: parseInt(formData.divisionId),
+          districtId: parseInt(formData.districtId),
+          cityId: parseInt(formData.cityId),
+          regionId: parseInt(formData.regionId),
+          address: formData.address,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Store token in localStorage
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+        alert("Registration successful! Welcome to GroCart!");
+        // Redirect to dashboard or home page
+        // window.location.href = '/dashboard';
+      } else {
+        alert(`Registration failed: ${data.error}`);
+      }
     } catch (error) {
       console.error("Registration failed:", error);
       alert("Registration failed. Please try again.");
@@ -204,329 +352,382 @@ export default function RegisterPage() {
     }
   };
 
-  const getFilteredDistricts = () => {
-    return formData.divisionId ? districts[formData.divisionId] || [] : [];
-  };
-
-  const getFilteredCities = () => {
-    return formData.districtId ? cities[formData.districtId] || [] : [];
-  };
-
-  const getFilteredRegions = () => {
-    return formData.cityId ? regions[formData.cityId] || [] : [];
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
-      {/* Animated background elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse"></div>
-        <div className="absolute top-3/4 right-1/4 w-64 h-64 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse delay-500"></div>
-      </div>
-
-      <div className="max-w-7xl mx-auto relative">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-green-100 overflow-hidden">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full shadow-lg">
-              <Sparkles className="h-8 w-8 text-white" />
-            </div>
+        <div className="bg-gradient-to-r from-green-600 to-green-700 p-8 text-center">
+          <div className="flex items-center justify-center mb-4">
+            <Sparkles className="w-8 h-8 text-green-200 mr-2" />
+            <h1 className="text-3xl font-bold text-white">GroCart</h1>
           </div>
-          <h2 className="text-4xl font-bold text-gray-900 mb-2">Join GroCart</h2>
-          <p className="text-lg text-gray-600">Create your account to start shopping fresh groceries</p>
-          <div className="flex justify-center items-center mt-4 space-x-4">
-            <div className="flex items-center text-green-600">
-              <CheckCircle className="h-5 w-5 mr-2" />
-              <span className="text-sm">Secure Registration</span>
-            </div>
-            <div className="flex items-center text-blue-600">
-              <Shield className="h-5 w-5 mr-2" />
-              <span className="text-sm">Privacy Protected</span>
-            </div>
-          </div>
+          <p className="text-green-100 text-lg">
+            Create your account to start shopping fresh groceries
+          </p>
         </div>
 
-        {/* Form Container - Made wider */}
-        <div className="bg-white/80 backdrop-blur-sm shadow-2xl rounded-3xl border border-white/20 p-12 md:p-16">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            
-            {/* Personal Information Section */}
-            <div className="space-y-8">
-              <div className="border-b border-gray-200 pb-4">
-                <h3 className="text-xl font-semibold text-gray-900 flex items-center">
-                  <User className="h-5 w-5 mr-2 text-blue-500" />
-                  Personal Information
-                </h3>
-              </div>
+        {/* Form */}
+        <div className="p-8 space-y-6">
+          {/* Username */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 flex items-center">
+              <User className="w-4 h-4 mr-2 text-green-600" />
+              Username
+            </label>
+            <Input
+              type="text"
+              name="username"
+              value={formData.username}
+              onChange={handleInputChange}
+              placeholder="Choose a unique username"
+              className={`w-full ${
+                errors.username ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            {errors.username && (
+              <p className="text-red-500 text-sm">{errors.username}</p>
+            )}
+          </div>
 
-              {/* Username */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Username</label>
-                <div className="relative">
-                  <Input
-                    type="text"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleInputChange}
-                    className="w-full h-14 pl-4 pr-4 bg-white border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-gray-900"
-                    placeholder="Enter your username"
-                  />
-                </div>
-                {errors.username && <p className="text-red-500 text-sm mt-1">{errors.username}</p>}
-              </div>
+          {/* Email */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 flex items-center">
+              <Mail className="w-4 h-4 mr-2 text-green-600" />
+              Email Address
+            </label>
+            <Input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              placeholder="Enter your email address"
+              className={`w-full ${
+                errors.email ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            {errors.email && (
+              <p className="text-red-500 text-sm">{errors.email}</p>
+            )}
+          </div>
 
-              {/* Email */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Email Address</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="w-full h-14 pl-12 pr-4 bg-white border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-gray-900"
-                    placeholder="Enter your email"
-                  />
-                </div>
-                {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-              </div>
-
-              {/* First Name & Last Name */}
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">First Name</label>
-                  <Input
-                    type="text"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    className="w-full h-14 px-4 bg-white border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-gray-900"
-                    placeholder="First name"
-                  />
-                  {errors.firstName && <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>}
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Last Name</label>
-                  <Input
-                    type="text"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    className="w-full h-14 px-4 bg-white border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-gray-900"
-                    placeholder="Last name"
-                  />
-                  {errors.lastName && <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>}
-                </div>
-              </div>
-
-              {/* Phone Number */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Phone Number</label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Input
-                    type="tel"
-                    name="phoneNumber"
-                    value={formData.phoneNumber}
-                    onChange={handleInputChange}
-                    className="w-full h-14 pl-12 pr-4 bg-white border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-gray-900"
-                    placeholder="Enter your phone number"
-                  />
-                </div>
-                {errors.phoneNumber && <p className="text-red-500 text-sm mt-1">{errors.phoneNumber}</p>}
-              </div>
-
-              {/* Password Fields */}
-              <div className="grid grid-cols-1 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Password</label>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      name="password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      className="w-full h-14 pl-4 pr-12 bg-white border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-gray-900"
-                      placeholder="Enter your password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
-                  {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Confirm Password</label>
-                  <div className="relative">
-                    <Input
-                      type={showConfirmPassword ? "text" : "password"}
-                      name="confirmPassword"
-                      value={formData.confirmPassword}
-                      onChange={handleInputChange}
-                      className="w-full h-14 pl-4 pr-12 bg-white border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-gray-900"
-                      placeholder="Confirm your password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
-                  {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>}
-                </div>
-              </div>
+          {/* Name Fields */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                First Name
+              </label>
+              <Input
+                type="text"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleInputChange}
+                placeholder="First name"
+                className={`w-full ${
+                  errors.firstName ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors.firstName && (
+                <p className="text-red-500 text-sm">{errors.firstName}</p>
+              )}
             </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Last Name
+              </label>
+              <Input
+                type="text"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleInputChange}
+                placeholder="Last name"
+                className={`w-full ${
+                  errors.lastName ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors.lastName && (
+                <p className="text-red-500 text-sm">{errors.lastName}</p>
+              )}
+            </div>
+          </div>
 
-            {/* Address Information Section */}
-            <div className="space-y-8">
-              <div className="border-b border-gray-200 pb-4">
-                <h3 className="text-xl font-semibold text-gray-900 flex items-center">
-                  <MapPin className="h-5 w-5 mr-2 text-green-500" />
-                  Address Information
-                </h3>
+          {/* Phone Number */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 flex items-center">
+              <Phone className="w-4 h-4 mr-2 text-green-600" />
+              Phone Number
+            </label>
+            <Input
+              type="tel"
+              name="phoneNumber"
+              value={formData.phoneNumber}
+              onChange={handleInputChange}
+              placeholder="Enter your phone number"
+              className={`w-full ${
+                errors.phoneNumber ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            {errors.phoneNumber && (
+              <p className="text-red-500 text-sm">{errors.phoneNumber}</p>
+            )}
+          </div>
+
+          {/* Password Fields */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 flex items-center">
+                <Shield className="w-4 h-4 mr-2 text-green-600" />
+                Password
+              </label>
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  placeholder="Create a strong password"
+                  className={`w-full pr-10 ${
+                    errors.password ? "border-red-500" : "border-gray-300"
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
               </div>
+              {errors.password && (
+                <p className="text-red-500 text-sm">{errors.password}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <Input
+                  type={showConfirmPassword ? "text" : "password"}
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  placeholder="Confirm your password"
+                  className={`w-full pr-10 ${
+                    errors.confirmPassword
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+              {errors.confirmPassword && (
+                <p className="text-red-500 text-sm">{errors.confirmPassword}</p>
+              )}
+            </div>
+          </div>
 
+          {/* Location Fields */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+              <MapPin className="w-5 h-5 mr-2 text-green-600" />
+              Delivery Address
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Division */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Division</label>
+                <label className="text-sm font-medium text-gray-700">
+                  Division
+                </label>
                 <select
                   name="divisionId"
                   value={formData.divisionId}
                   onChange={handleInputChange}
-                  className="w-full h-14 px-4 bg-white border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-gray-900 appearance-none cursor-pointer"
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                    errors.divisionId ? "border-red-500" : "border-gray-300"
+                  }`}
+                  disabled={loadingStates.divisions}
                 >
-                  <option value="">Select Division</option>
+                  <option value="">
+                    {loadingStates.divisions ? "Loading..." : "Select Division"}
+                  </option>
                   {divisions.map((division) => (
-                    <option key={division.id} value={division.id}>
+                    <option
+                      key={division.division_id}
+                      value={division.division_id}
+                    >
                       {division.name}
                     </option>
                   ))}
                 </select>
-                {errors.divisionId && <p className="text-red-500 text-sm mt-1">{errors.divisionId}</p>}
+                {errors.divisionId && (
+                  <p className="text-red-500 text-sm">{errors.divisionId}</p>
+                )}
               </div>
 
               {/* District */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">District</label>
+                <label className="text-sm font-medium text-gray-700">
+                  District
+                </label>
                 <select
                   name="districtId"
                   value={formData.districtId}
                   onChange={handleInputChange}
-                  disabled={!formData.divisionId}
-                  className="w-full h-14 px-4 bg-white border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-gray-900 appearance-none cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                    errors.districtId ? "border-red-500" : "border-gray-300"
+                  }`}
+                  disabled={loadingStates.districts || !formData.divisionId}
                 >
-                  <option value="">Select District</option>
-                  {getFilteredDistricts().map((district) => (
-                    <option key={district.id} value={district.id}>
+                  <option value="">
+                    {loadingStates.districts
+                      ? "Loading..."
+                      : !formData.divisionId
+                      ? "Select Division First"
+                      : "Select District"}
+                  </option>
+                  {districts.map((district) => (
+                    <option
+                      key={district.district_id}
+                      value={district.district_id}
+                    >
                       {district.name}
                     </option>
                   ))}
                 </select>
-                {errors.districtId && <p className="text-red-500 text-sm mt-1">{errors.districtId}</p>}
+                {errors.districtId && (
+                  <p className="text-red-500 text-sm">{errors.districtId}</p>
+                )}
               </div>
 
               {/* City */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">City</label>
+                <label className="text-sm font-medium text-gray-700">
+                  City
+                </label>
                 <select
                   name="cityId"
                   value={formData.cityId}
                   onChange={handleInputChange}
-                  disabled={!formData.districtId}
-                  className="w-full h-14 px-4 bg-white border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-gray-900 appearance-none cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                    errors.cityId ? "border-red-500" : "border-gray-300"
+                  }`}
+                  disabled={loadingStates.cities || !formData.districtId}
                 >
-                  <option value="">Select City</option>
-                  {getFilteredCities().map((city) => (
-                    <option key={city.id} value={city.id}>
+                  <option value="">
+                    {loadingStates.cities
+                      ? "Loading..."
+                      : !formData.districtId
+                      ? "Select District First"
+                      : "Select City"}
+                  </option>
+                  {cities.map((city) => (
+                    <option key={city.city_id} value={city.city_id}>
                       {city.name}
                     </option>
                   ))}
                 </select>
-                {errors.cityId && <p className="text-red-500 text-sm mt-1">{errors.cityId}</p>}
+                {errors.cityId && (
+                  <p className="text-red-500 text-sm">{errors.cityId}</p>
+                )}
               </div>
 
-              {/* Region - Now under City */}
+              {/* Region */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Region</label>
+                <label className="text-sm font-medium text-gray-700">
+                  Region
+                </label>
                 <select
                   name="regionId"
                   value={formData.regionId}
                   onChange={handleInputChange}
-                  disabled={!formData.cityId}
-                  className="w-full h-14 px-4 bg-white border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-gray-900 appearance-none cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                    errors.regionId ? "border-red-500" : "border-gray-300"
+                  }`}
+                  disabled={loadingStates.regions || !formData.cityId}
                 >
-                  <option value="">Select Region</option>
-                  {getFilteredRegions().map((region) => (
-                    <option key={region.id} value={region.id}>
+                  <option value="">
+                    {loadingStates.regions
+                      ? "Loading..."
+                      : !formData.cityId
+                      ? "Select City First"
+                      : "Select Region"}
+                  </option>
+                  {regions.map((region) => (
+                    <option key={region.region_id} value={region.region_id}>
                       {region.name}
                     </option>
                   ))}
                 </select>
-                {errors.regionId && <p className="text-red-500 text-sm mt-1">{errors.regionId}</p>}
+                {errors.regionId && (
+                  <p className="text-red-500 text-sm">{errors.regionId}</p>
+                )}
               </div>
+            </div>
 
-              {/* Street Address */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Street Address</label>
-                <textarea
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  rows={5}
-                  className="w-full px-4 py-4 bg-white border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-gray-900 resize-none"
-                  placeholder="Enter your complete address"
-                />
-                {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
-              </div>
-
-              {/* Primary Address Checkbox */}
-              <div className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  name="isPrimary"
-                  checked={formData.isPrimary}
-                  onChange={handleInputChange}
-                  className="h-5 w-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label className="text-sm font-medium text-gray-700">
-                  Set as primary address
-                </label>
-              </div>
+            {/* Street Address */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Street Address
+              </label>
+              <Input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+                placeholder="Enter your complete street address"
+                className={`w-full ${
+                  errors.address ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors.address && (
+                <p className="text-red-500 text-sm">{errors.address}</p>
+              )}
             </div>
           </div>
 
           {/* Submit Button */}
-          <div className="mt-12 pt-8 border-t border-gray-200">
-            <Button
-              onClick={handleSubmit}
-              disabled={isLoading}
-              className="w-full h-16 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-lg"
-            >
-              {isLoading ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                  <span>Creating Account...</span>
-                </div>
-              ) : (
-                "Create Account"
-              )}
-            </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center"
+          >
+            {isLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Creating Account...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Create Account
+              </>
+            )}
+          </Button>
 
-            <p className="text-center text-sm text-gray-600 mt-6">
-              Already have an account?{" "}
-              <a href="/login" className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
-                Sign in here
-              </a>
-            </p>
+          {/* Sign In Link */}
+          <div className="text-center text-sm text-gray-600">
+            Already have an account?{" "}
+            <a
+              href="/login"
+              className="text-green-600 hover:text-green-700 font-medium"
+            >
+              Sign in here
+            </a>
           </div>
         </div>
       </div>
