@@ -10,6 +10,9 @@ import {
   Sparkles,
   Shield,
   CheckCircle,
+  ShoppingCart,
+  Leaf,
+  Star,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -53,8 +56,6 @@ export default function RegisterPage() {
   }, []);
 
   // Fetch divisions
-  // In your fetchDivisions function, add this debugging:
-  // Add debugging to see what data you're receiving
   const fetchDivisions = async () => {
     setLoadingStates((prev) => ({ ...prev, divisions: true }));
     try {
@@ -63,7 +64,7 @@ export default function RegisterPage() {
       );
       if (response.ok) {
         const data = await response.json();
-        console.log("Divisions data structure:", data); // Debug line
+        console.log("Divisions data structure:", data);
         setDivisions(data);
       } else {
         console.error("Failed to fetch divisions");
@@ -236,7 +237,10 @@ export default function RegisterPage() {
 
     // Clear error when user starts typing
     if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
+      setErrors((prev) => ({
+        ...prev,
+        [name]: "",
+      }));
     }
 
     // Check availability for username and email with debounce
@@ -264,11 +268,14 @@ export default function RegisterPage() {
       newErrors.confirmPassword = "Please confirm your password";
     if (!formData.firstName.trim())
       newErrors.firstName = "First name is required";
-    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
+    if (!formData.lastName.trim())
+      newErrors.lastName = "Last name is required";
     if (!formData.phoneNumber.trim())
       newErrors.phoneNumber = "Phone number is required";
-    if (!formData.divisionId) newErrors.divisionId = "Please select a division";
-    if (!formData.districtId) newErrors.districtId = "Please select a district";
+    if (!formData.divisionId)
+      newErrors.divisionId = "Please select a division";
+    if (!formData.districtId)
+      newErrors.districtId = "Please select a district";
     if (!formData.cityId) newErrors.cityId = "Please select a city";
     if (!formData.regionId) newErrors.regionId = "Please select a region";
     if (!formData.address.trim())
@@ -333,14 +340,10 @@ export default function RegisterPage() {
       });
 
       const data = await response.json();
-
       if (response.ok) {
-        // Store token in localStorage
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
         alert("Registration successful! Welcome to GroCart!");
-        // Redirect to dashboard or home page
-        // window.location.href = '/dashboard';
       } else {
         alert(`Registration failed: ${data.error}`);
       }
@@ -353,21 +356,54 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-green-100 overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-green-600 to-green-700 p-8 text-center">
-          <div className="flex items-center justify-center mb-4">
-            <Sparkles className="w-8 h-8 text-green-200 mr-2" />
-            <h1 className="text-3xl font-bold text-white">GroCart</h1>
+    <div className="min-h-screen bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400 flex items-center justify-center p-4">
+      <div className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-white/30 overflow-hidden">
+        {/* Simplified Header Box */}
+        <div className="bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700 p-12 text-center relative overflow-hidden">
+          {/* Animated Background Elements */}
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute top-8 left-12 text-6xl animate-bounce">🥕</div>
+            <div className="absolute top-12 right-16 text-5xl animate-pulse">🍎</div>
+            <div className="absolute bottom-10 left-20 text-4xl animate-bounce delay-300">🥬</div>
+            <div className="absolute bottom-12 right-12 text-5xl animate-pulse delay-500">🛒</div>
+            <div className="absolute top-1/2 left-1/3 text-3xl animate-bounce delay-700">🥛</div>
+            <div className="absolute top-1/3 right-1/3 text-4xl animate-pulse delay-200">🍞</div>
           </div>
-          <p className="text-green-100 text-lg">
-            Create your account to start shopping fresh groceries
-          </p>
+          
+          {/* Main Content */}
+          <div className="relative z-10">
+            {/* Enhanced Logo */}
+            <div className="flex items-center justify-center mb-6">
+              <div className="bg-white/25 backdrop-blur-lg rounded-full p-6 mr-6 border-3 border-white/40 shadow-2xl">
+                <div className="flex items-center justify-center relative">
+                  <ShoppingCart className="w-12 h-12 text-white mr-2" />
+                  <Leaf className="w-8 h-8 text-yellow-300 absolute -top-1 -right-1" />
+                  <Star className="w-4 h-4 text-yellow-400 absolute top-0 left-0 animate-pulse" />
+                </div>
+              </div>
+              <div className="text-left">
+                <h1 className="text-6xl font-black text-white tracking-wide mb-2">
+                  Gro<span className="text-yellow-300 drop-shadow-lg">Cart</span>
+                </h1>
+                <div className="flex items-center text-green-100 text-lg">
+                  <Star className="w-4 h-4 mr-1 text-yellow-300" />
+                  <span className="font-semibold">Fresh • Fast • Reliable</span>
+                  <Star className="w-4 h-4 ml-1 text-yellow-300" />
+                </div>
+              </div>
+            </div>
+            
+            {/* Simple Description */}
+            <div className="max-w-2xl mx-auto">
+              <p className="text-green-50 text-2xl font-semibold leading-relaxed">
+                Create your account to start shopping fresh groceries
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Form */}
-        <div className="p-8 space-y-6">
+        {/* Form Section */}
+        <div className="p-10 space-y-6">
           {/* Username */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 flex items-center">
@@ -380,7 +416,7 @@ export default function RegisterPage() {
               value={formData.username}
               onChange={handleInputChange}
               placeholder="Choose a unique username"
-              className={`w-full ${
+              className={`w-full h-16 text-lg bg-white text-gray-900 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                 errors.username ? "border-red-500" : "border-gray-300"
               }`}
             />
@@ -401,7 +437,7 @@ export default function RegisterPage() {
               value={formData.email}
               onChange={handleInputChange}
               placeholder="Enter your email address"
-              className={`w-full ${
+              className={`w-full h-16 text-lg bg-white text-gray-900 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                 errors.email ? "border-red-500" : "border-gray-300"
               }`}
             />
@@ -422,7 +458,7 @@ export default function RegisterPage() {
                 value={formData.firstName}
                 onChange={handleInputChange}
                 placeholder="First name"
-                className={`w-full ${
+                className={`w-full h-16 text-lg bg-white text-gray-900 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                   errors.firstName ? "border-red-500" : "border-gray-300"
                 }`}
               />
@@ -440,7 +476,7 @@ export default function RegisterPage() {
                 value={formData.lastName}
                 onChange={handleInputChange}
                 placeholder="Last name"
-                className={`w-full ${
+                className={`w-full h-16 text-lg bg-white text-gray-900 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                   errors.lastName ? "border-red-500" : "border-gray-300"
                 }`}
               />
@@ -462,7 +498,7 @@ export default function RegisterPage() {
               value={formData.phoneNumber}
               onChange={handleInputChange}
               placeholder="Enter your phone number"
-              className={`w-full ${
+              className={`w-full h-16 text-lg bg-white text-gray-900 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                 errors.phoneNumber ? "border-red-500" : "border-gray-300"
               }`}
             />
@@ -485,7 +521,7 @@ export default function RegisterPage() {
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="Create a strong password"
-                  className={`w-full pr-10 ${
+                  className={`w-full h-16 text-lg bg-white text-gray-900 px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.password ? "border-red-500" : "border-gray-300"
                   }`}
                 />
@@ -516,7 +552,7 @@ export default function RegisterPage() {
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                   placeholder="Confirm your password"
-                  className={`w-full pr-10 ${
+                  className={`w-full h-16 text-lg bg-white text-gray-900 px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.confirmPassword
                       ? "border-red-500"
                       : "border-gray-300"
@@ -557,7 +593,7 @@ export default function RegisterPage() {
                   name="divisionId"
                   value={formData.divisionId}
                   onChange={handleInputChange}
-                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                  className={`w-full h-16 text-lg bg-white text-gray-900 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.divisionId ? "border-red-500" : "border-gray-300"
                   }`}
                   disabled={loadingStates.divisions}
@@ -588,7 +624,7 @@ export default function RegisterPage() {
                   name="districtId"
                   value={formData.districtId}
                   onChange={handleInputChange}
-                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                  className={`w-full h-16 text-lg bg-white text-gray-900 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.districtId ? "border-red-500" : "border-gray-300"
                   }`}
                   disabled={loadingStates.districts || !formData.divisionId}
@@ -623,7 +659,7 @@ export default function RegisterPage() {
                   name="cityId"
                   value={formData.cityId}
                   onChange={handleInputChange}
-                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                  className={`w-full h-16 text-lg bg-white text-gray-900 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.cityId ? "border-red-500" : "border-gray-300"
                   }`}
                   disabled={loadingStates.cities || !formData.districtId}
@@ -655,7 +691,7 @@ export default function RegisterPage() {
                   name="regionId"
                   value={formData.regionId}
                   onChange={handleInputChange}
-                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                  className={`w-full h-16 text-lg bg-white text-gray-900 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.regionId ? "border-red-500" : "border-gray-300"
                   }`}
                   disabled={loadingStates.regions || !formData.cityId}
@@ -690,7 +726,7 @@ export default function RegisterPage() {
                 value={formData.address}
                 onChange={handleInputChange}
                 placeholder="Enter your complete street address"
-                className={`w-full ${
+                className={`w-full h-16 text-lg bg-white text-gray-900 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                   errors.address ? "border-red-500" : "border-gray-300"
                 }`}
               />
@@ -704,7 +740,7 @@ export default function RegisterPage() {
           <Button
             onClick={handleSubmit}
             disabled={isLoading}
-            className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center"
+            className="w-full h-16 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 hover:shadow-xl hover:scale-105 text-white font-semibold text-lg rounded-lg transition-all duration-300 flex items-center justify-center transform"
           >
             {isLoading ? (
               <>
@@ -713,7 +749,7 @@ export default function RegisterPage() {
               </>
             ) : (
               <>
-                <CheckCircle className="w-4 h-4 mr-2" />
+                <CheckCircle className="w-5 h-5 mr-2" />
                 Create Account
               </>
             )}
