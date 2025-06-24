@@ -56,6 +56,13 @@ const AddressManagement = () => {
     id: null,
     name: "",
   });
+  // Add this new state after your existing state declarations
+  const [fieldErrors, setFieldErrors] = useState({
+    division: "",
+    district: "",
+    city: "",
+    region: "",
+  });
 
   // Search states
   const [searchTerm, setSearchTerm] = useState("");
@@ -240,240 +247,273 @@ const AddressManagement = () => {
 
   // Handle new address submission
   const handleSubmitNewAddress = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  
-  try {
-    let divisionId = newAddress.selectedDivision;
-    let districtId = newAddress.selectedDistrict;
-    let cityId = newAddress.selectedCity;
-    let createdItems = [];
+    e.preventDefault();
+    setLoading(true);
 
-    // Create new division if needed
-    if (newAddress.selectedDivision === 'new' && newAddress.newDivisionName) {
-      try {
-        const divisionResponse = await fetch('http://localhost:3000/api/address/divisions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: newAddress.newDivisionName })
-        });
-        
-        const divisionData = await divisionResponse.json();
-        
-        if (divisionResponse.status === 409) {
-          error(`Division "${newAddress.newDivisionName}" already exists. Please choose a different name.`, {
-            title: '⚠️ Duplicate Division!',
-            duration: 6000
+    try {
+      let divisionId = newAddress.selectedDivision;
+      let districtId = newAddress.selectedDistrict;
+      let cityId = newAddress.selectedCity;
+      let createdItems = [];
+
+      // Create new division if needed
+      if (newAddress.selectedDivision === "new" && newAddress.newDivisionName) {
+        try {
+          const divisionResponse = await fetch(
+            "http://localhost:3000/api/address/divisions",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: newAddress.newDivisionName }),
+            }
+          );
+
+          const divisionData = await divisionResponse.json();
+
+          // Replace the existing division duplicate handling
+          if (divisionResponse.status === 409) {
+            setFieldErrors((prev) => ({
+              ...prev,
+              division: `Division "${newAddress.newDivisionName}" already exists. Please choose a different name.`,
+            }));
+            setLoading(false);
+            return;
+          }
+
+          if (!divisionResponse.ok) {
+            throw new Error(divisionData.error || "Failed to create division");
+          }
+
+          divisionId = divisionData.division_id;
+          createdItems.push("Division");
+
+          // If user only wants to create division, stop here
+          if (
+            !creationIntent.createDistrict &&
+            !creationIntent.createCity &&
+            !creationIntent.createRegion
+          ) {
+            success(
+              `Division "${newAddress.newDivisionName}" created successfully!`,
+              {
+                title: "🎉 Success!",
+                duration: 4000,
+                animation: "bounce",
+              }
+            );
+            resetForm();
+            fetchAllData();
+            setLoading(false);
+            return;
+          }
+        } catch (err) {
+          error("Network error while creating division. Please try again.", {
+            title: "❌ Network Error!",
+            duration: 5000,
           });
           setLoading(false);
           return;
         }
-        
-        if (!divisionResponse.ok) {
-          throw new Error(divisionData.error || 'Failed to create division');
+      }
+
+      // Create new district if needed and intended
+      if (
+        newAddress.selectedDistrict === "new" &&
+        newAddress.newDistrictName &&
+        divisionId &&
+        creationIntent.createDistrict
+      ) {
+        try {
+          const districtResponse = await fetch(
+            "http://localhost:3000/api/address/districts",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: newAddress.newDistrictName,
+                division_id: divisionId,
+              }),
+            }
+          );
+
+          const districtData = await districtResponse.json();
+
+          // Replace the existing district duplicate handling
+          if (districtResponse.status === 409) {
+            const selectedDivision = divisions.find(
+              (div) => div.division_id === divisionId
+            );
+            const divisionName = selectedDivision?.name || "selected division";
+            setFieldErrors((prev) => ({
+              ...prev,
+              district: `District "${newAddress.newDistrictName}" already exists in ${divisionName}. Please choose a different name.`,
+            }));
+            setLoading(false);
+            return;
+          }
+
+          if (!districtResponse.ok) {
+            throw new Error(districtData.error || "Failed to create district");
+          }
+
+          districtId = districtData.district_id;
+          createdItems.push("District");
+
+          // If user only wants to create up to district, stop here
+          if (!creationIntent.createCity && !creationIntent.createRegion) {
+            success(`${createdItems.join(" and ")} created successfully!`, {
+              title: "🎉 Success!",
+              duration: 4000,
+              animation: "bounce",
+            });
+            resetForm();
+            fetchAllData();
+            setLoading(false);
+            return;
+          }
+        } catch (err) {
+          error("Network error while creating district. Please try again.", {
+            title: "❌ Network Error!",
+            duration: 5000,
+          });
+          setLoading(false);
+          return;
         }
-        
-        divisionId = divisionData.division_id;
-        createdItems.push('Division');
-        
-        // If user only wants to create division, stop here
-        if (!creationIntent.createDistrict && !creationIntent.createCity && !creationIntent.createRegion) {
-          success(`Division "${newAddress.newDivisionName}" created successfully!`, {
-            title: '🎉 Success!',
+      }
+
+      // Create new city if needed and intended
+      if (
+        newAddress.selectedCity === "new" &&
+        newAddress.newCityName &&
+        districtId &&
+        creationIntent.createCity
+      ) {
+        try {
+          const cityResponse = await fetch(
+            "http://localhost:3000/api/address/cities",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: newAddress.newCityName,
+                district_id: districtId,
+              }),
+            }
+          );
+
+          const cityData = await cityResponse.json();
+
+          // Replace the existing city duplicate handling
+          if (cityResponse.status === 409) {
+            const selectedDistrict = districts.find(
+              (dist) => dist.district_id === districtId
+            );
+            const districtName = selectedDistrict?.name || "selected district";
+            setFieldErrors((prev) => ({
+              ...prev,
+              city: `City "${newAddress.newCityName}" already exists in ${districtName}. Please choose a different name.`,
+            }));
+            setLoading(false);
+            return;
+          }
+
+          if (!cityResponse.ok) {
+            throw new Error(cityData.error || "Failed to create city");
+          }
+
+          cityId = cityData.city_id;
+          createdItems.push("City");
+
+          // If user only wants to create up to city, stop here
+          if (!creationIntent.createRegion) {
+            success(`${createdItems.join(", ")} created successfully!`, {
+              title: "🎉 Success!",
+              duration: 4000,
+              animation: "bounce",
+            });
+            resetForm();
+            fetchAllData();
+            setLoading(false);
+            return;
+          }
+        } catch (err) {
+          error("Network error while creating city. Please try again.", {
+            title: "❌ Network Error!",
+            duration: 5000,
+          });
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Create new region if needed and intended
+      if (newAddress.newRegionName && cityId && creationIntent.createRegion) {
+        try {
+          const regionResponse = await fetch(
+            "http://localhost:3000/api/address/regions",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: newAddress.newRegionName,
+                city_id: cityId,
+                delivery_region_id: newAddress.deliveryRegionId || null,
+              }),
+            }
+          );
+
+          const regionData = await regionResponse.json();
+
+          // Replace the existing region duplicate handling
+          if (regionResponse.status === 409) {
+            const selectedCity = cities.find((city) => city.city_id === cityId);
+            const cityName = selectedCity?.name || "selected city";
+            setFieldErrors((prev) => ({
+              ...prev,
+              region: `Region "${newAddress.newRegionName}" already exists in ${cityName}. Please choose a different name.`,
+            }));
+            setLoading(false);
+            return;
+          }
+
+          if (!regionResponse.ok) {
+            throw new Error(regionData.error || "Failed to create region");
+          }
+
+          createdItems.push("Region");
+          success(`${createdItems.join(", ")} created successfully!`, {
+            title: "🎉 Address Created!",
             duration: 4000,
-            animation: 'bounce'
+            animation: "bounce",
+            position: "top-right",
+            icon: Trophy, // Import Trophy from lucide-react
+            size: "medium",
           });
           resetForm();
           fetchAllData();
+        } catch (err) {
+          error("Network error while creating region. Please try again.", {
+            title: "❌ Network Error!",
+            duration: 5000,
+          });
           setLoading(false);
           return;
         }
-      } catch (err) {
-        error('Network error while creating division. Please try again.', {
-          title: '❌ Network Error!',
-          duration: 5000
-        });
-        setLoading(false);
-        return;
       }
+    } catch (error) {
+      console.error("Error creating address:", error);
+      error("An unexpected error occurred. Please try again.", {
+        title: "❌ Error!",
+        duration: 5000,
+      });
+    } finally {
+      setLoading(false);
     }
-
-    // Create new district if needed and intended
-    if (newAddress.selectedDistrict === 'new' && newAddress.newDistrictName && divisionId && creationIntent.createDistrict) {
-      try {
-        const districtResponse = await fetch('http://localhost:3000/api/address/districts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            name: newAddress.newDistrictName, 
-            division_id: divisionId 
-          })
-        });
-        
-        const districtData = await districtResponse.json();
-        
-        if (districtResponse.status === 409) {
-          // Get division name for better error message
-          const selectedDivision = divisions.find(div => div.division_id === divisionId);
-          const divisionName = selectedDivision?.name || 'selected division';
-          
-          error(`District "${newAddress.newDistrictName}" already exists in ${divisionName}. Please choose a different name.`, {
-            title: '⚠️ Duplicate District!',
-            duration: 6000
-          });
-          setLoading(false);
-          return;
-        }
-        
-        if (!districtResponse.ok) {
-          throw new Error(districtData.error || 'Failed to create district');
-        }
-        
-        districtId = districtData.district_id;
-        createdItems.push('District');
-        
-        // If user only wants to create up to district, stop here
-        if (!creationIntent.createCity && !creationIntent.createRegion) {
-          success(`${createdItems.join(' and ')} created successfully!`, {
-            title: '🎉 Success!',
-            duration: 4000,
-            animation: 'bounce'
-          });
-          resetForm();
-          fetchAllData();
-          setLoading(false);
-          return;
-        }
-      } catch (err) {
-        error('Network error while creating district. Please try again.', {
-          title: '❌ Network Error!',
-          duration: 5000
-        });
-        setLoading(false);
-        return;
-      }
-    }
-
-    // Create new city if needed and intended
-    if (newAddress.selectedCity === 'new' && newAddress.newCityName && districtId && creationIntent.createCity) {
-      try {
-        const cityResponse = await fetch('http://localhost:3000/api/address/cities', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            name: newAddress.newCityName, 
-            district_id: districtId 
-          })
-        });
-        
-        const cityData = await cityResponse.json();
-        
-        if (cityResponse.status === 409) {
-          // Get district name for better error message
-          const selectedDistrict = districts.find(dist => dist.district_id === districtId);
-          const districtName = selectedDistrict?.name || 'selected district';
-          
-          error(`City "${newAddress.newCityName}" already exists in ${districtName}. Please choose a different name.`, {
-            title: '⚠️ Duplicate City!',
-            duration: 6000
-          });
-          setLoading(false);
-          return;
-        }
-        
-        if (!cityResponse.ok) {
-          throw new Error(cityData.error || 'Failed to create city');
-        }
-        
-        cityId = cityData.city_id;
-        createdItems.push('City');
-        
-        // If user only wants to create up to city, stop here
-        if (!creationIntent.createRegion) {
-          success(`${createdItems.join(', ')} created successfully!`, {
-            title: '🎉 Success!',
-            duration: 4000,
-            animation: 'bounce'
-          });
-          resetForm();
-          fetchAllData();
-          setLoading(false);
-          return;
-        }
-      } catch (err) {
-        error('Network error while creating city. Please try again.', {
-          title: '❌ Network Error!',
-          duration: 5000
-        });
-        setLoading(false);
-        return;
-      }
-    }
-
-    // Create new region if needed and intended
-    if (newAddress.newRegionName && cityId && creationIntent.createRegion) {
-      try {
-        const regionResponse = await fetch('http://localhost:3000/api/address/regions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: newAddress.newRegionName,
-            city_id: cityId,
-            delivery_region_id: newAddress.deliveryRegionId || null
-          })
-        });
-        
-        const regionData = await regionResponse.json();
-        
-        if (regionResponse.status === 409) {
-          // Get city name for better error message
-          const selectedCity = cities.find(city => city.city_id === cityId);
-          const cityName = selectedCity?.name || 'selected city';
-          
-          error(`Region "${newAddress.newRegionName}" already exists in ${cityName}. Please choose a different name.`, {
-            title: '⚠️ Duplicate Region!',
-            duration: 6000
-          });
-          setLoading(false);
-          return;
-        }
-        
-        if (!regionResponse.ok) {
-          throw new Error(regionData.error || 'Failed to create region');
-        }
-        
-        createdItems.push('Region');
-        success(`${createdItems.join(', ')} created successfully!`, {
-          title: '🎉 Success!',
-          duration: 4000,
-          animation: 'bounce'
-        });
-        resetForm();
-        fetchAllData();
-      } catch (err) {
-        error('Network error while creating region. Please try again.', {
-          title: '❌ Network Error!',
-          duration: 5000
-        });
-        setLoading(false);
-        return;
-      }
-    }
-
-  } catch (error) {
-    console.error('Error creating address:', error);
-    error('An unexpected error occurred. Please try again.', {
-      title: '❌ Error!',
-      duration: 5000
-    });
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   // Add this helper function
   const resetForm = () => {
+    // Reset all form text values
     setNewAddress({
       selectedDivision: "",
       selectedDistrict: "",
@@ -484,12 +524,33 @@ const AddressManagement = () => {
       newRegionName: "",
       deliveryRegionId: "",
     });
+
+    // Reset creation intent flags
     setCreationIntent({
       createDivision: false,
       createDistrict: false,
       createCity: false,
       createRegion: false,
     });
+
+    // Clear any field errors
+    setFieldErrors({
+      division: "",
+      district: "",
+      city: "",
+      region: "",
+    });
+
+    // Clear dependent dropdown arrays
+    setDistricts([]);
+    setCities([]);
+  };
+
+  const clearFieldError = (fieldName) => {
+    setFieldErrors((prev) => ({
+      ...prev,
+      [fieldName]: "",
+    }));
   };
 
   // Handle edit operations
@@ -939,15 +1000,26 @@ const AddressManagement = () => {
                             <input
                               type="text"
                               placeholder="Enter new division name"
+                              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                                fieldErrors.division
+                                  ? "border-red-500 focus:ring-red-500"
+                                  : "border-gray-300 focus:ring-blue-500"
+                              }`}
                               value={newAddress.newDivisionName}
-                              onChange={(e) =>
+                              onChange={(e) => {
                                 setNewAddress((prev) => ({
                                   ...prev,
                                   newDivisionName: e.target.value,
-                                }))
-                              }
-                              className="w-full p-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                }));
+                                clearFieldError("division");
+                              }}
                             />
+                            {fieldErrors.division && (
+                              <p className="mt-1 text-sm text-red-600 flex items-center">
+                                <X className="w-4 h-4 mr-1" />
+                                {fieldErrors.division}
+                              </p>
+                            )}
                           </div>
                         )}
                       </div>
@@ -991,15 +1063,26 @@ const AddressManagement = () => {
                             <input
                               type="text"
                               placeholder="Enter new district name"
+                              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                                fieldErrors.district
+                                  ? "border-red-500 focus:ring-red-500"
+                                  : "border-gray-300 focus:ring-blue-500"
+                              }`}
                               value={newAddress.newDistrictName}
-                              onChange={(e) =>
+                              onChange={(e) => {
                                 setNewAddress((prev) => ({
                                   ...prev,
                                   newDistrictName: e.target.value,
-                                }))
-                              }
-                              className="w-full p-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                }));
+                                clearFieldError("district");
+                              }}
                             />
+                            {fieldErrors.district && (
+                              <p className="mt-1 text-sm text-red-600 flex items-center">
+                                <X className="w-4 h-4 mr-1" />
+                                {fieldErrors.district}
+                              </p>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1038,15 +1121,26 @@ const AddressManagement = () => {
                             <input
                               type="text"
                               placeholder="Enter new city name"
+                              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                                fieldErrors.city
+                                  ? "border-red-500 focus:ring-red-500"
+                                  : "border-gray-300 focus:ring-blue-500"
+                              }`}
                               value={newAddress.newCityName}
-                              onChange={(e) =>
+                              onChange={(e) => {
                                 setNewAddress((prev) => ({
                                   ...prev,
                                   newCityName: e.target.value,
-                                }))
-                              }
-                              className="w-full p-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                }));
+                                clearFieldError("city");
+                              }}
                             />
+                            {fieldErrors.city && (
+                              <p className="mt-1 text-sm text-red-600 flex items-center">
+                                <X className="w-4 h-4 mr-1" />
+                                {fieldErrors.city}
+                              </p>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1061,15 +1155,26 @@ const AddressManagement = () => {
                           <input
                             type="text"
                             placeholder="Enter region name"
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                              fieldErrors.region
+                                ? "border-red-500 focus:ring-red-500"
+                                : "border-gray-300 focus:ring-blue-500"
+                            }`}
                             value={newAddress.newRegionName}
-                            onChange={(e) =>
+                            onChange={(e) => {
                               setNewAddress((prev) => ({
                                 ...prev,
                                 newRegionName: e.target.value,
-                              }))
-                            }
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              }));
+                              clearFieldError("region");
+                            }}
                           />
+                          {fieldErrors.region && (
+                            <p className="mt-1 text-sm text-red-600 flex items-center">
+                              <X className="w-4 h-4 mr-1" />
+                              {fieldErrors.region}
+                            </p>
+                          )}
                         </div>
 
                         <div className="mb-6">
