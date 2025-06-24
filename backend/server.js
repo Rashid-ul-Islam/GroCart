@@ -11,6 +11,7 @@ import adminPanelRoute from "./routes/adminPanelRoute.js";
 import addressRoute from "./routes/addressRoute.js";
 import userRegRoute from "./routes/userRegRoute.js";
 import productsByCat from "./routes/productsByCatRoute.js";
+import searchRoute from "./routes/searchRoute.js";
 
 
 const app = express();
@@ -33,6 +34,7 @@ app.use("/api/categories", addCategoryRoute);
 app.use("/api/adminDashboard",adminPanelRoute);
 app.use("/api/address", addressRoute);
 app.use("/api/auth", userRegRoute);
+app.use("/api/search", searchRoute);
 
 app.listen(port, () => {
   console.log(`Server running on ${port}`);

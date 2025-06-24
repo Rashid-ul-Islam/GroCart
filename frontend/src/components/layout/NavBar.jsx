@@ -1,6 +1,7 @@
 // src/components/layout/NavBar.jsx
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Search, X } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { ShoppingCart, Heart, User, PackageSearch, Shield } from "lucide-react";
 import { Button } from "../ui/button.jsx";
 import { Input } from "../ui/input.jsx";
@@ -12,22 +13,57 @@ export default function NavBar() {
   const [user, setUser] = useState(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const cartItemCount = 3;
+  const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchTerm.trim()) return;
+
+    try {
+      // Save search to history if user is logged in
+      if (isLoggedIn && user) {
+        await fetch("http://localhost:3000/api/search/saveSearchHistory", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            user_id: user.user_id,
+            search_query: searchTerm,
+          }),
+        });
+      }
+
+      // Navigate to search results page
+      navigate(`/search?query=${encodeURIComponent(searchTerm)}`);
+    } catch (error) {
+      console.error("Error saving search history:", error);
+      // Still navigate even if saving fails
+      navigate(`/search?query=${encodeURIComponent(searchTerm)}`);
+    }
+  };
+
+  // Clear search input
+  const clearSearch = () => {
+    setSearchTerm("");
+  };
 
   // Check if user is logged in on component mount
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-
+    const token = localStorage.getItem("token");
+    const userData = localStorage.getItem("user");
     if (token && userData) {
       try {
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
         setIsLoggedIn(true);
-        setIsAdmin(parsedUser.role_id === 'admin');
+        setIsAdmin(parsedUser.role_id === "admin");
       } catch (error) {
-        console.error('Error parsing user data:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        console.error("Error parsing user data:", error);
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
       }
     }
   }, []);
@@ -36,18 +72,18 @@ export default function NavBar() {
   const handleLoginSuccess = (userData) => {
     setUser(userData);
     setIsLoggedIn(true);
-    setIsAdmin(userData.role_id === 'admin');
+    setIsAdmin(userData.role_id === "admin");
     setIsLoginModalOpen(false);
   };
 
   // Handle logout
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setUser(null);
     setIsLoggedIn(false);
     setIsAdmin(false);
-    window.location.href = '/';
+    window.location.href = "/";
   };
 
   // Get current path for modal navigation logic
@@ -66,23 +102,27 @@ export default function NavBar() {
           </Link>
 
           {/* Search bar */}
-          <div className="flex-1 max-w-2xl mx-8 hidden md:block">
+          <form onSubmit={handleSearch} className="flex-1 max-w-2xl mx-8">
             <div className="relative">
               <Input
-                type="search"
-                placeholder="Search for Fresh Groceries..."
-                className="bg-yellow-100 rounded-full px-8 py-4 shadow-lg focus:ring-4 focus:ring-yellow-300 focus:outline-none transition text-lg pr-12"
-                style={{
-                  width: "450px",
-                  maxWidth: "100%",
-                  backgroundColor: "#FEFEFE",
-                }}
+                type="text"
+                placeholder="Search for products..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
-              <button className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                <PackageSearch className="h-6 w-6 text-purple-400 hover:text-purple-600 transition" />
-              </button>
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={clearSearch}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
-          </div>
+          </form>
 
           {/* Right-side controls */}
           <div className="flex items-center gap-8 text-purple-700">
@@ -152,27 +192,42 @@ export default function NavBar() {
                 className="p-0 rounded-full hover:bg-yellow-200 focus:ring-4 focus:ring-yellow-300 transition flex items-center space-x-2"
               >
                 <User className="w-7 h-7 text-purple-700 hover:text-yellow-400 transition" />
-                {isLoggedIn && <span className="hidden md:block text-purple-700 hover:text-yellow-400 font-medium">{user?.first_name}</span>}
+                {isLoggedIn && (
+                  <span className="hidden md:block text-purple-700 hover:text-yellow-400 font-medium">
+                    {user?.first_name}
+                  </span>
+                )}
               </Button>
               <div className="absolute right-0 mt-2 w-64 bg-white shadow-xl rounded-md border border-purple-300 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                 {isLoggedIn ? (
                   <>
                     <div className="px-4 py-3 border-b border-purple-100 bg-gradient-to-r from-purple-50 to-yellow-50">
-                      <p className="font-bold text-purple-900">{user?.first_name} {user?.last_name}</p>
+                      <p className="font-bold text-purple-900">
+                        {user?.first_name} {user?.last_name}
+                      </p>
                       <p className="text-sm text-purple-600">{user?.email}</p>
                     </div>
-                    <Link to="/profile" className="block hover:bg-yellow-50 px-4 py-2 cursor-pointer transition text-purple-700 hover:text-purple-900">
+                    <Link
+                      to="/profile"
+                      className="block hover:bg-yellow-50 px-4 py-2 cursor-pointer transition text-purple-700 hover:text-purple-900"
+                    >
                       Profile
                     </Link>
                     {isAdmin && (
-                      <Link to="/admin" className="block hover:bg-yellow-50 px-4 py-2 cursor-pointer transition text-purple-700 hover:text-purple-900">
+                      <Link
+                        to="/admin"
+                        className="block hover:bg-yellow-50 px-4 py-2 cursor-pointer transition text-purple-700 hover:text-purple-900"
+                      >
                         Admin Panel
                       </Link>
                     )}
-                    <Link to="/orders" className="block hover:bg-yellow-50 px-4 py-2 cursor-pointer transition text-purple-700 hover:text-purple-900">
+                    <Link
+                      to="/orders"
+                      className="block hover:bg-yellow-50 px-4 py-2 cursor-pointer transition text-purple-700 hover:text-purple-900"
+                    >
                       My Orders
                     </Link>
-                    <button 
+                    <button
                       onClick={handleLogout}
                       className="block w-full text-left hover:bg-red-50 px-4 py-2 cursor-pointer transition text-red-600 hover:text-red-800 border-t border-purple-100"
                     >
@@ -187,7 +242,10 @@ export default function NavBar() {
                     >
                       Login
                     </button>
-                    <Link to="/register" className="block hover:bg-yellow-50 px-4 py-2 cursor-pointer transition text-purple-700 hover:text-purple-900">
+                    <Link
+                      to="/register"
+                      className="block hover:bg-yellow-50 px-4 py-2 cursor-pointer transition text-purple-700 hover:text-purple-900"
+                    >
                       Register
                     </Link>
                   </>
