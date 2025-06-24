@@ -7,6 +7,7 @@ import AddProduct from "./pages/AddProduct.jsx";
 import AddCategory from "./pages/AddCategory.jsx";
 import RegisterPage from "./pages/regPage.jsx";
 import AddressManagement from "./pages/AddressManagement.jsx";
+import ProductsByCategory from "./pages/ProductByCategory.jsx";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 export default function App() {
@@ -20,6 +21,8 @@ export default function App() {
         <Route path="admin/add-category" element={<AddCategory />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/address-management" element={<AddressManagement />} />
+        <Route path="/products/category" element={<ProductsByCategory />} />
+        {/* Add more routes as needed */}
       </Routes>
     </Router>
   );

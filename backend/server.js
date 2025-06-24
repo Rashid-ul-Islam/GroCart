@@ -10,6 +10,7 @@ import addCategoryRoute from "./routes/addCategoryRoute.js";
 import adminPanelRoute from "./routes/adminPanelRoute.js";
 import addressRoute from "./routes/addressRoute.js";
 import userRegRoute from "./routes/userRegRoute.js";
+import productsByCat from "./routes/productsByCatRoute.js";
 
 
 const app = express();
@@ -27,6 +28,7 @@ const port = process.env.PORT || 3000;
 
 
 app.use("/api/products",addProductRoute);
+app.use("/api/productsByCat", productsByCat);
 app.use("/api/categories", addCategoryRoute);
 app.use("/api/adminDashboard",adminPanelRoute);
 app.use("/api/address", addressRoute);

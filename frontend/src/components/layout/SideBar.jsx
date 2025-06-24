@@ -86,25 +86,32 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView, onSidebarT
   };
 
   const handleCategorySelect = async (category) => {
-    const hasChildren = await checkHasChildren(category.category_id);
-    if (hasChildren) {
-      const childCategories = await fetchChildCategories(category.category_id);
-      const newPath = [...selectedPath, category];
-      setSelectedPath(newPath);
-      setCategoryBreadcrumb(newPath);
-      setCategoryLevels((prev) => [...prev, childCategories]);
-      setCurrentLevel((prev) => prev + 1);
-      if (onCategorySelect) {
-        onCategorySelect(category, false);
-      }
-    } else {
-      const newPath = [...selectedPath, category];
-      setCategoryBreadcrumb(newPath);
-      if (onProductsView) {
-        onProductsView(category.category_id, newPath);
-      }
+  const hasChildren = await checkHasChildren(category.category_id);
+  
+  if (hasChildren) {
+    const childCategories = await fetchChildCategories(category.category_id);
+    const newPath = [...selectedPath, category];
+    setSelectedPath(newPath);
+    setCategoryBreadcrumb(newPath);
+    setCategoryLevels((prev) => [...prev, childCategories]);
+    setCurrentLevel((prev) => prev + 1);
+    
+    if (onCategorySelect) {
+      onCategorySelect(category, false);
     }
-  };
+  } else {
+    // This is a leaf category - navigate to products page
+    const newPath = [...selectedPath, category];
+    setCategoryBreadcrumb(newPath);
+    
+    // Fix: Ensure category_name exists, fallback to 'Unknown Category'
+    const categoryName = category.category_name || 'Unknown Category';
+    
+    // Navigate to products page with category
+    window.location.href = `/products/category?categoryId=${category.category_id}&categoryName=${encodeURIComponent(categoryName)}`;
+  }
+};
+
 
   const handleBackToLevel = (targetLevel) => {
     if (targetLevel < 0) {
