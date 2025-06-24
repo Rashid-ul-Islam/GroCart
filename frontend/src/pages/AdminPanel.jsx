@@ -44,7 +44,6 @@ export default function AdminPanel() {
   const [productsPerPage] = useState(10);
 
   // Filter states
-  // Filter states
   const [selectedCategory, setSelectedCategory] = useState("");
   const [priceRange, setPriceRange] = useState({ min: "", max: "" });
   const [selectedOrigin, setSelectedOrigin] = useState("");
@@ -52,9 +51,6 @@ export default function AdminPanel() {
   const [isAvailableFilter, setIsAvailableFilter] = useState("");
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [showFilters, setShowFilters] = useState(false);
-
-  // Get unique categories for filter dropdown
-  // const categories = [...new Set(products.map((product) => product.category))];
 
   // Fetch dashboard stats on component mount
   useEffect(() => {
@@ -116,6 +112,7 @@ export default function AdminPanel() {
       setStatsError(null);
     }
   };
+
   // Fetch categories
   const fetchCategories = async () => {
     try {
@@ -236,14 +233,10 @@ export default function AdminPanel() {
 
   // Pagination functionality
   const getCurrentPageProducts = () => {
-    // const filteredProducts = getFilteredProducts();
     const indexOfLastProduct = currentPage * productsPerPage;
     const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
     return filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
   };
-
-  // const totalFilteredProducts = getFilteredProducts().length;
-  // const totalPages = Math.ceil(totalFilteredProducts / productsPerPage);
 
   const goToNextPage = () => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
@@ -445,7 +438,7 @@ export default function AdminPanel() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Enter product name to search..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
+                  className="w-full h-12 px-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200 text-lg"
                 />
               </div>
               <div className="flex gap-2">
@@ -567,7 +560,7 @@ export default function AdminPanel() {
                     setSelectedCategory(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full h-12 px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 >
                   <option value="">All Categories</option>
                   {categories.map((category) => (
@@ -598,7 +591,7 @@ export default function AdminPanel() {
                       }));
                       setCurrentPage(1);
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full h-12 px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   />
                   <input
                     type="number"
@@ -611,7 +604,7 @@ export default function AdminPanel() {
                       }));
                       setCurrentPage(1);
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full h-12 px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   />
                 </div>
               </div>
@@ -629,7 +622,7 @@ export default function AdminPanel() {
                     setSelectedOrigin(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full h-12 px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 />
               </div>
 
@@ -644,7 +637,7 @@ export default function AdminPanel() {
                     setIsRefundableFilter(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full h-12 px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 >
                   <option value="">All</option>
                   <option value="true">Yes</option>
@@ -663,7 +656,7 @@ export default function AdminPanel() {
                     setIsAvailableFilter(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full h-12 px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 >
                   <option value="">All</option>
                   <option value="true">Available</option>
@@ -687,7 +680,7 @@ export default function AdminPanel() {
                       }));
                       setCurrentPage(1);
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full h-12 px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   />
                   <input
                     type="date"
@@ -699,7 +692,7 @@ export default function AdminPanel() {
                       }));
                       setCurrentPage(1);
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full h-12 px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   />
                 </div>
               </div>
