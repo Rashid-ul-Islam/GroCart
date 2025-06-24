@@ -68,11 +68,11 @@ const ProductCard = ({ product, onProductClick }) => {
         <div className="flex items-center justify-between mb-4">
           <div className="flex flex-col">
             <span className="text-2xl font-bold text-purple-600">
-              ${product.price || "0.00"}
+              {product.price || "৳0.00"}
             </span>
             {product.originalPrice && (
               <span className="text-sm text-gray-500 line-through">
-                ${product.originalPrice}
+                {product.originalPrice}
               </span>
             )}
           </div>
@@ -166,85 +166,162 @@ const ProductSection = ({
   );
 };
 
-// Sample data for demonstration
-const sampleProducts = [
-  {
-    id: 1,
-    name: "Fresh Organic Bananas",
-    price: "2.99",
-    originalPrice: "3.99",
-    discount: 25,
-    rating: 4,
-    reviews: 156,
-    unit: "per lb",
-    image:
-      "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=300&h=200&fit=crop",
-  },
-  {
-    id: 2,
-    name: "Premium Avocados",
-    price: "4.99",
-    rating: 5,
-    reviews: 89,
-    unit: "pack of 4",
-    image:
-      "https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=300&h=200&fit=crop",
-  },
-  {
-    id: 3,
-    name: "Fresh Strawberries",
-    price: "5.99",
-    originalPrice: "7.99",
-    discount: 15,
-    rating: 4,
-    reviews: 234,
-    unit: "per box",
-    image:
-      "https://images.unsplash.com/photo-1464454709131-ffd692591ee5?w=300&h=200&fit=crop",
-  },
-];
-
 // Main HomePage Component
 const HomePage = () => {
   const [selectedProducts, setSelectedProducts] = useState(null);
   const [categoryPath, setCategoryPath] = useState([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // State for homepage sections
+  const [homepageData, setHomepageData] = useState({
+    mostPopular: [],
+    freshVegetables: [],
+    freshFruits: [],
+    dairyProducts: [],
+    meatProducts: [],
+    beverages: []
+  });
 
   // Add handler function
   const handleSidebarToggle = (collapsed) => {
     setIsSidebarCollapsed(collapsed);
   };
 
-  const [sections, setSections] = useState({
-    popular: { products: [], loading: true },
-    trending: { products: [], loading: true },
-    fresh: { products: [], loading: true },
-    organic: { products: [], loading: true },
-    deals: { products: [], loading: true },
+  const transformProduct = (apiProduct) => ({
+    id: apiProduct.product_id,
+    name: apiProduct.product_name || apiProduct.name,
+    price: `৳${apiProduct.price}`,
+    unit: apiProduct.unit_measure || 'kg',
+    origin: apiProduct.origin || 'Local',
+    description: apiProduct.description,
+    image: apiProduct.image_url || apiProduct.primary_image || 'https://via.placeholder.com/300x200',
+    isAvailable: apiProduct.is_available,
+    isRefundable: apiProduct.is_refundable,
+    rating: parseFloat(apiProduct.avg_rating) || 4,
+    reviews: parseInt(apiProduct.review_count) || Math.floor(Math.random() * 200) + 10,
+    category: apiProduct.category_name
   });
 
-  // Simulate API calls with sample data
+  // Fetch homepage products
   useEffect(() => {
-    const loadSectionData = async (sectionKey) => {
-      // Simulate API delay
-      await new Promise((resolve) =>
-        setTimeout(resolve, 1000 + Math.random() * 2000)
-      );
-
-      setSections((prev) => ({
-        ...prev,
-        [sectionKey]: {
-          products: sampleProducts, // Using sample data for demonstration
-          loading: false,
-        },
-      }));
+    const fetchHomepageProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        console.log('Fetching homepage products...');
+        const response = await fetch('http://localhost:3000/api/home/getProductsForHomepage');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const apiResponse = await response.json();
+        console.log('API Response:', apiResponse);
+        
+        if (!apiResponse.success) {
+          throw new Error(apiResponse.message || 'Failed to fetch products');
+        }
+        
+        // Handle the response structure
+        let transformedData;
+        
+        if (apiResponse.data && typeof apiResponse.data === 'object' && !Array.isArray(apiResponse.data)) {
+          // If data is already categorized
+          transformedData = {
+            mostPopular: (apiResponse.data.mostPopular || []).map(transformProduct),
+            freshVegetables: (apiResponse.data.freshVegetables || []).map(transformProduct),
+            freshFruits: (apiResponse.data.freshFruits || []).map(transformProduct),
+            dairyProducts: (apiResponse.data.dairyProducts || []).map(transformProduct),
+            meatProducts: (apiResponse.data.meatProducts || []).map(transformProduct),
+            beverages: (apiResponse.data.beverages || []).map(transformProduct)
+          };
+        } else {
+          // If data is a flat array, distribute products across categories
+          const allProducts = (Array.isArray(apiResponse.data) ? apiResponse.data : []).map(transformProduct);
+          
+          transformedData = {
+            mostPopular: allProducts.slice(0, 5),
+            freshVegetables: allProducts.filter(p => 
+              p.category && p.category.toLowerCase().includes('vegetable')
+            ).slice(0, 5),
+            freshFruits: allProducts.filter(p => 
+              p.category && p.category.toLowerCase().includes('fruit')
+            ).slice(0, 5),
+            dairyProducts: allProducts.filter(p => 
+              p.category && (
+                p.category.toLowerCase().includes('dairy') ||
+                p.category.toLowerCase().includes('milk') ||
+                p.category.toLowerCase().includes('cheese')
+              )
+            ).slice(0, 5),
+            meatProducts: allProducts.filter(p => 
+              p.category && (
+                p.category.toLowerCase().includes('meat') ||
+                p.category.toLowerCase().includes('chicken') ||
+                p.category.toLowerCase().includes('beef') ||
+                p.category.toLowerCase().includes('fish')
+              )
+            ).slice(0, 5),
+            beverages: allProducts.filter(p => 
+              p.category && (
+                p.category.toLowerCase().includes('beverage') ||
+                p.category.toLowerCase().includes('drink') ||
+                p.category.toLowerCase().includes('juice')
+              )
+            ).slice(0, 5)
+          };
+          
+          // Fill empty categories with random products
+          Object.keys(transformedData).forEach(key => {
+            if (key !== 'mostPopular' && transformedData[key].length === 0) {
+              transformedData[key] = allProducts.slice(0, 5);
+            }
+          });
+        }
+        
+        console.log('Transformed data:', transformedData);
+        setHomepageData(transformedData);
+        
+      } catch (error) {
+        console.error('Error fetching homepage products:', error);
+        setError(`Failed to load products: ${error.message}`);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    // Load each section
-    Object.keys(sections).forEach((sectionKey) => {
-      loadSectionData(sectionKey);
-    });
+    fetchHomepageProducts();
   }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-purple-600" />
+          <div className="text-lg font-medium text-gray-700">Loading fresh products...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex items-center justify-center">
+        <div className="text-center bg-white p-8 rounded-2xl shadow-lg">
+          <div className="text-red-600 mb-4">⚠️ Error: {error}</div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleCategorySelect = (category, hasProducts) => {
     console.log("Category selected:", category);
@@ -272,18 +349,41 @@ const HomePage = () => {
 
   const sectionConfigs = [
     {
-      key: "popular",
-      title: "Popular Products",
+      key: "mostPopular",
+      title: "Most Popular",
       subtitle: "Customer favorites",
+      products: homepageData.mostPopular
     },
     {
-      key: "trending",
-      title: "Trending Now",
-      subtitle: "What's hot right now",
+      key: "freshVegetables",
+      title: "Fresh Vegetables",
+      subtitle: "Farm fresh daily",
+      products: homepageData.freshVegetables
     },
-    { key: "fresh", title: "Fresh Vegetables", subtitle: "Farm fresh daily" },
-    { key: "organic", title: "Organic Selection", subtitle: "Pure & natural" },
-    { key: "deals", title: "Special Deals", subtitle: "Limited time offers" },
+    {
+      key: "freshFruits",
+      title: "Fresh Fruits",
+      subtitle: "Sweet & juicy",
+      products: homepageData.freshFruits
+    },
+    {
+      key: "dairyProducts",
+      title: "Dairy Products",
+      subtitle: "Pure & fresh",
+      products: homepageData.dairyProducts
+    },
+    {
+      key: "meatProducts",
+      title: "Meat Products",
+      subtitle: "Premium quality",
+      products: homepageData.meatProducts
+    },
+    {
+      key: "beverages",
+      title: "Beverages",
+      subtitle: "Refreshing drinks",
+      products: homepageData.beverages
+    }
   ];
 
   return (
@@ -328,8 +428,8 @@ const HomePage = () => {
               <ProductSection
                 key={config.key}
                 title={config.title}
-                products={sections[config.key].products}
-                loading={sections[config.key].loading}
+                products={config.products}
+                loading={false} // Loading is handled at the component level
                 onViewMore={() => handleViewMore(config.key)}
                 onProductClick={handleProductClick}
               />
