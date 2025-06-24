@@ -486,7 +486,6 @@ const AddressManagement = () => {
             duration: 4000,
             animation: "bounce",
             position: "top-right",
-            icon: Trophy, // Import Trophy from lucide-react
             size: "medium",
           });
           resetForm();
@@ -618,6 +617,7 @@ const AddressManagement = () => {
       });
     }
   };
+
   // Add these helper functions
   const hasValidCreationIntent = () => {
     if (creationIntent.createDivision && newAddress.newDivisionName)
@@ -653,7 +653,7 @@ const AddressManagement = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
@@ -665,15 +665,15 @@ const AddressManagement = () => {
           </p>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons - ENHANCED COLORFUL BUTTONS */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex flex-wrap gap-4">
             <Button
               onClick={() => setActiveTab("overview")}
-              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all transform hover:scale-105 ${
                 activeTab === "overview"
-                  ? "bg-indigo-600 text-white shadow-lg"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? "bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-lg hover:from-emerald-700 hover:to-emerald-800"
+                  : "bg-gradient-to-r from-emerald-200 to-emerald-300 text-emerald-800 hover:from-emerald-300 hover:to-emerald-400"
               }`}
             >
               Overview
@@ -681,10 +681,10 @@ const AddressManagement = () => {
 
             <Button
               onClick={() => setActiveTab("new-address")}
-              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all transform hover:scale-105 ${
                 activeTab === "new-address"
-                  ? "bg-blue-600 text-white shadow-lg"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? "bg-gradient-to-r from-orange-600 to-red-600 text-red-800 shadow-lg hover:from-orange-700 hover:to-red-700"
+                  : "bg-gradient-to-r from-orange-400 to-red-400 text-red-900 hover:from-orange-500 hover:to-red-700"
               }`}
             >
               <Plus className="w-5 h-5" />
@@ -693,10 +693,10 @@ const AddressManagement = () => {
 
             <Button
               onClick={() => setActiveTab("edit-address")}
-              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all transform hover:scale-105 ${
                 activeTab === "edit-address"
-                  ? "bg-green-600 text-white shadow-lg"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? "bg-gradient-to-r from-teal-600 to-cyan-600 text-white shadow-lg hover:from-teal-700 hover:to-cyan-700"
+                  : "bg-gradient-to-r from-teal-400 to-cyan-500 text-teal-800 hover:from-teal-600 hover:to-cyan-800"
               }`}
             >
               <Edit3 className="w-5 h-5" />
@@ -705,10 +705,10 @@ const AddressManagement = () => {
 
             <Button
               onClick={() => setActiveTab("delivery-regions")}
-              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all transform hover:scale-105 ${
                 activeTab === "delivery-regions"
-                  ? "bg-purple-600 text-white shadow-lg"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg hover:from-violet-700 hover:to-purple-700"
+                  : "bg-gradient-to-r from-violet-500 to-purple-500 text-purple-800 hover:from-violet-600 hover:to-purple-800"
               }`}
             >
               <MapPin className="w-5 h-5" />
@@ -735,7 +735,7 @@ const AddressManagement = () => {
                     </h2>
                     <Button
                       onClick={fetchAllData}
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-lg hover:from-indigo-600 hover:to-blue-600 shadow-md"
                     >
                       <RefreshCw className="w-4 h-4" />
                       Refresh
@@ -859,7 +859,6 @@ const AddressManagement = () => {
                   </h2>
 
                   <form onSubmit={handleSubmitNewAddress} className="space-y-6">
-                    {/* Division Selection */}
                     {/* Creation Intent Selection */}
                     <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                       <h4 className="font-medium text-blue-900 mb-3">
@@ -1216,7 +1215,7 @@ const AddressManagement = () => {
                       <Button
                         type="submit"
                         disabled={loading || !hasValidCreationIntent()}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors duration-200"
+                        className="w-full bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white py-3 px-6 rounded-lg transition-all duration-200 font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {loading ? (
                           <div className="flex items-center justify-center gap-2">
@@ -1447,7 +1446,7 @@ const AddressManagement = () => {
                       <div className="flex items-end">
                         <Button
                           onClick={handleSearch}
-                          className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
+                          className="w-full px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-lg hover:from-amber-700 hover:to-orange-700 flex items-center justify-center gap-2 shadow-md"
                         >
                           <Search className="w-4 h-4" />
                           Search
@@ -1615,6 +1614,12 @@ const AddressManagement = () => {
             </>
           )}
         </div>
+
+        {/* Notification Container */}
+        <NotificationContainer
+          notifications={notifications}
+          removeNotification={removeNotification}
+        />
       </div>
     </div>
   );
