@@ -87,7 +87,7 @@ export default function NavBar() {
           {/* Right-side controls */}
           <div className="flex items-center gap-8 text-purple-700">
             {/* Categories Dropdown (on hover) */}
-            <div className="relative group">
+            {/* <div className="relative group">
               <Button
                 variant="ghost"
                 className="text-base font-medium hover:text-yellow-400 focus:outline-none transition"
@@ -100,15 +100,15 @@ export default function NavBar() {
                 <Link to="/category/dairy" className="block hover:bg-yellow-50 px-4 py-2 cursor-pointer transition">Dairy</Link>
                 <Link to="/category/meat" className="block hover:bg-yellow-50 px-4 py-2 cursor-pointer transition">Meat</Link>
               </div>
-            </div>
+            </div> */}
 
             {/* Favorites */}
-            <Link
+            {/* <Link
               to="/favorites"
               className="hover:text-yellow-400 transition duration-300"
             >
               <Heart className="w-7 h-7 animate-pulse" />
-            </Link>
+            </Link> */}
 
             {/* Cart */}
             <Link
