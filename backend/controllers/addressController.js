@@ -31,21 +31,27 @@ export const getDivisionById = async (req, res) => {
 export const createDivision = async (req, res) => {
   try {
     const { name } = req.body;
-    
     if (!name) {
       return res.status(400).json({ error: 'Division name is required' });
+    }
+
+    // Check for duplicate
+    const duplicateCheck = await pool.query(
+      'SELECT division_id FROM "Division" WHERE LOWER(name) = LOWER($1)',
+      [name]
+    );
+
+    if (duplicateCheck.rows.length > 0) {
+      return res.status(409).json({ error: 'Division already exists' });
     }
 
     const result = await pool.query(
       'INSERT INTO "Division" (name) VALUES ($1) RETURNING *',
       [name]
     );
-    
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    if (error.code === '23505') { // Unique violation
-      return res.status(409).json({ error: 'Division name already exists' });
-    }
     console.error('Error creating division:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -166,10 +172,9 @@ export const getDistrictById = async (req, res) => {
 export const createDistrict = async (req, res) => {
   try {
     const { name, division_id } = req.body;
-    
     if (!name || !division_id) {
-      return res.status(400).json({ 
-        error: 'District name and division_id are required' 
+      return res.status(400).json({
+        error: 'District name and division_id are required'
       });
     }
 
@@ -178,22 +183,32 @@ export const createDistrict = async (req, res) => {
       'SELECT division_id FROM "Division" WHERE division_id = $1',
       [division_id]
     );
-    
     if (divisionCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Division not found' });
+    }
+
+    // Check for duplicate district in the same division
+    const duplicateCheck = await pool.query(
+      'SELECT district_id FROM "District" WHERE LOWER(name) = LOWER($1) AND division_id = $2',
+      [name, division_id]
+    );
+
+    if (duplicateCheck.rows.length > 0) {
+      return res.status(409).json({ error: 'District already exists in this division' });
     }
 
     const result = await pool.query(
       'INSERT INTO "District" (name, division_id) VALUES ($1, $2) RETURNING *',
       [name, division_id]
     );
-    
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Error creating district:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
 
 export const updateDistrict = async (req, res) => {
   try {
@@ -327,10 +342,9 @@ export const getCityById = async (req, res) => {
 export const createCity = async (req, res) => {
   try {
     const { name, district_id } = req.body;
-    
     if (!name || !district_id) {
-      return res.status(400).json({ 
-        error: 'City name and district_id are required' 
+      return res.status(400).json({
+        error: 'City name and district_id are required'
       });
     }
 
@@ -339,16 +353,25 @@ export const createCity = async (req, res) => {
       'SELECT district_id FROM "District" WHERE district_id = $1',
       [district_id]
     );
-    
     if (districtCheck.rows.length === 0) {
       return res.status(404).json({ error: 'District not found' });
+    }
+
+    // Check for duplicate city in the same district
+    const duplicateCheck = await pool.query(
+      'SELECT city_id FROM "City" WHERE LOWER(name) = LOWER($1) AND district_id = $2',
+      [name, district_id]
+    );
+
+    if (duplicateCheck.rows.length > 0) {
+      return res.status(409).json({ error: 'City already exists in this district' });
     }
 
     const result = await pool.query(
       'INSERT INTO "City" (name, district_id) VALUES ($1, $2) RETURNING *',
       [name, district_id]
     );
-    
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Error creating city:', error);
@@ -661,10 +684,9 @@ export const getRegionById = async (req, res) => {
 export const createRegion = async (req, res) => {
   try {
     const { name, city_id, delivery_region_id } = req.body;
-    
     if (!name || !city_id) {
-      return res.status(400).json({ 
-        error: 'Region name and city_id are required' 
+      return res.status(400).json({
+        error: 'Region name and city_id are required'
       });
     }
 
@@ -673,7 +695,6 @@ export const createRegion = async (req, res) => {
       'SELECT city_id FROM "City" WHERE city_id = $1',
       [city_id]
     );
-    
     if (cityCheck.rows.length === 0) {
       return res.status(404).json({ error: 'City not found' });
     }
@@ -684,17 +705,26 @@ export const createRegion = async (req, res) => {
         'SELECT delivery_region_id FROM "DeliveryRegion" WHERE delivery_region_id = $1',
         [delivery_region_id]
       );
-      
       if (deliveryRegionCheck.rows.length === 0) {
         return res.status(404).json({ error: 'Delivery region not found' });
       }
+    }
+
+    // Check for duplicate region in the same city
+    const duplicateCheck = await pool.query(
+      'SELECT region_id FROM "Region" WHERE LOWER(name) = LOWER($1) AND city_id = $2',
+      [name, city_id]
+    );
+
+    if (duplicateCheck.rows.length > 0) {
+      return res.status(409).json({ error: 'Region already exists in this city' });
     }
 
     const result = await pool.query(
       'INSERT INTO "Region" (name, city_id, delivery_region_id) VALUES ($1, $2, $3) RETURNING *',
       [name, city_id, delivery_region_id || null]
     );
-    
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Error creating region:', error);
