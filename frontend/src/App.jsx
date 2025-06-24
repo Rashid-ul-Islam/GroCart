@@ -16,8 +16,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/admin" element={<AdminPanel />} />
-        <Route path="/add-product" element={<AddProduct />} />
-        <Route path="/add-category" element={<AddCategory />} />
+        <Route path="admin/add-product" element={<AddProduct />} />
+        <Route path="admin/add-category" element={<AddCategory />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/address-management" element={<AddressManagement />} />
       </Routes>
