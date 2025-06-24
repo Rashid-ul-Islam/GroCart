@@ -1,11 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Heart, Folder, FolderOpen, HelpCircle, ArrowLeft, Package, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Heart,
+  Folder,
+  FolderOpen,
+  HelpCircle,
+  ArrowLeft,
+  Package,
+  Loader2,
+} from "lucide-react";
 
 // Sidebar component
-function Sidebar({ onCategorySelect, onProductsView, onFavoritesView }) {
+function Sidebar({ onCategorySelect, onProductsView, onFavoritesView, onSidebarToggle }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeSection, setActiveSection] = useState('categories');
+  const [activeSection, setActiveSection] = useState("categories");
   const [categoryLevels, setCategoryLevels] = useState([]);
   const [selectedPath, setSelectedPath] = useState([]);
   const [categoryBreadcrumb, setCategoryBreadcrumb] = useState([]);
@@ -82,8 +92,8 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView }) {
       const newPath = [...selectedPath, category];
       setSelectedPath(newPath);
       setCategoryBreadcrumb(newPath);
-      setCategoryLevels(prev => [...prev, childCategories]);
-      setCurrentLevel(prev => prev + 1);
+      setCategoryLevels((prev) => [...prev, childCategories]);
+      setCurrentLevel((prev) => prev + 1);
       if (onCategorySelect) {
         onCategorySelect(category, false);
       }
@@ -101,19 +111,19 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView }) {
       fetchRootCategories();
       return;
     }
-    setCategoryLevels(prev => prev.slice(0, targetLevel + 1));
-    setSelectedPath(prev => prev.slice(0, targetLevel));
-    setCategoryBreadcrumb(prev => prev.slice(0, targetLevel));
+    setCategoryLevels((prev) => prev.slice(0, targetLevel + 1));
+    setSelectedPath((prev) => prev.slice(0, targetLevel));
+    setCategoryBreadcrumb((prev) => prev.slice(0, targetLevel));
     setCurrentLevel(targetLevel);
   };
 
   const handleFavoritesClick = () => {
-    setActiveSection('favorites');
+    setActiveSection("favorites");
     // Reset category navigation when switching to favorites
     setSelectedPath([]);
     setCategoryBreadcrumb([]);
     setCurrentLevel(0);
-    
+
     // Call the favorites view handler
     if (onFavoritesView) {
       onFavoritesView();
@@ -121,15 +131,27 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView }) {
   };
 
   const handleCategoriesClick = () => {
-    setActiveSection('categories');
+    setActiveSection("categories");
     fetchRootCategories();
   };
+  const toggleSidebar = () => {
+    setIsCollapsed(!isCollapsed);
+  };
 
+  // Add this useEffect to notify parent component about sidebar state changes
+  useEffect(() => {
+    if (onSidebarToggle) {
+      onSidebarToggle(isCollapsed);
+    }
+  }, [isCollapsed, onSidebarToggle]);
   const currentCategories = categoryLevels[currentLevel] || [];
 
   return (
-    <div className={`${isCollapsed ? 'w-16' : 'w-80'} bg-gradient-to-br from-slate-50 via-white to-blue-50 backdrop-blur-sm shadow-2xl transition-all duration-500 ease-in-out flex flex-col h-[calc(100vh-80px)] border-r border-slate-200/60 fixed top-20 left-0 z-40 overflow-hidden`}>
-      
+    <div
+      className={`${
+        isCollapsed ? "w-16" : "w-80"
+      } bg-gradient-to-br from-slate-50 via-white to-blue-50 backdrop-blur-sm shadow-2xl transition-all duration-500 ease-in-out flex flex-col h-[calc(100vh-80px)] border-r border-slate-200/60 fixed top-20 left-0 z-40 overflow-hidden`}
+    >
       {/* Animated background elements */}
       <div className="absolute inset-0 opacity-40">
         <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-blue-200/30 to-purple-200/30 rounded-full blur-3xl transform -translate-x-16 -translate-y-16 animate-pulse"></div>
@@ -140,15 +162,20 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView }) {
       <div className="relative z-10 p-6 border-b border-slate-200/60 bg-white/70 backdrop-blur-md">
         <div className="flex items-center justify-center">
           {!isCollapsed && (
-            <div className="flex flex-col opacity-0 animate-slideInText mr-auto" style={{animationDelay: '300ms', animationFillMode: 'forwards'}}>
+            <div
+              className="flex flex-col opacity-0 animate-slideInText mr-auto"
+              style={{ animationDelay: "300ms", animationFillMode: "forwards" }}
+            >
               <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-800 via-blue-800 to-purple-800 bg-clip-text text-transparent">
                 Explore & Shop
               </h2>
-              <p className="text-sm text-slate-500 font-medium">Discover amazing products</p>
+              <p className="text-sm text-slate-500 font-medium">
+                Discover amazing products
+              </p>
             </div>
           )}
           <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
+            onClick={toggleSidebar}
             className="group relative p-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
           >
             <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-400 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur"></div>
@@ -169,24 +196,33 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView }) {
         <button
           onClick={handleFavoritesClick}
           className={`group w-full flex items-center transition-all duration-300 rounded-lg transform hover:scale-[1.02] hover:shadow-lg ${
-            isCollapsed ? 'justify-center ' : 'space-x-4 p-4'
+            isCollapsed ? "justify-center " : "space-x-4 p-4"
           } ${
-            activeSection === 'favorites'
-              ? 'bg-gradient-to-r from-red-50 to-pink-50 text-red-600 border-2 border-red-200/60 shadow-lg shadow-red-100/50'
-              : 'text-slate-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 hover:text-red-600 hover:border-red-200/40 border-2 border-transparent'
+            activeSection === "favorites"
+              ? "bg-gradient-to-r from-red-50 to-pink-50 text-red-600 border-2 border-red-200/60 shadow-lg shadow-red-100/50"
+              : "text-slate-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 hover:text-red-600 hover:border-red-200/40 border-2 border-transparent"
           }`}
         >
-          <div className={`p-2 rounded-xl transition-all duration-300 ${
-            activeSection === 'favorites' 
-              ? 'bg-red-100 shadow-inner' 
-              : 'bg-slate-100 group-hover:bg-red-100'
-          }`}>
-            <Heart className={`w-5 h-5 transition-all duration-300 ${
-              activeSection === 'favorites' ? 'fill-current scale-110' : 'group-hover:scale-110'
-            }`} />
+          <div
+            className={`p-2 rounded-xl transition-all duration-300 ${
+              activeSection === "favorites"
+                ? "bg-red-100 shadow-inner"
+                : "bg-slate-100 group-hover:bg-red-100"
+            }`}
+          >
+            <Heart
+              className={`w-5 h-5 transition-all duration-300 ${
+                activeSection === "favorites"
+                  ? "fill-current scale-110"
+                  : "group-hover:scale-110"
+              }`}
+            />
           </div>
           {!isCollapsed && (
-            <div className="flex flex-col items-start opacity-0 animate-slideInText" style={{animationDelay: '300ms', animationFillMode: 'forwards'}}>
+            <div
+              className="flex flex-col items-start opacity-0 animate-slideInText"
+              style={{ animationDelay: "300ms", animationFillMode: "forwards" }}
+            >
               <span className="font-semibold text-lg">Favorites</span>
               <span className="text-xs opacity-75">Your loved items</span>
             </div>
@@ -197,22 +233,27 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView }) {
         <button
           onClick={handleCategoriesClick}
           className={`group w-full flex items-center transition-all duration-300 rounded-lg transform hover:scale-[1.02] hover:shadow-lg ${
-            isCollapsed ? 'justify-center' : 'space-x-4 p-4'
+            isCollapsed ? "justify-center" : "space-x-4 p-4"
           } ${
-            activeSection === 'categories'
-              ? 'bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-600 border-2 border-emerald-200/60 shadow-lg shadow-emerald-100/50'
-              : 'text-slate-700 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-green-50 hover:text-emerald-600 hover:border-emerald-200/40 border-2 border-transparent'
+            activeSection === "categories"
+              ? "bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-600 border-2 border-emerald-200/60 shadow-lg shadow-emerald-100/50"
+              : "text-slate-700 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-green-50 hover:text-emerald-600 hover:border-emerald-200/40 border-2 border-transparent"
           }`}
         >
-          <div className={`p-2 rounded-xl transition-all duration-300 ${
-            activeSection === 'categories' 
-              ? 'bg-emerald-100 shadow-inner' 
-              : 'bg-slate-100 group-hover:bg-emerald-100'
-          }`}>
+          <div
+            className={`p-2 rounded-xl transition-all duration-300 ${
+              activeSection === "categories"
+                ? "bg-emerald-100 shadow-inner"
+                : "bg-slate-100 group-hover:bg-emerald-100"
+            }`}
+          >
             <Package className="w-5 h-5 transition-all duration-300 group-hover:scale-110" />
           </div>
           {!isCollapsed && (
-            <div className="flex flex-col items-start opacity-0 animate-slideInText" style={{animationDelay: '300ms', animationFillMode: 'forwards'}}>
+            <div
+              className="flex flex-col items-start opacity-0 animate-slideInText"
+              style={{ animationDelay: "300ms", animationFillMode: "forwards" }}
+            >
               <span className="font-semibold text-lg">Categories</span>
               <span className="text-xs opacity-75">Browse collections</span>
             </div>
@@ -220,7 +261,7 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView }) {
         </button>
 
         {/* Categories Content */}
-        {activeSection === 'categories' && !isCollapsed && (
+        {activeSection === "categories" && !isCollapsed && (
           <div className="mt-6 space-y-4 animate-fadeIn">
             {/* Breadcrumb Navigation */}
             {categoryBreadcrumb.length > 0 && (
@@ -263,7 +304,9 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView }) {
                   <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
                   <div className="absolute inset-0 w-8 h-8 rounded-full border-2 border-emerald-200 animate-ping"></div>
                 </div>
-                <p className="text-slate-600 font-medium">Loading categories...</p>
+                <p className="text-slate-600 font-medium">
+                  Loading categories...
+                </p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -287,7 +330,9 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView }) {
                           {category.name}
                         </span>
                         <span className="text-xs text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          {category.has_children ? 'Has subcategories' : 'View products'}
+                          {category.has_children
+                            ? "Has subcategories"
+                            : "View products"}
                         </span>
                       </div>
                     </div>
@@ -307,14 +352,22 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView }) {
       {/* Help Section */}
       {!isCollapsed && (
         <div className="relative z-10 p-6 border-t border-slate-200/60 bg-white/70 backdrop-blur-md">
-          <button className="group w-full flex items-center transition-all duration-300 rounded-lg border-2 border-transparent hover:border-blue-200/40 transform hover:scale-[1.02] text-slate-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:text-blue-700 ${
+          <button
+            className="group w-full flex items-center transition-all duration-300 rounded-lg border-2 border-transparent hover:border-blue-200/40 transform hover:scale-[1.02] text-slate-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:text-blue-700 ${
             isCollapsed ? 'justify-center p-3' : 'space-x-4 p-4'
-          }">
+          }"
+          >
             <div className="p-2 rounded-xl bg-slate-100 group-hover:bg-blue-100 transition-all duration-300">
               <HelpCircle className="w-5 h-5 transition-all duration-300 group-hover:scale-110" />
             </div>
             {!isCollapsed && (
-              <div className="flex flex-col items-start opacity-0 animate-slideInText" style={{animationDelay: '300ms', animationFillMode: 'forwards'}}>
+              <div
+                className="flex flex-col items-start opacity-0 animate-slideInText"
+                style={{
+                  animationDelay: "300ms",
+                  animationFillMode: "forwards",
+                }}
+              >
                 <span className="font-semibold">Help & Support</span>
                 <span className="text-xs opacity-75">Need assistance?</span>
               </div>
@@ -323,31 +376,49 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView }) {
         </div>
       )}
 
-      <style jsx = 'true'>{`
+      <style jsx="true">{`
         @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
-        
+
         @keyframes slideInUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
-        
+
         @keyframes slideInText {
-          from { opacity: 0; transform: translateX(-10px); }
-          to { opacity: 1; transform: translateX(0); }
+          from {
+            opacity: 0;
+            transform: translateX(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
         }
-        
+
         .animate-fadeIn {
           animation: fadeIn 0.5s ease-out;
         }
-        
+
         .animate-slideInUp {
           animation: slideInUp 0.6s ease-out forwards;
           opacity: 0;
         }
-        
+
         .animate-slideInText {
           animation: slideInText 0.4s ease-out forwards;
         }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Heart, Star, ArrowRight, Loader2 } from "lucide-react";
-import Sidebar from "../components/layout/SideBar.jsx"; 
+import Sidebar from "../components/layout/SideBar.jsx";
 
 // Product Card Component
 const ProductCard = ({ product, onProductClick }) => {
@@ -17,13 +17,17 @@ const ProductCard = ({ product, onProductClick }) => {
           className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500 cursor-pointer"
           onClick={() => onProductClick && onProductClick(product)}
         />
-        
+
         {/* Favorite Button */}
         <button
           onClick={() => setIsLiked(!isLiked)}
           className="absolute top-3 right-3 p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white transition-all duration-200 shadow-lg"
         >
-          <Heart className={`w-5 h-5 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-500'} transition-colors duration-200`} />
+          <Heart
+            className={`w-5 h-5 ${
+              isLiked ? "fill-red-500 text-red-500" : "text-gray-500"
+            } transition-colors duration-200`}
+          />
         </button>
 
         {/* Discount Badge */}
@@ -36,34 +40,44 @@ const ProductCard = ({ product, onProductClick }) => {
 
       {/* Product Info */}
       <div className="p-6">
-        <h3 
+        <h3
           className="font-bold text-gray-800 mb-2 text-lg hover:text-purple-600 transition-colors cursor-pointer line-clamp-2"
           onClick={() => onProductClick && onProductClick(product)}
         >
           {product.name}
         </h3>
-        
+
         <div className="flex items-center mb-3">
           <div className="flex items-center space-x-1">
             {[...Array(5)].map((_, i) => (
               <Star
                 key={i}
-                className={`w-4 h-4 ${i < (product.rating || 4) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                className={`w-4 h-4 ${
+                  i < (product.rating || 4)
+                    ? "fill-yellow-400 text-yellow-400"
+                    : "text-gray-300"
+                }`}
               />
             ))}
           </div>
-          <span className="text-sm text-gray-500 ml-2">({product.reviews || 0})</span>
+          <span className="text-sm text-gray-500 ml-2">
+            ({product.reviews || 0})
+          </span>
         </div>
 
         <div className="flex items-center justify-between mb-4">
           <div className="flex flex-col">
-            <span className="text-2xl font-bold text-purple-600">${product.price || '0.00'}</span>
+            <span className="text-2xl font-bold text-purple-600">
+              ${product.price || "0.00"}
+            </span>
             {product.originalPrice && (
-              <span className="text-sm text-gray-500 line-through">${product.originalPrice}</span>
+              <span className="text-sm text-gray-500 line-through">
+                ${product.originalPrice}
+              </span>
             )}
           </div>
           <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-            {product.unit || 'each'}
+            {product.unit || "each"}
           </span>
         </div>
 
@@ -114,7 +128,13 @@ const ProductCardSkeleton = () => {
 };
 
 // Product Section Component
-const ProductSection = ({ title, products, loading, onViewMore, onProductClick }) => {
+const ProductSection = ({
+  title,
+  products,
+  loading,
+  onViewMore,
+  onProductClick,
+}) => {
   return (
     <div className="mb-16">
       <div className="flex items-center justify-between mb-8">
@@ -132,19 +152,15 @@ const ProductSection = ({ title, products, loading, onViewMore, onProductClick }
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-        {loading ? (
-          [...Array(5)].map((_, index) => (
-            <ProductCardSkeleton key={index} />
-          ))
-        ) : (
-          products.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onProductClick={onProductClick}
-            />
-          ))
-        )}
+        {loading
+          ? [...Array(5)].map((_, index) => <ProductCardSkeleton key={index} />)
+          : products.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onProductClick={onProductClick}
+              />
+            ))}
       </div>
     </div>
   );
@@ -161,7 +177,8 @@ const sampleProducts = [
     rating: 4,
     reviews: 156,
     unit: "per lb",
-    image: "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=300&h=200&fit=crop"
+    image:
+      "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=300&h=200&fit=crop",
   },
   {
     id: 2,
@@ -170,7 +187,8 @@ const sampleProducts = [
     rating: 5,
     reviews: 89,
     unit: "pack of 4",
-    image: "https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=300&h=200&fit=crop"
+    image:
+      "https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=300&h=200&fit=crop",
   },
   {
     id: 3,
@@ -181,60 +199,65 @@ const sampleProducts = [
     rating: 4,
     reviews: 234,
     unit: "per box",
-    image: "https://images.unsplash.com/photo-1464454709131-ffd692591ee5?w=300&h=200&fit=crop"
-  }
+    image:
+      "https://images.unsplash.com/photo-1464454709131-ffd692591ee5?w=300&h=200&fit=crop",
+  },
 ];
 
-// Main HomePage Component  
+// Main HomePage Component
 const HomePage = () => {
   const [selectedProducts, setSelectedProducts] = useState(null);
   const [categoryPath, setCategoryPath] = useState([]);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
+  // Add handler function
   const handleSidebarToggle = (collapsed) => {
-    setSidebarCollapsed(collapsed);
+    setIsSidebarCollapsed(collapsed);
   };
+
   const [sections, setSections] = useState({
     popular: { products: [], loading: true },
     trending: { products: [], loading: true },
     fresh: { products: [], loading: true },
     organic: { products: [], loading: true },
-    deals: { products: [], loading: true }
+    deals: { products: [], loading: true },
   });
 
   // Simulate API calls with sample data
   useEffect(() => {
     const loadSectionData = async (sectionKey) => {
       // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-      
-      setSections(prev => ({
+      await new Promise((resolve) =>
+        setTimeout(resolve, 1000 + Math.random() * 2000)
+      );
+
+      setSections((prev) => ({
         ...prev,
         [sectionKey]: {
           products: sampleProducts, // Using sample data for demonstration
-          loading: false
-        }
+          loading: false,
+        },
       }));
     };
 
     // Load each section
-    Object.keys(sections).forEach(sectionKey => {
+    Object.keys(sections).forEach((sectionKey) => {
       loadSectionData(sectionKey);
     });
   }, []);
 
   const handleCategorySelect = (category, hasProducts) => {
-    console.log('Category selected:', category);
+    console.log("Category selected:", category);
   };
 
   const handleProductsView = (categoryId, path) => {
     setSelectedProducts(categoryId);
     setCategoryPath(path);
-    console.log('Products view for category:', categoryId, 'Path:', path);
+    console.log("Products view for category:", categoryId, "Path:", path);
   };
 
   const handleFavoritesView = () => {
-    console.log('Favorites view selected');
+    console.log("Favorites view selected");
   };
 
   const handleViewMore = (sectionType) => {
@@ -243,31 +266,42 @@ const HomePage = () => {
   };
 
   const handleProductClick = (product) => {
-    console.log('Product clicked:', product);
+    console.log("Product clicked:", product);
     // Implement navigation to product detail page
   };
 
   const sectionConfigs = [
-    { key: 'popular', title: 'Popular Products', subtitle: 'Customer favorites' },
-    { key: 'trending', title: 'Trending Now', subtitle: 'What\'s hot right now' },
-    { key: 'fresh', title: 'Fresh Vegetables', subtitle: 'Farm fresh daily' },
-    { key: 'organic', title: 'Organic Selection', subtitle: 'Pure & natural' },
-    { key: 'deals', title: 'Special Deals', subtitle: 'Limited time offers' }
+    {
+      key: "popular",
+      title: "Popular Products",
+      subtitle: "Customer favorites",
+    },
+    {
+      key: "trending",
+      title: "Trending Now",
+      subtitle: "What's hot right now",
+    },
+    { key: "fresh", title: "Fresh Vegetables", subtitle: "Farm fresh daily" },
+    { key: "organic", title: "Organic Selection", subtitle: "Pure & natural" },
+    { key: "deals", title: "Special Deals", subtitle: "Limited time offers" },
   ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
-      
       {/* Sidebar Component */}
-      <Sidebar 
+      <Sidebar
         onCategorySelect={handleCategorySelect}
         onProductsView={handleProductsView}
         onFavoritesView={handleFavoritesView}
-        onToggle={handleSidebarToggle}
+        onSidebarToggle={handleSidebarToggle}
       />
 
       {/* Main Content Area - Responsive to sidebar state */}
-      <div className="ml-80 pt-20 transition-all duration-500 ease-in-out">
+      <div
+        className={`transition-all duration-300 ${
+          isSidebarCollapsed ? "ml-16" : "ml-80"
+        } min-h-screen bg-gray-50`}
+      >
         {/* Main Content */}
         <main className="w-full">
           <div className="container mx-auto px-6 py-8">
@@ -305,7 +339,10 @@ const HomePage = () => {
       </div>
 
       {/* Mobile Overlay */}
-      <div className="lg:hidden fixed inset-0 bg-black/20 opacity-0 pointer-events-none transition-opacity duration-300 z-30" id="sidebar-overlay"></div>
+      <div
+        className="lg:hidden fixed inset-0 bg-black/20 opacity-0 pointer-events-none transition-opacity duration-300 z-30"
+        id="sidebar-overlay"
+      ></div>
     </div>
   );
 };
