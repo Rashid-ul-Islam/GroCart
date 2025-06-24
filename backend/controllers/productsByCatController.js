@@ -87,7 +87,6 @@ export const getProductsByCategoryRecursive = async (req, res) => {
   }
 };
 
-// Get all products with pagination
 export const getAllProducts = async (req, res) => {
   const { page = 1, limit = 20 } = req.query;
   const offset = (page - 1) * limit;
@@ -117,7 +116,7 @@ export const getAllProducts = async (req, res) => {
 
     const { rows } = await pool.query(query, [limit, offset]);
 
-    // Get total count for pagination
+    
     const countQuery = `SELECT COUNT(*) FROM "Product" WHERE is_available = true`;
     const countResult = await pool.query(countQuery);
     const totalProducts = parseInt(countResult.rows[0].count);
@@ -138,7 +137,6 @@ export const getAllProducts = async (req, res) => {
   }
 };
 
-// Get product by ID with all images
 export const getProductById = async (req, res) => {
   const { productId } = req.params;
 
@@ -193,7 +191,6 @@ export const getProductById = async (req, res) => {
   }
 };
 
-// Search products by name
 export const searchProducts = async (req, res) => {
   const { query: searchQuery, page = 1, limit = 20 } = req.query;
   const offset = (page - 1) * limit;

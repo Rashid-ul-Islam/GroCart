@@ -5,7 +5,6 @@ export const addCategory = async (req, res) => {
     console.log("Received input:", input);
 
     try {
-        // 1. Check if category with the same name exists
         const checkQuery = `SELECT 1 FROM "Category" WHERE name = $1 LIMIT 1;`;
         const checkResult = await pool.query(checkQuery, [input.name]);
         if (checkResult.rows.length > 0) {
@@ -14,8 +13,6 @@ export const addCategory = async (req, res) => {
                 message: "Category with this name already exists."
             });
         }
-
-        // 2. Insert if not exists
         const query = `
             INSERT INTO "Category"
             (name, parent_id, description, cat_image)
@@ -34,7 +31,6 @@ export const addCategory = async (req, res) => {
         res.status(201).json(result.rows[0]);
     } catch (error) {
         console.error("Error adding category:", error);
-        // Handle unique violation error if it slips through
         if (error.code === '23505') {
             return res.status(409).json({
                 field: "name",

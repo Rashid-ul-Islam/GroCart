@@ -14,15 +14,15 @@ export const addProduct = async (req, res) => {
     `;
 
         const values = [
-            input.productName,             // name
-            input.categoryId,              // category_id
-            input.price,                   // price
-            input.quantity,                // quantity
-            input.unitMeasure || null,     // unit_measure (nullable)
-            input.origin || null,          // origin (nullable)
-            input.description || null,     // description (nullable)
-            input.isRefundable,            // is_refundable (boolean)
-            input.isAvailable              // is_available (boolean)
+            input.productName,             
+            input.categoryId,             
+            input.price,                   
+            input.quantity,                
+            input.unitMeasure || null,     
+            input.origin || null,         
+            input.description || null,     
+            input.isRefundable,          
+            input.isAvailable         
         ];
 
         const result = await pool.query(query, values);
@@ -34,8 +34,6 @@ export const addProduct = async (req, res) => {
     }
 };
 
-
-// Get all categories with hierarchical structure
 export const getCategoriesHierarchy = async (req, res) => {
     try {
         const query = `
@@ -81,8 +79,6 @@ export const getCategoriesHierarchy = async (req, res) => {
         res.status(500).json({ message: "Failed to fetch category hierarchy" });
     }
 };
-
-// Get root categories (parent categories only)
 export const getRootCategories = async (req, res) => {
     try {
         const query = `
@@ -98,8 +94,6 @@ export const getRootCategories = async (req, res) => {
         res.status(500).json({ message: "Failed to fetch root categories" });
     }
 };
-
-// Get child categories by parent ID
 export const getChildCategories = async (req, res) => {
     try {
         const { parentId } = req.params;
@@ -117,8 +111,6 @@ export const getChildCategories = async (req, res) => {
         res.status(500).json({ message: "Failed to fetch child categories" });
     }
 };
-
-// Check if a category has children
 export const hasChildCategories = async (req, res) => {
     try {
         const { categoryId } = req.params;
@@ -136,7 +128,6 @@ export const hasChildCategories = async (req, res) => {
     }
 };
 
-// Get category breadcrumb (path from root to selected category)
 export const getCategoryBreadcrumb = async (req, res) => {
     try {
         const { categoryId } = req.params;
@@ -175,8 +166,6 @@ export const getCategoryBreadcrumb = async (req, res) => {
         res.status(500).json({ message: "Failed to fetch category breadcrumb" });
     }
 };
-
-// Get leaf categories (categories with no children) - useful for products
 export const getLeafCategories = async (req, res) => {
     try {
         const query = `

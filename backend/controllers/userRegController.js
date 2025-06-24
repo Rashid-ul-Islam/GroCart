@@ -1,10 +1,7 @@
-// controllers/userController.js
-
 import pool from '../db.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
-// Register new user
 export const registerUser = async (req, res) => {
   const client = await pool.connect();
   try {
@@ -24,14 +21,13 @@ export const registerUser = async (req, res) => {
       address,
     } = req.body;
 
-    // Validation
+    
     if (!username || !email || !password || !firstName || !lastName || !phoneNumber) {
       return res.status(400).json({
         error: 'Username, email, password, first name, last name, and phone number are required'
       });
     }
 
-    // Check if user already exists
     const existingUser = await client.query(
       'SELECT user_id FROM "User" WHERE username = $1 OR email = $2',
       [username, email]
@@ -41,11 +37,9 @@ export const registerUser = async (req, res) => {
       return res.status(409).json({ error: 'Username or email already exists' });
     }
 
-    // Hash password
     const saltRounds = 12;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
-    // Create user
     const userResult = await client.query(
       `INSERT INTO "User" (username, email, password_hash, first_name, last_name, phone_number, role_id, created_at, total_points)
        VALUES ($1, $2, $3, $4, $5, $6, 'customer', NOW(), 0) 
@@ -55,7 +49,6 @@ export const registerUser = async (req, res) => {
 
     const newUser = userResult.rows[0];
 
-    // Create user address if address information is provided
     if (regionId && address) {
       await client.query(
         `INSERT INTO "Address" (user_id, region_id, address, "isPrimary", created_at)
@@ -66,7 +59,6 @@ export const registerUser = async (req, res) => {
 
     await client.query('COMMIT');
 
-    // Generate JWT token
     const token = jwt.sign(
       {
         userId: newUser.user_id,
@@ -106,7 +98,6 @@ export const registerUser = async (req, res) => {
   }
 };
 
-// Login user
 export const loginUser = async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -114,8 +105,6 @@ export const loginUser = async (req, res) => {
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password are required' });
     }
-
-    // Find user by username or email
     const userResult = await pool.query(
       'SELECT user_id, username, email, password_hash, first_name, last_name, phone_number, role_id FROM "User" WHERE username = $1 OR email = $1',
       [username]
@@ -127,19 +116,16 @@ export const loginUser = async (req, res) => {
 
     const user = userResult.rows[0];
 
-    // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Update last login
     await pool.query(
       'UPDATE "User" SET last_login = NOW() WHERE user_id = $1',
       [user.user_id]
     );
 
-    // Generate JWT token
     const token = jwt.sign(
       {
         userId: user.user_id,
@@ -170,7 +156,6 @@ export const loginUser = async (req, res) => {
   }
 };
 
-// Check username availability
 export const checkUsernameAvailability = async (req, res) => {
   try {
     const { username } = req.params;
@@ -186,7 +171,6 @@ export const checkUsernameAvailability = async (req, res) => {
   }
 };
 
-// Check email availability
 export const checkEmailAvailability = async (req, res) => {
   try {
     const { email } = req.params;
@@ -202,7 +186,6 @@ export const checkEmailAvailability = async (req, res) => {
   }
 };
 
-// Get user addresses
 export const getUserAddresses = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -222,7 +205,6 @@ export const getUserAddresses = async (req, res) => {
   }
 };
 
-// Add new address
 export const addUserAddress = async (req, res) => {
   const client = await pool.connect();
   try {
@@ -234,7 +216,7 @@ export const addUserAddress = async (req, res) => {
       return res.status(400).json({ error: 'User ID, region ID, and address are required' });
     }
 
-    // If this is set as primary, update other addresses to not be primary
+    
     if (isPrimary) {
       await client.query(
         'UPDATE "Address" SET "isPrimary" = false WHERE user_id = $1',

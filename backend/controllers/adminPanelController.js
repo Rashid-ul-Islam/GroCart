@@ -1,6 +1,6 @@
 import pool from "../db.js";
 
-// Get total count of products
+
 export const getProductCount = async (req, res) => {
     try {
         const query = `SELECT COUNT(*) as total FROM "Product"`;
@@ -12,7 +12,7 @@ export const getProductCount = async (req, res) => {
     }
 };
 
-// Get total count of users (assuming you have a User table)
+
 export const getUserCount = async (req, res) => {
     try {
         const query = `SELECT COUNT(*) as total FROM "User"`;
@@ -24,7 +24,6 @@ export const getUserCount = async (req, res) => {
     }
 };
 
-// Get dashboard stats (combined endpoint for better performance)
 export const getDashboardStats = async (req, res) => {
     try {
         const productCountQuery = `SELECT COUNT(*) as total FROM "Product"`;
@@ -48,10 +47,8 @@ export const getDashboardStats = async (req, res) => {
     }
 };
 
-// Helper function to get all descendant category IDs
 const getDescendantCategoryIds = async (categoryId) => {
     try {
-        // Using recursive CTE to find all descendant categories
         const query = `
             WITH RECURSIVE category_tree AS (
                 -- Base case: start with the selected category
@@ -73,7 +70,7 @@ const getDescendantCategoryIds = async (categoryId) => {
         return result.rows.map(row => row.category_id);
     } catch (error) {
         console.error("Error fetching descendant categories:", error);
-        return [categoryId]; // Fallback to just the selected category
+        return [categoryId];
     }
 };
 
@@ -97,7 +94,6 @@ export const getProducts = async (req, res) => {
         let queryParams = [];
         let paramIndex = 1;
 
-        // Search by name
         if (search) {
             whereConditions.push(`p.name ILIKE $${paramIndex}`);
             queryParams.push(`%${search}%`);
@@ -106,23 +102,19 @@ export const getProducts = async (req, res) => {
 
         // Filter by category (including child categories)
         if (category_id) {
-            // Get all descendant category IDs
             const categoryIds = await getDescendantCategoryIds(parseInt(category_id));
             
             if (categoryIds.length === 1) {
-                // Single category
                 whereConditions.push(`p.category_id = $${paramIndex}`);
                 queryParams.push(categoryIds[0]);
                 paramIndex++;
             } else {
-                // Multiple categories (parent + children)
                 const placeholders = categoryIds.map(() => `$${paramIndex++}`).join(',');
                 whereConditions.push(`p.category_id IN (${placeholders})`);
                 queryParams.push(...categoryIds);
             }
         }
 
-        // Filter by price range
         if (min_price) {
             whereConditions.push(`p.price >= $${paramIndex}`);
             queryParams.push(parseFloat(min_price));
@@ -134,28 +126,23 @@ export const getProducts = async (req, res) => {
             paramIndex++;
         }
 
-        // Filter by origin
         if (origin) {
             whereConditions.push(`p.origin ILIKE $${paramIndex}`);
             queryParams.push(`%${origin}%`);
             paramIndex++;
         }
-
-        // Filter by refundable status
         if (is_refundable !== '') {
             whereConditions.push(`p.is_refundable = $${paramIndex}`);
             queryParams.push(is_refundable === 'true');
             paramIndex++;
         }
 
-        // Filter by availability
         if (is_available !== '') {
             whereConditions.push(`p.is_available = $${paramIndex}`);
             queryParams.push(is_available === 'true');
             paramIndex++;
         }
 
-        // Filter by creation date range
         if (start_date) {
             whereConditions.push(`p.created_at >= $${paramIndex}`);
             queryParams.push(start_date);
@@ -169,7 +156,6 @@ export const getProducts = async (req, res) => {
 
         const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
-        // Get total count for pagination
         const countQuery = `
             SELECT COUNT(*) as total 
             FROM "Product" p 
@@ -179,7 +165,6 @@ export const getProducts = async (req, res) => {
         const countResult = await pool.query(countQuery, queryParams);
         const totalProducts = parseInt(countResult.rows[0].total);
 
-        // Get products with pagination
         const offset = (page - 1) * limit;
         const productsQuery = `
             SELECT 
@@ -221,7 +206,6 @@ export const getProducts = async (req, res) => {
     }
 };
 
-// Get categories for filter dropdown
 export const getCategories = async (req, res) => {
     try {
         const query = `SELECT category_id, name FROM "Category" ORDER BY name`;
@@ -233,7 +217,6 @@ export const getCategories = async (req, res) => {
     }
 };
 
-// Search products
 export const searchProducts = async (req, res) => {
     try {
         const { search } = req.query;
@@ -272,7 +255,6 @@ export const searchProducts = async (req, res) => {
     }
 };
 
-// Delete product
 export const deleteProduct = async (req, res) => {
     try {
         const { id } = req.params;

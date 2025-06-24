@@ -1,6 +1,5 @@
 import pool from "../db.js";
 
-// Search products by name and description
 export const searchProducts = async (req, res) => {
     const { query } = req.query;
     const page = parseInt(req.query.page) || 1;
@@ -50,7 +49,6 @@ LIMIT $3 OFFSET $4;
 
         const { rows } = await pool.query(searchQuery, [searchPattern, exactPattern, limit, offset]);
 
-        // Get total count for pagination
         const countQuery = `
       SELECT COUNT(DISTINCT p.product_id) as total
       FROM "Product" p
@@ -77,9 +75,7 @@ LIMIT $3 OFFSET $4;
         });
     }
 };
-// Added missing closing brace
 
-// Save search history
 export const saveSearchHistory = async (req, res) => {
   const { user_id, search_query } = req.body;
 
@@ -109,9 +105,6 @@ export const saveSearchHistory = async (req, res) => {
     });
   }
 };
- // Added missing closing brace
-
-// Get user search history
 export const getUserSearchHistory = async (req, res) => {
     const { userId } = req.params;
     const { limit = 10 } = req.query;
@@ -132,7 +125,7 @@ export const getUserSearchHistory = async (req, res) => {
         console.error("Error fetching search history:", error);
         res.status(500).json({ message: "Failed to fetch search history" });
     }
-}; // Added missing closing brace
+}; 
 
 export default {
     searchProducts,

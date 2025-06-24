@@ -15,7 +15,7 @@ router.get("/getProductCount", getProductCount);
 router.get("/getUserCount", getUserCount);
 router.get("/getDashboardStats", getDashboardStats);
 
-// Product management routes
+
 router.get('/products', getProducts);
 router.get('/categories', getCategories);
 router.get('/search', searchProducts);

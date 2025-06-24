@@ -1,9 +1,8 @@
 import express from 'express';
-import pool from '../db.js'; // Adjust path as needed
+import pool from '../db.js'; 
 
 const router = express.Router();
 
-// Get products for homepage with different categories
 export const getProductsForHomepage = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 12; // Default to 12 products
@@ -54,25 +53,24 @@ export const getProductsForHomepage = async (req, res) => {
     
     const products = result.rows.map(row => ({
       product_id: row.product_id,
-      product_name: row.name, // Changed from 'name' to 'product_name'
-      name: row.name, // Keep both for compatibility
+      product_name: row.name, 
+      name: row.name, 
       price: parseFloat(row.price),
       description: row.description,
       category_name: row.category_name,
-      image_url: row.primary_image, // Changed from 'primary_image' to 'image_url'
-      primary_image: row.primary_image, // Keep both for compatibility
+      image_url: row.primary_image, 
+      primary_image: row.primary_image, 
       total_ordered: parseInt(row.total_ordered),
       avg_rating: parseFloat(row.avg_rating).toFixed(1),
       review_count: parseInt(row.review_count),
       is_available: row.is_available,
-      unit_measure: 'kg', // Default unit - adjust based on your data
-      origin: 'Local', // Default origin - adjust based on your data
-      is_refundable: true // Default refundable - adjust based on your data
+      unit_measure: 'kg', 
+      origin: 'Local', 
+      is_refundable: true 
     }));
 
-    // Group products by category for homepage sections
     const categorizedProducts = {
-      mostPopular: products.slice(0, 5), // Top 5 most ordered products
+      mostPopular: products.slice(0, 5), 
       freshVegetables: products.filter(p => 
         p.category_name && p.category_name.toLowerCase().includes('vegetable')
       ).slice(0, 5),
@@ -103,7 +101,6 @@ export const getProductsForHomepage = async (req, res) => {
       ).slice(0, 5)
     };
 
-    // If specific categories are empty, fill with random products
     Object.keys(categorizedProducts).forEach(key => {
       if (key !== 'mostPopular' && categorizedProducts[key].length === 0) {
         categorizedProducts[key] = products.slice(0, 5);
@@ -112,8 +109,8 @@ export const getProductsForHomepage = async (req, res) => {
 
     res.json({
       success: true,
-      data: categorizedProducts, // Return categorized structure
-      allProducts: products, // Also return all products for reference
+      data: categorizedProducts, 
+      allProducts: products, 
       count: products.length
     });
 

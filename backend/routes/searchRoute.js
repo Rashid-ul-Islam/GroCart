@@ -7,7 +7,6 @@ import {
 
 const router = express.Router();
 
-// Search routes
 router.get('/searchProducts', searchProducts);
 router.post('/saveSearchHistory', saveSearchHistory);
 router.get('/getUserSearchHistory/:userId', getUserSearchHistory);
