@@ -39,9 +39,9 @@ const ProductCard = ({ product, onProductClick }) => {
       </div>
 
       {/* Product Info */}
-      <div className="p-6">
+      <div className="p-6 ">
         <h3
-          className="font-bold text-gray-800 mb-2 text-lg hover:text-purple-600 transition-colors cursor-pointer line-clamp-2"
+          className="font-bold text-gray-800 mb-2 text-lg hover:text-purple-600 transition-colors cursor-pointer line-clamp-2 "
           onClick={() => onProductClick && onProductClick(product)}
         >
           {product.name}
@@ -88,14 +88,14 @@ const ProductCard = ({ product, onProductClick }) => {
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg flex items-center justify-center font-bold text-lg transition-all duration-200 transform hover:scale-110 shadow-md hover:shadow-lg active:scale-95"
               >
                 -
               </button>
-              <span className="w-8 text-center font-medium">{quantity}</span>
+              <span className="w-8 text-center font-medium text-black">{quantity}</span>
               <button
                 onClick={() => setQuantity(quantity + 1)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg flex items-center justify-center font-bold text-lg transition-all duration-200 transform hover:scale-110 shadow-md hover:shadow-lg active:scale-95"
               >
                 +
               </button>

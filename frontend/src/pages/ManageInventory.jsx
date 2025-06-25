@@ -31,7 +31,7 @@ const InventoryManagement = () => {
   // Core state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("warehouse");
 
   // Data state
   const [warehouses, setWarehouses] = useState([]);
@@ -536,7 +536,6 @@ const InventoryManagement = () => {
           <div className="border-b border-gray-200">
             <nav className="flex space-x-8 px-6">
               {[
-                { id: "overview", label: "Overview", icon: BarChart3 },
                 { id: "warehouses", label: "Warehouses", icon: Warehouse },
                 { id: "products", label: "Product Stock", icon: Package },
               ].map((tab) => (
@@ -558,40 +557,6 @@ const InventoryManagement = () => {
         </div>
 
         {/* Tab Content */}
-        {activeTab === "overview" && (
-          <div className="space-y-6">
-            {/* Recent Activity */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Recent Activity
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="p-2 bg-green-100 rounded-full">
-                    <Plus className="h-4 w-4 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      New product added
-                    </p>
-                    <p className="text-xs text-gray-500">2 hours ago</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="p-2 bg-blue-100 rounded-full">
-                    <RefreshCw className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      Inventory updated
-                    </p>
-                    <p className="text-xs text-gray-500">4 hours ago</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {activeTab === "warehouses" && (
           <div className="space-y-6">

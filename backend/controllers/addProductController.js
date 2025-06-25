@@ -1,16 +1,16 @@
 import pool from "../db.js";
 
 export const addProduct = async (req, res) => {
-    const input = req.body;
-    console.log("Received input:", input);
+  const input = req.body;
+  console.log("Received input:", input);
 
-    const client = await pool.connect();
+  const client = await pool.connect();
 
-    try {
-        await client.query('BEGIN');
+  try {
+    await client.query('BEGIN');
 
-        // Insert product without is_available field
-        const productQuery = `
+    // Insert product
+    const productQuery = `
       INSERT INTO "Product"
       (name, category_id, price, quantity, unit_measure, origin, description, is_refundable, created_at, updated_at)
       VALUES
@@ -18,64 +18,83 @@ export const addProduct = async (req, res) => {
       RETURNING *;
     `;
 
-        const productValues = [
-            input.productName,
-            input.categoryId,
-            input.price,
-            input.quantity,
-            input.unitMeasure || null,
-            input.origin || null,
-            input.description || null,
-            input.isRefundable
-            // Removed input.isAvailable
-        ];
+    const productValues = [
+      input.productName,
+      input.categoryId,
+      input.price,
+      input.quantity,
+      input.unitMeasure || null,
+      input.origin || null,
+      input.description || null,
+      input.isRefundable
+    ];
 
-        const productResult = await client.query(productQuery, productValues);
-        const newProduct = productResult.rows[0];
+    const productResult = await client.query(productQuery, productValues);
+    const newProduct = productResult.rows[0];
 
-        // Handle warehouse distribution if provided
-        if (input.warehouseDistribution) {
-            const inventoryInserts = [];
-
-            for (const [warehouseId, distribution] of Object.entries(input.warehouseDistribution)) {
-                if (distribution.quantity > 0) {
-                    const inventoryQuery = `
+    // Handle warehouse distribution - ALWAYS execute this part
+    if (input.warehouseDistribution && Object.keys(input.warehouseDistribution).length > 0) {
+      // User provided warehouse distribution
+      const inventoryInserts = [];
+      for (const [warehouseId, distribution] of Object.entries(input.warehouseDistribution)) {
+        if (distribution.quantity > 0) {
+          const inventoryQuery = `
             INSERT INTO "Inventory"
             (product_id, warehouse_id, quantity_in_stock, reorder_level, last_restock_date)
             VALUES ($1, $2, $3, $4, NOW());
           `;
-
-                    const inventoryValues = [
-                        newProduct.product_id,
-                        parseInt(warehouseId),
-                        distribution.quantity,
-                        distribution.reorderLevel || 0
-                    ];
-
-                    inventoryInserts.push(client.query(inventoryQuery, inventoryValues));
-                }
-            }
-
-            // Execute all inventory inserts
-            if (inventoryInserts.length > 0) {
-                await Promise.all(inventoryInserts);
-            }
+          const inventoryValues = [
+            newProduct.product_id,
+            parseInt(warehouseId),
+            distribution.quantity,
+            distribution.reorderLevel || 20
+          ];
+          inventoryInserts.push(client.query(inventoryQuery, inventoryValues));
         }
-
-        await client.query('COMMIT');
-
-        res.status(201).json({
-            product: newProduct,
-            message: "Product added successfully with warehouse distribution"
-        });
-
-    } catch (error) {
-        await client.query('ROLLBACK');
-        console.error("Error adding product:", error);
-        res.status(500).json({ message: "Failed to add product" });
-    } finally {
-        client.release();
+      }
+      
+      if (inventoryInserts.length > 0) {
+        await Promise.all(inventoryInserts);
+      }
+    } else {
+      // User didn't provide warehouse distribution - add to all warehouses with default values
+      const warehousesQuery = `SELECT warehouse_id FROM "Warehouse" ORDER BY warehouse_id ASC;`;
+      const warehousesResult = await client.query(warehousesQuery);
+      
+      const defaultInventoryInserts = [];
+      for (const warehouse of warehousesResult.rows) {
+        const inventoryQuery = `
+          INSERT INTO "Inventory"
+          (product_id, warehouse_id, quantity_in_stock, reorder_level, last_restock_date)
+          VALUES ($1, $2, $3, $4, NOW());
+        `;
+        const inventoryValues = [
+          newProduct.product_id,
+          warehouse.warehouse_id,
+          0, // Default quantity
+          20 // Default reorder level
+        ];
+        defaultInventoryInserts.push(client.query(inventoryQuery, inventoryValues));
+      }
+      
+      if (defaultInventoryInserts.length > 0) {
+        await Promise.all(defaultInventoryInserts);
+      }
     }
+
+    await client.query('COMMIT');
+    res.status(201).json({
+      product: newProduct,
+      message: "Product added successfully with warehouse distribution"
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error("Error adding product:", error);
+    res.status(500).json({ message: "Failed to add product" });
+  } finally {
+    client.release();
+  }
 };
 
 export const getCategoriesHierarchy = async (req, res) => {
