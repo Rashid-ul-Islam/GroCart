@@ -410,13 +410,15 @@ export default function AdminPanel() {
                 Manage Inventory
               </Button>
             </Link>
+            <Link to='delivery-dashboard'>
             <Button
-              onClick={() => alert("View analytics functionality coming soon!")}
               className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3"
             >
               <BarChart3 className="w-6 h-6" />
-              View Analytics
+              Delivery Dashboard
             </Button>
+            </Link>
+            
           </div>
         </div>
 

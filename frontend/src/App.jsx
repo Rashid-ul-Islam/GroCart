@@ -10,6 +10,7 @@ import AddressManagement from "./pages/AddressManagement.jsx";
 import ProductsByCategory from "./pages/ProductByCategory.jsx";
 import SearchResultsPage from './pages/SearchResultPage.jsx';
 import ManageInventory from './pages/ManageInventory.jsx';
+import DeliveryDashboard from "./pages/DeliveryDashboard.jsx";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="/products/category" element={<ProductsByCategory />} />
         <Route path="/search" element={<SearchResultsPage />} />
         <Route path="/manage-inventory" element={<ManageInventory />} />
+        <Route path="/admin/delivery-dashboard" element={<DeliveryDashboard />} />
         {/* Add more routes as needed */}
       </Routes>
     </Router>
