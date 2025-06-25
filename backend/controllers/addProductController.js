@@ -4,33 +4,77 @@ export const addProduct = async (req, res) => {
     const input = req.body;
     console.log("Received input:", input);
 
+    const client = await pool.connect();
+
     try {
-        const query = `
+        await client.query('BEGIN');
+
+        // Insert product without is_available field
+        const productQuery = `
       INSERT INTO "Product"
-        (name, category_id, price, quantity, unit_measure, origin, description, is_refundable, is_available)
+      (name, category_id, price, quantity, unit_measure, origin, description, is_refundable, created_at, updated_at)
       VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
       RETURNING *;
     `;
 
-        const values = [
-            input.productName,             
-            input.categoryId,             
-            input.price,                   
-            input.quantity,                
-            input.unitMeasure || null,     
-            input.origin || null,         
-            input.description || null,     
-            input.isRefundable,          
-            input.isAvailable         
+        const productValues = [
+            input.productName,
+            input.categoryId,
+            input.price,
+            input.quantity,
+            input.unitMeasure || null,
+            input.origin || null,
+            input.description || null,
+            input.isRefundable
+            // Removed input.isAvailable
         ];
 
-        const result = await pool.query(query, values);
+        const productResult = await client.query(productQuery, productValues);
+        const newProduct = productResult.rows[0];
 
-        res.status(201).json(result.rows[0]);
+        // Handle warehouse distribution if provided
+        if (input.warehouseDistribution) {
+            const inventoryInserts = [];
+
+            for (const [warehouseId, distribution] of Object.entries(input.warehouseDistribution)) {
+                if (distribution.quantity > 0) {
+                    const inventoryQuery = `
+            INSERT INTO "Inventory"
+            (product_id, warehouse_id, quantity_in_stock, reorder_level, last_restock_date)
+            VALUES ($1, $2, $3, $4, NOW());
+          `;
+
+                    const inventoryValues = [
+                        newProduct.product_id,
+                        parseInt(warehouseId),
+                        distribution.quantity,
+                        distribution.reorderLevel || 0
+                    ];
+
+                    inventoryInserts.push(client.query(inventoryQuery, inventoryValues));
+                }
+            }
+
+            // Execute all inventory inserts
+            if (inventoryInserts.length > 0) {
+                await Promise.all(inventoryInserts);
+            }
+        }
+
+        await client.query('COMMIT');
+
+        res.status(201).json({
+            product: newProduct,
+            message: "Product added successfully with warehouse distribution"
+        });
+
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error("Error adding product:", error);
         res.status(500).json({ message: "Failed to add product" });
+    } finally {
+        client.release();
     }
 };
 
@@ -71,7 +115,7 @@ export const getCategoriesHierarchy = async (req, res) => {
             SELECT * FROM category_tree
             ORDER BY level, name ASC;
         `;
-        
+
         const result = await pool.query(query);
         res.status(200).json(result.rows);
     } catch (error) {
@@ -97,7 +141,7 @@ export const getRootCategories = async (req, res) => {
 export const getChildCategories = async (req, res) => {
     try {
         const { parentId } = req.params;
-        
+
         const query = `
             SELECT category_id, name, description, cat_image, parent_id
             FROM "Category"
@@ -114,7 +158,7 @@ export const getChildCategories = async (req, res) => {
 export const hasChildCategories = async (req, res) => {
     try {
         const { categoryId } = req.params;
-        
+
         const query = `
             SELECT COUNT(*) > 0 as has_children
             FROM "Category"
@@ -131,7 +175,7 @@ export const hasChildCategories = async (req, res) => {
 export const getCategoryBreadcrumb = async (req, res) => {
     try {
         const { categoryId } = req.params;
-        
+
         const query = `
             WITH RECURSIVE category_path AS (
                 -- Base case: start with the selected category
@@ -158,7 +202,7 @@ export const getCategoryBreadcrumb = async (req, res) => {
             FROM category_path
             ORDER BY level DESC;
         `;
-        
+
         const result = await pool.query(query, [categoryId]);
         res.status(200).json(result.rows);
     } catch (error) {
@@ -180,5 +224,22 @@ export const getLeafCategories = async (req, res) => {
     } catch (error) {
         console.error("Error fetching leaf categories:", error);
         res.status(500).json({ message: "Failed to fetch leaf categories" });
+    }
+};
+
+// Add this new function to fetch all warehouses
+export const getAllWarehouses = async (req, res) => {
+    try {
+        const query = `
+      SELECT warehouse_id, name, location, contact_info
+      FROM "Warehouse"
+      ORDER BY name ASC;
+    `;
+
+        const result = await pool.query(query);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error("Error fetching warehouses:", error);
+        res.status(500).json({ message: "Failed to fetch warehouses" });
     }
 };

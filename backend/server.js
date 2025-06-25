@@ -13,6 +13,8 @@ import userRegRoute from "./routes/userRegRoute.js";
 import productsByCat from "./routes/productsByCatRoute.js";
 import searchRoute from "./routes/searchRoute.js";
 import productHomepageRoute from "./routes/productHomepageRoute.js";
+import warehouseRoute from "./routes/warehouseRoute.js";
+import inventoryRoute from "./routes/inventoryRoute.js";
 
 
 const app = express();
@@ -37,6 +39,8 @@ app.use("/api/address", addressRoute);
 app.use("/api/auth", userRegRoute);
 app.use("/api/search", searchRoute);
 app.use("/api/home",productHomepageRoute);
+app.use("/api/wh", warehouseRoute);
+app.use("/api/inventory", inventoryRoute);
 
 app.listen(port, () => {
   console.log(`Server running on ${port}`);

@@ -32,7 +32,6 @@ export default function AddProduct() {
     description: "",
     imageUrl: "",
     isRefundable: "true",
-    isAvailable: "true",
   });
 
   // Category selection states
@@ -40,10 +39,20 @@ export default function AddProduct() {
   const [selectedPath, setSelectedPath] = useState([]);
   const [categoryBreadcrumb, setCategoryBreadcrumb] = useState([]);
   const [finalCategorySelected, setFinalCategorySelected] = useState(false);
+  // Add these new state variables after existing warehouse states
+  const [focusedField, setFocusedField] = useState(null);
+  const [fieldValues, setFieldValues] = useState({});
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [categoryLoading, setCategoryLoading] = useState(false);
+  // Update formData state - remove isAvailable
+  // Add new state for warehouse distribution
+  const [warehouses, setWarehouses] = useState([]);
+  const [warehouseDistribution, setWarehouseDistribution] = useState({});
+  const [showWarehouseDistribution, setShowWarehouseDistribution] =
+    useState(false);
+  const [warehouseLoading, setWarehouseLoading] = useState(false);
 
   // Initialize with root categories
   useEffect(() => {
@@ -157,31 +166,162 @@ export default function AddProduct() {
     fetchRootCategories();
   };
 
+  // Add this function after existing useEffect
+  const fetchWarehouses = async () => {
+    setWarehouseLoading(true);
+    try {
+      const response = await fetch(
+        "http://localhost:3000/api/products/getAllWarehouses"
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setWarehouses(data);
+        // Initialize warehouse distribution with proper defaults
+        const initialDistribution = {};
+        data.forEach((warehouse) => {
+          initialDistribution[warehouse.warehouse_id] = {
+            quantity: 0, // Default stock to 0
+            reorderLevel: 20, // Default reorder level to 20
+          };
+        });
+        setWarehouseDistribution(initialDistribution);
+      } else {
+        console.error("Failed to fetch warehouses:", response.statusText);
+      }
+    } catch (error) {
+      console.error("Failed to fetch warehouses:", error);
+    } finally {
+      setWarehouseLoading(false);
+    }
+  };
+
+  const handleWarehouseDistributionChange = (warehouseId, field, value) => {
+    setWarehouseDistribution((prev) => ({
+      ...prev,
+      [warehouseId]: {
+        ...prev[warehouseId],
+        [field]:
+          value === ""
+            ? field === "quantity"
+              ? 0
+              : 20
+            : parseInt(value) || (field === "quantity" ? 0 : 20),
+      },
+    }));
+
+    // Update field values for focus management
+    setFieldValues((prev) => ({
+      ...prev,
+      [`${warehouseId}-${field}`]: value,
+    }));
+  };
+
+  const handleFieldFocus = (warehouseId, field) => {
+    const fieldKey = `${warehouseId}-${field}`;
+    const currentValue = warehouseDistribution[warehouseId]?.[field];
+    const defaultValue = field === "quantity" ? 0 : 20;
+
+    setFocusedField(fieldKey);
+
+    // If the current value is the default, clear it
+    if (currentValue === defaultValue) {
+      setFieldValues((prev) => ({
+        ...prev,
+        [fieldKey]: "",
+      }));
+    } else {
+      setFieldValues((prev) => ({
+        ...prev,
+        [fieldKey]: currentValue.toString(),
+      }));
+    }
+  };
+
+  const handleFieldBlur = (warehouseId, field) => {
+    const fieldKey = `${warehouseId}-${field}`;
+    const currentFieldValue = fieldValues[fieldKey];
+    const defaultValue = field === "quantity" ? 0 : 20;
+
+    setFocusedField(null);
+
+    // If field is empty, restore default value
+    if (currentFieldValue === "" || currentFieldValue === undefined) {
+      setWarehouseDistribution((prev) => ({
+        ...prev,
+        [warehouseId]: {
+          ...prev[warehouseId],
+          [field]: defaultValue,
+        },
+      }));
+
+      setFieldValues((prev) => ({
+        ...prev,
+        [fieldKey]: defaultValue.toString(),
+      }));
+    } else {
+      // Update with the actual value
+      const numValue = parseInt(currentFieldValue) || defaultValue;
+      setWarehouseDistribution((prev) => ({
+        ...prev,
+        [warehouseId]: {
+          ...prev[warehouseId],
+          [field]: numValue,
+        },
+      }));
+    }
+  };
+
+  const getFieldDisplayValue = (warehouseId, field) => {
+    const fieldKey = `${warehouseId}-${field}`;
+    const isFocused = focusedField === fieldKey;
+
+    if (isFocused) {
+      return fieldValues[fieldKey] || "";
+    }
+
+    return (
+      warehouseDistribution[warehouseId]?.[field]?.toString() ||
+      (field === "quantity" ? "0" : "20")
+    );
+  };
+
+  const toggleWarehouseDistribution = () => {
+    if (!showWarehouseDistribution && warehouses.length === 0) {
+      fetchWarehouses();
+    }
+    setShowWarehouseDistribution(!showWarehouseDistribution);
+  };
+
   const handleAddProduct = async () => {
     if (!validateForm()) {
       return;
     }
-
     setLoading(true);
 
-    // Convert string values to appropriate types
+    // Convert string values to appropriate types and remove isAvailable
     const productData = {
       ...formData,
       categoryId: parseInt(formData.categoryId),
       price: parseFloat(formData.price),
       quantity: parseInt(formData.quantity),
       isRefundable: formData.isRefundable === "true",
-      isAvailable: formData.isAvailable === "true",
+      // Remove isAvailable: formData.isAvailable === "true",
+      warehouseDistribution: showWarehouseDistribution
+        ? warehouseDistribution
+        : null,
     };
 
     try {
-      const response = await fetch("http://localhost:3000/api/products/addProduct", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(productData),
-      });
+      const response = await fetch(
+        "http://localhost:3000/api/products/addProduct",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(productData),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -203,8 +343,10 @@ export default function AddProduct() {
         description: "",
         imageUrl: "",
         isRefundable: "true",
-        isAvailable: "true",
+        // Remove isAvailable: "true",
       });
+      setWarehouseDistribution({});
+      setShowWarehouseDistribution(false);
       setErrors({});
       resetCategorySelection();
     } catch (error) {
@@ -637,22 +779,139 @@ export default function AddProduct() {
                   <option value="false">❌ No (Non-refundable)</option>
                 </select>
               </div>
+              // Remove the entire is_available field section and replace with:
+              {/* Warehouse Distribution Section */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="warehouseDistribution"
+                    checked={showWarehouseDistribution}
+                    onChange={toggleWarehouseDistribution}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label
+                    htmlFor="warehouseDistribution"
+                    className="text-sm font-medium text-gray-700"
+                  >
+                    Set Warehouse Distribution (Optional)
+                  </label>
+                </div>
 
-              {/* Is Available */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <Eye className="w-4 h-4 text-emerald-500" />
-                  Is Available
-                </label>
-                <select
-                  name="isAvailable"
-                  value={formData.isAvailable}
-                  onChange={handleInputChange}
-                  className="w-full bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5"
-                >
-                  <option value="true">🟢 Available</option>
-                  <option value="false">🔴 Not Available</option>
-                </select>
+                {showWarehouseDistribution && (
+                  <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <h4 className="text-sm font-medium text-gray-900 mb-3">
+                      Distribute Stock Across Warehouses
+                    </h4>
+
+                    {warehouseLoading ? (
+                      <div className="text-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="text-sm text-gray-500 mt-2">
+                          Loading warehouses...
+                        </p>
+                      </div>
+                    ) : warehouses.length === 0 ? (
+                      <div className="text-center py-4">
+                        <p className="text-sm text-gray-500">
+                          No warehouses available
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {warehouses.map((warehouse) => (
+                          <div
+                            key={warehouse.warehouse_id}
+                            className="bg-white rounded border p-3"
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <h5 className="text-sm font-medium text-gray-900">
+                                  {warehouse.name}
+                                </h5>
+                                <p className="text-xs text-gray-500">
+                                  {warehouse.location}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                  Stock Quantity
+                                </label>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={getFieldDisplayValue(
+                                    warehouse.warehouse_id,
+                                    "quantity"
+                                  )}
+                                  onChange={(e) =>
+                                    handleWarehouseDistributionChange(
+                                      warehouse.warehouse_id,
+                                      "quantity",
+                                      e.target.value
+                                    )
+                                  }
+                                  onFocus={() =>
+                                    handleFieldFocus(
+                                      warehouse.warehouse_id,
+                                      "quantity"
+                                    )
+                                  }
+                                  onBlur={() =>
+                                    handleFieldBlur(
+                                      warehouse.warehouse_id,
+                                      "quantity"
+                                    )
+                                  }
+                                  className="text-sm"
+                                  placeholder="0"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                  Reorder Level
+                                </label>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={getFieldDisplayValue(
+                                    warehouse.warehouse_id,
+                                    "reorderLevel"
+                                  )}
+                                  onChange={(e) =>
+                                    handleWarehouseDistributionChange(
+                                      warehouse.warehouse_id,
+                                      "reorderLevel",
+                                      e.target.value
+                                    )
+                                  }
+                                  onFocus={() =>
+                                    handleFieldFocus(
+                                      warehouse.warehouse_id,
+                                      "reorderLevel"
+                                    )
+                                  }
+                                  onBlur={() =>
+                                    handleFieldBlur(
+                                      warehouse.warehouse_id,
+                                      "reorderLevel"
+                                    )
+                                  }
+                                  className="text-sm"
+                                  placeholder="20"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

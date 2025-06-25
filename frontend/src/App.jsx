@@ -9,6 +9,7 @@ import RegisterPage from "./pages/regPage.jsx";
 import AddressManagement from "./pages/AddressManagement.jsx";
 import ProductsByCategory from "./pages/ProductByCategory.jsx";
 import SearchResultsPage from './pages/SearchResultPage.jsx';
+import ManageInventory from './pages/ManageInventory.jsx';
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="/address-management" element={<AddressManagement />} />
         <Route path="/products/category" element={<ProductsByCategory />} />
         <Route path="/search" element={<SearchResultsPage />} />
+        <Route path="/manage-inventory" element={<ManageInventory />} />
         {/* Add more routes as needed */}
       </Routes>
     </Router>

@@ -1,0 +1,391 @@
+import pool from '../db.js';
+
+export const getInventory = async (req, res) => {
+  try {
+    const { 
+      warehouse_id = '', 
+      product_id = '', 
+      low_stock = false,
+      page = 1, 
+      limit = 10 
+    } = req.query;
+    
+    const offset = (page - 1) * limit;
+    
+    let query = `
+      SELECT 
+        i.inventory_id,
+        i.product_id,
+        i.warehouse_id,
+        i.quantity_in_stock,
+        i.reorder_level,
+        i.last_restock_date,
+        p.name as product_name,
+        p.price,
+        p.unit_measure,
+        w.name as warehouse_name,
+        w.location as warehouse_location
+      FROM "Inventory" i
+      JOIN "Product" p ON i.product_id = p.product_id
+      JOIN "Warehouse" w ON i.warehouse_id = w.warehouse_id
+    `;
+    
+    let whereConditions = [];
+    let queryParams = [];
+    let paramCount = 0;
+    
+    if (warehouse_id) {
+      paramCount++;
+      whereConditions.push(`i.warehouse_id = $${paramCount}`);
+      queryParams.push(warehouse_id);
+    }
+    
+    if (product_id) {
+      paramCount++;
+      whereConditions.push(`i.product_id = $${paramCount}`);
+      queryParams.push(product_id);
+    }
+    
+    if (low_stock === 'true') {
+      whereConditions.push(`i.quantity_in_stock <= i.reorder_level`);
+    }
+    
+    if (whereConditions.length > 0) {
+      query += ` WHERE ${whereConditions.join(' AND ')}`;
+    }
+    
+    query += ` ORDER BY i.last_restock_date DESC NULLS LAST`;
+    
+    // Add pagination
+    paramCount++;
+    query += ` LIMIT $${paramCount}`;
+    queryParams.push(limit);
+    
+    paramCount++;
+    query += ` OFFSET $${paramCount}`;
+    queryParams.push(offset);
+    
+    // Count query
+    let countQuery = `
+      SELECT COUNT(*) as total
+      FROM "Inventory" i
+      JOIN "Product" p ON i.product_id = p.product_id
+      JOIN "Warehouse" w ON i.warehouse_id = w.warehouse_id
+    `;
+    
+    if (whereConditions.length > 0) {
+      countQuery += ` WHERE ${whereConditions.join(' AND ')}`;
+    }
+    
+    const [inventoryResult, countResult] = await Promise.all([
+      pool.query(query, queryParams),
+      pool.query(countQuery, queryParams.slice(0, -2)) // Remove limit and offset for count
+    ]);
+    
+    const total = parseInt(countResult.rows[0].total);
+    const totalPages = Math.ceil(total / limit);
+    
+    res.status(200).json({
+      success: true,
+      inventory: inventoryResult.rows,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalItems: total,
+        itemsPerPage: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching inventory:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch inventory'
+    });
+  }
+};
+
+export const getInventoryStats = async (req, res) => {
+  try {
+    const query = `
+      SELECT
+  (SELECT COUNT(*) FROM "Product") AS totalProducts,
+  (SELECT COUNT(*) FROM "Warehouse") AS totalWarehouses,
+  (SELECT COUNT(*) FROM "Inventory" i 
+     WHERE i.quantity_in_stock <= i.reorder_level) AS lowStockProducts,
+  (SELECT COALESCE(SUM(p.price * i.quantity_in_stock), 0)
+     FROM "Inventory" i
+     JOIN "Product" p ON i.product_id = p.product_id) AS totalValue;
+
+    `;
+    const result = await pool.query(query);
+    res.status(200).json({
+      success: true,
+      stats: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error fetching inventory stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch inventory statistics'
+    });
+  }
+};
+
+export const getProductInventory = async (req, res) => {
+  try {
+    const { product_id } = req.params;
+    
+    const query = `
+      SELECT 
+        i.*,
+        w.name as warehouse_name,
+        w.location as warehouse_location,
+        p.name as product_name,
+        p.unit_measure
+      FROM "Inventory" i
+      JOIN "Warehouse" w ON i.warehouse_id = w.warehouse_id
+      JOIN "Product" p ON i.product_id = p.product_id
+      WHERE i.product_id = $1
+      ORDER BY w.name
+    `;
+    
+    const result = await pool.query(query, [product_id]);
+    res.status(200).json({
+      success: true,
+      inventory: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching product inventory:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch product inventory'
+    });
+  }
+};
+
+export const getWarehouseInventory = async (req, res) => {
+  try {
+    const { warehouse_id } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (page - 1) * limit;
+    
+    const query = `
+      SELECT 
+        i.*,
+        p.name as product_name,
+        p.price,
+        p.unit_measure,
+        c.name as category_name
+      FROM "Inventory" i
+      JOIN "Product" p ON i.product_id = p.product_id
+      LEFT JOIN "Category" c ON p.category_id = c.category_id
+      WHERE i.warehouse_id = $1
+      ORDER BY p.name
+      LIMIT $2 OFFSET $3
+    `;
+    
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM "Inventory" i
+      WHERE i.warehouse_id = $1
+    `;
+    
+    const [inventoryResult, countResult] = await Promise.all([
+      pool.query(query, [warehouse_id, limit, offset]),
+      pool.query(countQuery, [warehouse_id])
+    ]);
+    
+    const total = parseInt(countResult.rows[0].total);
+    const totalPages = Math.ceil(total / limit);
+    
+    res.status(200).json({
+      success: true,
+      inventory: inventoryResult.rows,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalItems: total,
+        itemsPerPage: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching warehouse inventory:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch warehouse inventory'
+    });
+  }
+};
+
+export const upsertInventory = async (req, res) => {
+  try {
+    const { product_id, warehouse_id, quantity_in_stock, reorder_level } = req.body;
+    
+    if (!product_id || !warehouse_id || quantity_in_stock === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product ID, warehouse ID, and quantity are required'
+      });
+    }
+    
+    const query = `
+      INSERT INTO "Inventory" (product_id, warehouse_id, quantity_in_stock, reorder_level, last_restock_date)
+      VALUES ($1, $2, $3, $4, NOW())
+      ON CONFLICT (product_id, warehouse_id)
+      DO UPDATE SET
+        quantity_in_stock = EXCLUDED.quantity_in_stock,
+        reorder_level = COALESCE(EXCLUDED.reorder_level, "Inventory".reorder_level),
+        last_restock_date = NOW()
+      RETURNING *
+    `;
+    
+    const values = [product_id, warehouse_id, quantity_in_stock, reorder_level || 0];
+    
+    const result = await pool.query(query, values);
+    
+    res.status(200).json({
+      success: true,
+      inventory: result.rows[0],
+      message: 'Inventory updated successfully'
+    });
+  } catch (error) {
+    console.error('Error upserting inventory:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update inventory'
+    });
+  }
+};
+
+export const updateReorderLevel = async (req, res) => {
+  try {
+    const { inventory_id } = req.params;
+    const { reorder_level } = req.body;
+    
+    if (reorder_level === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reorder level is required'
+      });
+    }
+    
+    const query = `
+      UPDATE "Inventory"
+      SET reorder_level = $1
+      WHERE inventory_id = $2
+      RETURNING *
+    `;
+    
+    const result = await pool.query(query, [reorder_level, inventory_id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Inventory item not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      inventory: result.rows[0],
+      message: 'Reorder level updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating reorder level:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update reorder level'
+    });
+  }
+};
+
+export const restockInventory = async (req, res) => {
+  try {
+    const { inventory_id } = req.params;
+    const { quantity } = req.body;
+    
+    if (!quantity || quantity <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid quantity is required'
+      });
+    }
+    
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Update inventory
+      const inventoryQuery = `
+        UPDATE "Inventory"
+        SET quantity_in_stock = quantity_in_stock + $1, last_restock_date = NOW()
+        WHERE inventory_id = $2
+        RETURNING *, 
+        (SELECT product_id FROM "Inventory" WHERE inventory_id = $2) as product_id
+      `;
+      
+      const inventoryResult = await client.query(inventoryQuery, [quantity, inventory_id]);
+      
+      if (inventoryResult.rows.length === 0) {
+        throw new Error('Inventory item not found');
+      }
+      
+      // Update product total quantity
+      const productQuery = `
+        UPDATE "Product"
+        SET quantity = quantity + $1, updated_at = NOW()
+        WHERE product_id = $2
+        RETURNING *
+      `;
+      
+      await client.query(productQuery, [quantity, inventoryResult.rows[0].product_id]);
+      
+      await client.query('COMMIT');
+      
+      res.status(200).json({
+        success: true,
+        inventory: inventoryResult.rows[0],
+        message: 'Inventory restocked successfully'
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error restocking inventory:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to restock inventory'
+    });
+  }
+};
+
+export const deleteInventoryItem = async (req, res) => {
+  try {
+    const { inventory_id } = req.params;
+    
+    const query = 'DELETE FROM "Inventory" WHERE inventory_id = $1 RETURNING *';
+    const result = await pool.query(query, [inventory_id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Inventory item not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Inventory item deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting inventory item:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete inventory item'
+    });
+  }
+};

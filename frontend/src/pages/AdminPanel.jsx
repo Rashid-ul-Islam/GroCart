@@ -1,4 +1,3 @@
-// src/components/AdminPanel.jsx
 import React, { useState, useEffect } from "react";
 import {
   Plus,
@@ -405,16 +404,12 @@ export default function AdminPanel() {
                 Address book
               </Button>
             </Link>
-
-            <Button
-              onClick={() =>
-                alert("Manage inventory functionality coming soon!")
-              }
-              className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3"
-            >
-              <Package className="w-6 h-6" />
-              Manage Inventory
-            </Button>
+            <Link to='/manage-inventory'>
+              <Button className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3">
+                <Package className="w-6 h-6" />
+                Manage Inventory
+              </Button>
+            </Link>
             <Button
               onClick={() => alert("View analytics functionality coming soon!")}
               className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3"
