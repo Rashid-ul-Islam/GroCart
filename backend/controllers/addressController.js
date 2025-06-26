@@ -945,3 +945,27 @@ export const getAddressHierarchy = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+// Add this new function to your addressController.js
+export const getWarehouses = async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        warehouse_id,
+        name,
+        location,
+        contact_info,
+        latitude,
+        longitude,
+        created_at
+      FROM "Warehouse"
+      ORDER BY name ASC
+    `);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching warehouses:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+

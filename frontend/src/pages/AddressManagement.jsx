@@ -68,6 +68,20 @@ const AddressManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchType, setSearchType] = useState("region"); // 'region' or 'delivery_region'
   const [searchResults, setSearchResults] = useState([]);
+  // Add these new states after your existing state declarations
+  const [warehouses, setWarehouses] = useState([]);
+  const [newDeliveryRegion, setNewDeliveryRegion] = useState({
+    name: "",
+    latitude: "",
+    longitude: "",
+    warehouse_id: "",
+  });
+  const [deliveryRegionErrors, setDeliveryRegionErrors] = useState({
+    name: "",
+    latitude: "",
+    longitude: "",
+    warehouse_id: "",
+  });
 
   // Delivery region management states
   const [selectedRegionForDelivery, setSelectedRegionForDelivery] =
@@ -87,6 +101,7 @@ const AddressManagement = () => {
         fetchDivisions(),
         fetchDeliveryRegions(),
         fetchRegionsWithDeliveryInfo(),
+        fetchWarehouses(), // Add this line
       ]);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -162,6 +177,18 @@ const AddressManagement = () => {
       }
     } catch (error) {
       console.error("Error fetching regions:", error);
+    }
+  };
+  // Add this new fetch function
+  const fetchWarehouses = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/api/address/warehouses");
+      if (response.ok) {
+        const data = await response.json();
+        setWarehouses(data);
+      }
+    } catch (error) {
+      console.error("Error fetching warehouses:", error);
     }
   };
 
@@ -509,6 +536,109 @@ const AddressManagement = () => {
       setLoading(false);
     }
   };
+  // Add this new submission handler
+  const handleSubmitNewDeliveryRegion = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    // Clear previous errors
+    setDeliveryRegionErrors({
+      name: "",
+      latitude: "",
+      longitude: "",
+      warehouse_id: "",
+    });
+
+    // Validation
+    let hasErrors = false;
+    const errors = {};
+
+    if (!newDeliveryRegion.name.trim()) {
+      errors.name = "Delivery region name is required";
+      hasErrors = true;
+    }
+
+    if (!newDeliveryRegion.latitude || isNaN(newDeliveryRegion.latitude)) {
+      errors.latitude = "Valid latitude is required";
+      hasErrors = true;
+    }
+
+    if (!newDeliveryRegion.longitude || isNaN(newDeliveryRegion.longitude)) {
+      errors.longitude = "Valid longitude is required";
+      hasErrors = true;
+    }
+
+    if (!newDeliveryRegion.warehouse_id) {
+      errors.warehouse_id = "Warehouse selection is required";
+      hasErrors = true;
+    }
+
+    if (hasErrors) {
+      setDeliveryRegionErrors(errors);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        "http://localhost:3000/api/address/delivery-regions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: newDeliveryRegion.name,
+            latitude: parseFloat(newDeliveryRegion.latitude),
+            longitude: parseFloat(newDeliveryRegion.longitude),
+            warehouse_id: parseInt(newDeliveryRegion.warehouse_id),
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.status === 409) {
+        setDeliveryRegionErrors((prev) => ({
+          ...prev,
+          name: `Delivery region "${newDeliveryRegion.name}" already exists. Please choose a different name.`,
+        }));
+        setLoading(false);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create delivery region");
+      }
+
+      success(
+        `Delivery region "${newDeliveryRegion.name}" created successfully!`,
+        {
+          title: "🎉 Success!",
+          duration: 4000,
+          animation: "bounce",
+        }
+      );
+
+      // Reset form
+      setNewDeliveryRegion({
+        name: "",
+        latitude: "",
+        longitude: "",
+        warehouse_id: "",
+      });
+
+      fetchAllData();
+    } catch (error) {
+      console.error("Error creating delivery region:", error);
+      error("Failed to create delivery region. Please try again.", {
+        title: "❌ Error!",
+        duration: 5000,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Add this helper function
   const resetForm = () => {
@@ -713,6 +843,17 @@ const AddressManagement = () => {
             >
               <MapPin className="w-5 h-5" />
               Edit Delivery Regions
+            </Button>
+            <Button
+              onClick={() => setActiveTab("addDeliveryRegion")}
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all transform hover:scale-105 ${
+                activeTab === "addDeliveryRegion"
+                  ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg hover:from-violet-700 hover:to-purple-700"
+                  : "bg-gradient-to-r from-violet-500 to-purple-500 text-purple-800 hover:from-violet-600 hover:to-purple-800"
+              }`}
+            >
+              <Plus className="w-5 h-5" />
+              Add Delivery Region
             </Button>
           </div>
         </div>
@@ -1224,6 +1365,212 @@ const AddressManagement = () => {
                           </div>
                         ) : (
                           `Create ${getCreationIntentText()}`
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              )}
+              {/* Add new delivery region tab */}
+              {activeTab === "addDeliveryRegion" && (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      Add New Delivery Region
+                    </h2>
+                    <div className="text-sm text-gray-500">
+                      Create delivery coverage areas
+                    </div>
+                  </div>
+
+                  <form
+                    onSubmit={handleSubmitNewDeliveryRegion}
+                    className="space-y-6"
+                  >
+                    {/* Delivery Region Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Delivery Region Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={newDeliveryRegion.name}
+                        onChange={(e) => {
+                          setNewDeliveryRegion((prev) => ({
+                            ...prev,
+                            name: e.target.value,
+                          }));
+                          if (deliveryRegionErrors.name) {
+                            setDeliveryRegionErrors((prev) => ({
+                              ...prev,
+                              name: "",
+                            }));
+                          }
+                        }}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          deliveryRegionErrors.name
+                            ? "border-red-300"
+                            : "border-gray-300"
+                        }`}
+                        placeholder="Enter delivery region name"
+                      />
+                      {deliveryRegionErrors.name && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {deliveryRegionErrors.name}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Latitude */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Latitude *
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={newDeliveryRegion.latitude}
+                        onChange={(e) => {
+                          setNewDeliveryRegion((prev) => ({
+                            ...prev,
+                            latitude: e.target.value,
+                          }));
+                          if (deliveryRegionErrors.latitude) {
+                            setDeliveryRegionErrors((prev) => ({
+                              ...prev,
+                              latitude: "",
+                            }));
+                          }
+                        }}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          deliveryRegionErrors.latitude
+                            ? "border-red-300"
+                            : "border-gray-300"
+                        }`}
+                        placeholder="Enter latitude (e.g., 23.8103)"
+                      />
+                      {deliveryRegionErrors.latitude && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {deliveryRegionErrors.latitude}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Longitude */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Longitude *
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={newDeliveryRegion.longitude}
+                        onChange={(e) => {
+                          setNewDeliveryRegion((prev) => ({
+                            ...prev,
+                            longitude: e.target.value,
+                          }));
+                          if (deliveryRegionErrors.longitude) {
+                            setDeliveryRegionErrors((prev) => ({
+                              ...prev,
+                              longitude: "",
+                            }));
+                          }
+                        }}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          deliveryRegionErrors.longitude
+                            ? "border-red-300"
+                            : "border-gray-300"
+                        }`}
+                        placeholder="Enter longitude (e.g., 90.4125)"
+                      />
+                      {deliveryRegionErrors.longitude && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {deliveryRegionErrors.longitude}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Warehouse Selection */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Warehouse *
+                      </label>
+                      <select
+                        value={newDeliveryRegion.warehouse_id}
+                        onChange={(e) => {
+                          setNewDeliveryRegion((prev) => ({
+                            ...prev,
+                            warehouse_id: e.target.value,
+                          }));
+                          if (deliveryRegionErrors.warehouse_id) {
+                            setDeliveryRegionErrors((prev) => ({
+                              ...prev,
+                              warehouse_id: "",
+                            }));
+                          }
+                        }}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          deliveryRegionErrors.warehouse_id
+                            ? "border-red-300"
+                            : "border-gray-300"
+                        }`}
+                      >
+                        <option value="">Select a warehouse</option>
+                        {warehouses.map((warehouse) => (
+                          <option
+                            key={warehouse.warehouse_id}
+                            value={warehouse.warehouse_id}
+                          >
+                            {warehouse.name} - {warehouse.location}
+                          </option>
+                        ))}
+                      </select>
+                      {deliveryRegionErrors.warehouse_id && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {deliveryRegionErrors.warehouse_id}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Submit Button */}
+                    <div className="flex justify-end space-x-3 pt-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setNewDeliveryRegion({
+                            name: "",
+                            latitude: "",
+                            longitude: "",
+                            warehouse_id: "",
+                          });
+                          setDeliveryRegionErrors({
+                            name: "",
+                            latitude: "",
+                            longitude: "",
+                            warehouse_id: "",
+                          });
+                        }}
+                      >
+                        <X className="mr-2 h-4 w-4" />
+                        Reset
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={loading}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        {loading ? (
+                          <>
+                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                            Creating...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="mr-2 h-4 w-4" />
+                            Create Delivery Region
+                          </>
                         )}
                       </Button>
                     </div>
