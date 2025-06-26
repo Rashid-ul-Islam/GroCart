@@ -18,6 +18,7 @@ import {
   Users,
   Package
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext.jsx';
 
 import { StatsOverview } from '../components/deliveryBoy/StatsOverview.jsx';
 import { AssignedDeliveries } from '../components/deliveryBoy/AssignedDeliveries.jsx';
@@ -28,7 +29,9 @@ const DeliveryBoy = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRegion, setFilterRegion] = useState("all");
-
+ const { user, isLoggedIn } = useAuth();
+  
+  const deliveryBoyId = user?.user_id;
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b border-gray-200">
@@ -129,7 +132,7 @@ const DeliveryBoy = () => {
                   <AssignedDeliveries />
                 </div>
                 <div>
-                  <PerformanceChart />
+                  <PerformanceChart deliveryBoyId={deliveryBoyId || "1"} />
                 </div>
               </div>
             </TabsContent>
@@ -139,7 +142,7 @@ const DeliveryBoy = () => {
                 <AssignedDeliveries />
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <StatsOverview />
-                  <PerformanceChart />
+                  <PerformanceChart deliveryBoyId={deliveryBoyId || "1"} />
                 </div>
               </div>
             </TabsContent>
@@ -167,7 +170,7 @@ const DeliveryBoy = () => {
                   </div>
                 </div>
               </div>
-              <PerformanceChart />
+              <PerformanceChart deliveryBoyId={deliveryBoyId || "1"} />
             </TabsContent>
 
             <TabsContent value="search" className="space-y-6">
@@ -232,7 +235,7 @@ const DeliveryBoy = () => {
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <StatsOverview />
-                <PerformanceChart />
+                <PerformanceChart deliveryBoyId={deliveryBoyId || "1"} />
               </div>
             </TabsContent>
           </Tabs>

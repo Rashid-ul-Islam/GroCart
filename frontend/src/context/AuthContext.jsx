@@ -11,11 +11,11 @@ export const useAuth = () => {
   return context;
 };
 
-// Helper function to get initial state from localStorage
+// Helper function to get initial state from sessionStorage
 const getInitialState = () => {
   try {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
+    const token = sessionStorage.getItem('token');
+    const userData = sessionStorage.getItem('user');
     
     if (token && userData) {
       const parsedUser = JSON.parse(userData);
@@ -27,8 +27,8 @@ const getInitialState = () => {
   } catch (error) {
     console.error('Error parsing stored user data:', error);
     // Clear corrupted data
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
   }
   
   return {
@@ -47,14 +47,14 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(false);
   }, []);
 
-  // Persist auth state changes to localStorage
+  // Persist auth state changes to sessionStorage
   useEffect(() => {
     if (authState.user && authState.isLoggedIn) {
-      localStorage.setItem('user', JSON.stringify(authState.user));
+      sessionStorage.setItem('user', JSON.stringify(authState.user));
       console.log('Auth state persisted:', authState);
     } else {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
+      sessionStorage.removeItem('user');
+      sessionStorage.removeItem('token');
       console.log('Auth state cleared');
     }
   }, [authState]);
@@ -64,8 +64,8 @@ export const AuthProvider = ({ children }) => {
       console.log('Login function called with:', { userData, token });
       
       // Store token immediately
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(userData));
+      sessionStorage.setItem('token', token);
+      sessionStorage.setItem('user', JSON.stringify(userData));
       
       // Update state
       setAuthState({
@@ -81,8 +81,8 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     console.log('Logout function called');
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
     setAuthState({
       user: null,
       isLoggedIn: false
@@ -92,7 +92,7 @@ export const AuthProvider = ({ children }) => {
 
   const updateUser = (updatedUserData) => {
     try {
-      localStorage.setItem('user', JSON.stringify(updatedUserData));
+      sessionStorage.setItem('user', JSON.stringify(updatedUserData));
       setAuthState(prev => ({
         ...prev,
         user: updatedUserData

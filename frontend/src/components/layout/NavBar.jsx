@@ -18,7 +18,6 @@ export default function NavBar() {
   const navigate = useNavigate();
   const isAdmin = user?.role_id === "admin";
   const isDeliveryBoy = user?.role_id === "delivery_boy";
-  console.log("NavBar render - User:", user, "IsLoggedIn:", isLoggedIn);
   const fetchCartCount = async () => {
     if (!isLoggedIn || !user) return;
     
