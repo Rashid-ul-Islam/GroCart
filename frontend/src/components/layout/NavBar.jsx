@@ -17,6 +17,7 @@ export default function NavBar() {
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
   const isAdmin = user?.role_id === "admin";
+  const isDeliveryBoy = user?.role_id === "delivery_boy";
   console.log("NavBar render - User:", user, "IsLoggedIn:", isLoggedIn);
   const fetchCartCount = async () => {
     if (!isLoggedIn || !user) return;
@@ -176,6 +177,16 @@ export default function NavBar() {
                 to="/admin"
                 className="hover:text-yellow-400 transition duration-300"
                 title="Admin Panel"
+              >
+                <Shield className="w-7 h-7" />
+              </Link>
+            )}
+
+            {isDeliveryBoy && (
+              <Link
+                to="/delivery"
+                className="hover:text-yellow-400 transition duration-300"
+                title="Delivery Boy"
               >
                 <Shield className="w-7 h-7" />
               </Link>

@@ -12,6 +12,7 @@ import SearchResultsPage from "./pages/SearchResultPage.jsx";
 import ManageInventory from "./pages/ManageInventory.jsx";
 import DeliveryDashboard from "./pages/DeliveryDashboard.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
+import DeliveryBoy from "./pages/DeliveryBoy.jsx"; 
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 export default function App() {
@@ -33,6 +34,7 @@ export default function App() {
             path="/admin/delivery-dashboard"
             element={<DeliveryDashboard />}
           />
+          <Route path="/delivery" element={<DeliveryBoy />} />
           {/* Add more routes as needed */}
         </Routes>
       </Router>
