@@ -11,84 +11,168 @@ import {
   Tag,
   Gift
 } from 'lucide-react';
-
-// Sample cart data - replace with your actual cart state management
-const sampleCartItems = [
-  {
-    id: 1,
-    name: "Premium Wireless Headphones",
-    price: 299.99,
-    quantity: 1,
-    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&h=100&fit=crop&crop=center",
-    variant: "Black, Noise Cancelling"
-  },
-  {
-    id: 2,
-    name: "Smart Fitness Watch",
-    price: 199.99,
-    quantity: 2,
-    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&h=100&fit=crop&crop=center",
-    variant: "Space Gray, 44mm"
-  },
-  {
-    id: 3,
-    name: "Organic Cotton T-Shirt",
-    price: 29.99,
-    quantity: 1,
-    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=100&h=100&fit=crop&crop=center",
-    variant: "Medium, Navy Blue"
-  }
-];
+import LoginModal from '../auth/LoginModal.jsx';
 
 // Cart Sidebar Layout Component
-function CartSidebarLayout({ children }) {
+export default function CartSidebarLayout({ children }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [cartItems, setCartItems] = useState(sampleCartItems);
+  const [cartItems, setCartItems] = useState([]);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  
+  const getCurrentUser = () => {
+    const userData = localStorage.getItem('user');
+    return userData ? JSON.parse(userData) : null;
+  };
 
+  const isUserLoggedIn = () => {
+    return localStorage.getItem('token') && localStorage.getItem('user');
+  };
   // Calculate totals
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const tax = subtotal * 0.08; // 8% tax
-  const shipping = subtotal > 100 ? 0 : 9.99;
+  const shipping = subtotal > 100 ? 0 : 50;
   const total = subtotal + tax + shipping;
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
+  const fetchCartItems = async () => {
+    if (!isUserLoggedIn()) return;
+    
+    setIsLoading(true);
+    try {
+      const user = getCurrentUser();
+      const response = await fetch(`http://localhost:3000/api/cart/getCart/${user.user_id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCartItems(data.data || []);
+      } else {
+        console.error('Failed to fetch cart items');
+      }
+    } catch (error) {
+      console.error('Error fetching cart items:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateQuantity = async (cart_item_id, newQuantity) => {
+    if (!isUserLoggedIn()) return;
+
+    try {
+      const response = await fetch(`http://localhost:3000/api/cart/updateCart/item/${cart_item_id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ quantity: newQuantity })
+      });
+
+      if (response.ok) {
+        if (newQuantity === 0) {
+          setCartItems(items => items.filter(item => item.id !== cart_item_id));
+        } else {
+          setCartItems(items => items.map(item => 
+            item.id === cart_item_id ? { ...item, quantity: newQuantity } : item
+          ));
+        }
+      } else {
+        console.error('Failed to update cart item');
+      }
+    } catch (error) {
+      console.error('Error updating cart item:', error);
+    }
+  };
+
+  const removeItem = async (cart_item_id) => {
+    if (!isUserLoggedIn()) return;
+
+    try {
+      const response = await fetch(`http://localhost:3000/api/cart/deleteCart/item/${cart_item_id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (response.ok) {
+        setCartItems(items => items.filter(item => item.id !== cart_item_id));
+      } else {
+        console.error('Failed to remove cart item');
+      }
+    } catch (error) {
+      console.error('Error removing cart item:', error);
+    }
+  };
+
+  const clearCart = async () => {
+    if (!isUserLoggedIn()) return;
+
+    try {
+      const user = getCurrentUser();
+      const response = await fetch(`http://localhost:3000/api/cart/clearCart/${user.user_id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (response.ok) {
+        setCartItems([]);
+      } else {
+        console.error('Failed to clear cart');
+      }
+    } catch (error) {
+      console.error('Error clearing cart:', error);
+    }
+  };
+
   const toggleCart = () => {
     if (!isAnimating) {
+      // Check if user is logged in when opening cart
+      if (!isUserLoggedIn()) {
+        setIsLoginModalOpen(true);
+        return;
+      }
+      
       setIsAnimating(true);
       setIsCartOpen(!isCartOpen);
+      
+      // Fetch cart items when opening cart
+      if (!isCartOpen) {
+        fetchCartItems();
+      }
+      
       setTimeout(() => setIsAnimating(false), 500);
     }
   };
 
-  const updateQuantity = (id, newQuantity) => {
-    if (newQuantity === 0) {
-      removeItem(id);
-    } else {
-      setCartItems(items =>
-        items.map(item =>
-          item.id === id ? { ...item, quantity: newQuantity } : item
-        )
-      );
-    }
+  const handleLoginSuccess = (userData) => {
+    setIsLoginModalOpen(false);
+    // Open cart after successful login
+    setIsCartOpen(true);
+    fetchCartItems();
   };
 
-  const removeItem = (id) => {
-    setCartItems(items => items.filter(item => item.id !== id));
-  };
-
+  
   // Prevent body scroll when cart is open
   useEffect(() => {
-    if (isCartOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isCartOpen]);
+      if (isCartOpen) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = 'unset';
+      }
+      return () => {
+        document.body.style.overflow = 'unset';
+      };
+    }, [isCartOpen]);
 
   return (
     <>
@@ -290,7 +374,13 @@ function CartSidebarLayout({ children }) {
           </div>
         )}
       </div>
-
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+        currentPath="/cart"
+      />
       <style jsx>{`
         @keyframes slideInRight {
           from {
@@ -315,55 +405,3 @@ function CartSidebarLayout({ children }) {
     </>
   );
 }
-
-// Demo Page Component to show usage
-function DemoPage() {
-  return (
-    <CartSidebarLayout>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-8">
-        <div className="max-w-6xl mx-auto">
-          <h1 className="text-4xl font-bold text-gray-800 mb-8 text-center">
-            E-commerce Demo Page
-          </h1>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((item) => (
-              <div key={item} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
-                <div className="h-48 bg-gradient-to-br from-blue-200 to-purple-200"></div>
-                <div className="p-6">
-                  <h3 className="font-semibold text-lg text-gray-800 mb-2">Product {item}</h3>
-                  <p className="text-gray-600 mb-4">This is a sample product description.</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-blue-600">$99.99</span>
-                    <button className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200">
-                      Add to Cart
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          <div className="text-center mt-12">
-            <p className="text-gray-600 text-lg mb-4">
-              Click the floating cart button on the right to see the cart sidebar in action!
-            </p>
-            <div className="bg-white rounded-xl p-6 shadow-lg inline-block">
-              <h2 className="text-xl font-semibold text-gray-800 mb-2">Features:</h2>
-              <ul className="text-left text-gray-600 space-y-1">
-                <li>• Floating cart button with item count</li>
-                <li>• Smooth slide-in animation from right</li>
-                <li>• Modern glassmorphism design</li>
-                <li>• Quantity controls and item management</li>
-                <li>• Price calculations and promo codes</li>
-                <li>• Responsive and touch-friendly</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    </CartSidebarLayout>
-  );
-}
-
-export default DemoPage;

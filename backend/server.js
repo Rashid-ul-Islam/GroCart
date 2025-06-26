@@ -18,6 +18,7 @@ import inventoryRoute from "./routes/inventoryRoute.js";
 import deliveryOverview from "./routes/deliveryOverviewRoute.js";
 import activeDeliveryRoute from "./routes/ActiveDeliveryRoute.js";
 import deliveryBoyManagementRoute from "./routes/deliveryBoyManagementRoute.js";
+import cartRoute from "./routes/cartRoute.js";
 
 
 const app = express();
@@ -47,6 +48,7 @@ app.use("/api/inventory", inventoryRoute);
 app.use("/api/delivery", deliveryOverview);
 app.use("/api/delivery", activeDeliveryRoute);
 app.use("/api/delivery", deliveryBoyManagementRoute);
+app.use("/api/cart", cartRoute);
 
 app.listen(port, () => {
   console.log(`Server running on ${port}`);

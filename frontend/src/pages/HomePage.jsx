@@ -1,24 +1,86 @@
 import React, { useState, useEffect } from "react";
 import { Heart, Star, ArrowRight, Loader2, ShoppingCart } from "lucide-react";
 import Sidebar from "../components/layout/SideBar.jsx";
+import CartBar from "../components/layout/CartBar.jsx";
+import LoginModal from "../components/auth/LoginModal.jsx";
 
 // Product Card Component
 const ProductCard = ({ product, onProductClick, onAddToCart }) => {
-  const [quantity, setQuantity] = useState(0); // Changed initial value to 0
+  const [quantity, setQuantity] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
-  const handleAddToCart = () => {
-    if (quantity > 0) {
-      // Call the parent's add to cart function
-      if (onAddToCart) {
-        onAddToCart(product, quantity);
+  const getCurrentUser = () => {
+    const userData = localStorage.getItem("user");
+    return userData ? JSON.parse(userData) : null;
+  };
+
+  const isUserLoggedIn = () => {
+    return localStorage.getItem("token") && localStorage.getItem("user");
+  };
+
+  const handleAddToCart = async () => {
+    if (quantity === 0) return;
+
+    if (!isUserLoggedIn()) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const user = getCurrentUser();
+      const response = await fetch(
+        "http://localhost:3000/api/cart/addToCart/add",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            user_id: user.user_id,
+            product_id: product.id,
+            quantity: quantity,
+          }),
+        }
+      );
+
+      const data = await response.json();
+      console.log("Add to cart response:", data);
+      console.log("Product:", product);
+
+      if (response.ok) {
+        // Success feedback
+        if (onAddToCart) {
+          onAddToCart(product, quantity);
+        }
+        setQuantity(0);
+
+        // Optional: Show success message
+        console.log("Item added to cart successfully");
+      } else {
+        console.error("Failed to add item to cart:", data.message);
+        // You can add a toast notification here
       }
-      // Reset quantity to 0 after adding to cart
-      setQuantity(0);
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const handleLoginSuccess = (userData) => {
+    setShowLoginModal(false);
+    // Automatically add to cart after login
+    setTimeout(() => {
+      handleAddToCart();
+    }, 500);
+  };
+
   return (
+    <>
     <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 overflow-hidden group">
       {/* Product Image */}
       <div className="relative overflow-hidden">
@@ -41,12 +103,12 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
           />
         </button>
 
-        {/* Discount Badge */}
+        {/* Discount Badge
         {product.discount && (
           <div className="absolute top-3 left-3 bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-1 rounded-full text-sm font-bold">
             -{product.discount}%
           </div>
-        )}
+        )} */}
       </div>
 
       {/* Product Info */}
@@ -98,13 +160,15 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
             <span className="text-sm font-medium text-gray-700">Qty:</span>
             <div className="flex items-center space-x-2">
               <button
-                onClick={() => setQuantity(Math.max(0, quantity - 1))} // Changed to allow 0
+                onClick={() => setQuantity(Math.max(0, quantity - 1))}
                 className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg flex items-center justify-center font-bold text-lg transition-all duration-200 transform hover:scale-110 shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 disabled={quantity <= 0}
               >
                 -
               </button>
-              <span className="w-8 text-center font-medium text-black">{quantity}</span>
+              <span className="w-8 text-center font-medium text-black">
+                {quantity}
+              </span>
               <button
                 onClick={() => setQuantity(quantity + 1)}
                 className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg flex items-center justify-center font-bold text-lg transition-all duration-200 transform hover:scale-110 shadow-md hover:shadow-lg active:scale-95"
@@ -118,20 +182,34 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
         {/* Add to Cart Button */}
         <button
           onClick={handleAddToCart}
-          disabled={quantity === 0}
+          disabled={quantity === 0 || isLoading}
           className={`w-full py-2 px-3 rounded-lg font-medium text-white transition-all duration-200 transform flex items-center justify-center space-x-2 text-sm ${
-            quantity > 0
+            quantity > 0 && !isLoading
               ? "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 hover:scale-105 shadow-lg hover:shadow-xl active:scale-95"
               : "bg-gray-400 cursor-not-allowed opacity-60"
           }`}
         >
-          <ShoppingCart className="w-4 h-4" />
-          <span>
-            {quantity > 0 ? `Add ${quantity} to Cart` : "Select Quantity"}
-          </span>
+          {isLoading ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          ) : (
+            <>
+              <ShoppingCart className="w-4 h-4" />
+              <span>
+                {quantity > 0 ? `Add ${quantity} to Cart` : "Select Quantity"}
+              </span>
+            </>
+          )}
         </button>
       </div>
     </div>
+    {/* Login Modal */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onLoginSuccess={handleLoginSuccess}
+        currentPath="/"
+      />
+    </>
   );
 };
 
@@ -204,8 +282,8 @@ const HomePage = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [cart, setCart] = useState([]); // Added cart state
-  
+  const [cart, setCart] = useState([]); // Cart state for CartBar
+
   // State for homepage sections
   const [homepageData, setHomepageData] = useState({
     mostPopular: [],
@@ -213,7 +291,7 @@ const HomePage = () => {
     freshFruits: [],
     dairyProducts: [],
     meatProducts: [],
-    beverages: []
+    beverages: [],
   });
 
   // Add handler function
@@ -221,44 +299,58 @@ const HomePage = () => {
     setIsSidebarCollapsed(collapsed);
   };
 
-  // Add to cart handler
+  // Add to cart handler - Updated to work with CartBar format
   const handleAddToCart = (product, quantity) => {
     console.log(`Adding ${quantity} of ${product.name} to cart`);
-    
-    setCart(prevCart => {
-      const existingItem = prevCart.find(item => item.id === product.id);
-      
+
+    setCart((prevCart) => {
+      const existingItem = prevCart.find((item) => item.id === product.id);
+
       if (existingItem) {
         // If product already exists in cart, update quantity
-        return prevCart.map(item =>
+        return prevCart.map((item) =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
       } else {
         // If product doesn't exist in cart, add new item
-        return [...prevCart, { ...product, quantity }];
+        // Transform product to match CartBar expected format
+        const cartItem = {
+          id: product.id,
+          name: product.name,
+          price: parseFloat(product.price.replace("৳", "")) || 0, // Remove ৳ and convert to number
+          quantity: quantity,
+          image: product.image || "https://via.placeholder.com/100x100",
+          variant: `${product.unit || "each"}, ${product.origin || "Local"}`,
+        };
+
+        return [...prevCart, cartItem];
       }
     });
 
     // Optional: Show success message or notification
-    // You can implement a toast notification here
-    alert(`Added ${quantity} ${product.name} to cart!`);
+    // You can implement a toast notification here instead of alert
+    console.log(`Added ${quantity} ${product.name} to cart!`);
   };
 
   const transformProduct = (apiProduct) => ({
     id: apiProduct.product_id,
     name: apiProduct.product_name || apiProduct.name,
     price: `৳${apiProduct.price}`,
-    unit: apiProduct.unit_measure || 'kg',
-    origin: apiProduct.origin || 'Local',
+    unit: apiProduct.unit_measure || "kg",
+    origin: apiProduct.origin || "Local",
     description: apiProduct.description,
-    image: apiProduct.image_url || apiProduct.primary_image || 'https://via.placeholder.com/300x200',
+    image:
+      apiProduct.image_url ||
+      apiProduct.primary_image ||
+      "https://via.placeholder.com/300x200",
     isAvailable: apiProduct.is_available,
     isRefundable: apiProduct.is_refundable,
     rating: parseFloat(apiProduct.avg_rating) || 4,
-    reviews: parseInt(apiProduct.review_count) || Math.floor(Math.random() * 200) + 10,
-    category: apiProduct.category_name
+    reviews:
+      parseInt(apiProduct.review_count) || Math.floor(Math.random() * 200) + 10,
+    category: apiProduct.category_name,
   });
 
   // Fetch homepage products
@@ -267,83 +359,111 @@ const HomePage = () => {
       try {
         setLoading(true);
         setError(null);
-        
-        console.log('Fetching homepage products...');
-        const response = await fetch('http://localhost:3000/api/home/getProductsForHomepage');
-        
+
+        console.log("Fetching homepage products...");
+        const response = await fetch(
+          "http://localhost:3000/api/home/getProductsForHomepage"
+        );
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const apiResponse = await response.json();
-        console.log('API Response:', apiResponse);
-        
+        console.log("API Response:", apiResponse);
+
         if (!apiResponse.success) {
-          throw new Error(apiResponse.message || 'Failed to fetch products');
+          throw new Error(apiResponse.message || "Failed to fetch products");
         }
-        
+
         // Handle the response structure
         let transformedData;
-        
-        if (apiResponse.data && typeof apiResponse.data === 'object' && !Array.isArray(apiResponse.data)) {
+
+        if (
+          apiResponse.data &&
+          typeof apiResponse.data === "object" &&
+          !Array.isArray(apiResponse.data)
+        ) {
           // If data is already categorized
           transformedData = {
-            mostPopular: (apiResponse.data.mostPopular || []).map(transformProduct),
-            freshVegetables: (apiResponse.data.freshVegetables || []).map(transformProduct),
-            freshFruits: (apiResponse.data.freshFruits || []).map(transformProduct),
-            dairyProducts: (apiResponse.data.dairyProducts || []).map(transformProduct),
-            meatProducts: (apiResponse.data.meatProducts || []).map(transformProduct),
-            beverages: (apiResponse.data.beverages || []).map(transformProduct)
+            mostPopular: (apiResponse.data.mostPopular || []).map(
+              transformProduct
+            ),
+            freshVegetables: (apiResponse.data.freshVegetables || []).map(
+              transformProduct
+            ),
+            freshFruits: (apiResponse.data.freshFruits || []).map(
+              transformProduct
+            ),
+            dairyProducts: (apiResponse.data.dairyProducts || []).map(
+              transformProduct
+            ),
+            meatProducts: (apiResponse.data.meatProducts || []).map(
+              transformProduct
+            ),
+            beverages: (apiResponse.data.beverages || []).map(transformProduct),
           };
         } else {
           // If data is a flat array, distribute products across categories
-          const allProducts = (Array.isArray(apiResponse.data) ? apiResponse.data : []).map(transformProduct);
-          
+          const allProducts = (
+            Array.isArray(apiResponse.data) ? apiResponse.data : []
+          ).map(transformProduct);
+
           transformedData = {
             mostPopular: allProducts.slice(0, 5),
-            freshVegetables: allProducts.filter(p => 
-              p.category && p.category.toLowerCase().includes('vegetable')
-            ).slice(0, 5),
-            freshFruits: allProducts.filter(p => 
-              p.category && p.category.toLowerCase().includes('fruit')
-            ).slice(0, 5),
-            dairyProducts: allProducts.filter(p => 
-              p.category && (
-                p.category.toLowerCase().includes('dairy') ||
-                p.category.toLowerCase().includes('milk') ||
-                p.category.toLowerCase().includes('cheese')
+            freshVegetables: allProducts
+              .filter(
+                (p) =>
+                  p.category && p.category.toLowerCase().includes("vegetable")
               )
-            ).slice(0, 5),
-            meatProducts: allProducts.filter(p => 
-              p.category && (
-                p.category.toLowerCase().includes('meat') ||
-                p.category.toLowerCase().includes('chicken') ||
-                p.category.toLowerCase().includes('beef') ||
-                p.category.toLowerCase().includes('fish')
+              .slice(0, 5),
+            freshFruits: allProducts
+              .filter(
+                (p) => p.category && p.category.toLowerCase().includes("fruit")
               )
-            ).slice(0, 5),
-            beverages: allProducts.filter(p => 
-              p.category && (
-                p.category.toLowerCase().includes('beverage') ||
-                p.category.toLowerCase().includes('drink') ||
-                p.category.toLowerCase().includes('juice')
+              .slice(0, 5),
+            dairyProducts: allProducts
+              .filter(
+                (p) =>
+                  p.category &&
+                  (p.category.toLowerCase().includes("dairy") ||
+                    p.category.toLowerCase().includes("milk") ||
+                    p.category.toLowerCase().includes("cheese"))
               )
-            ).slice(0, 5)
+              .slice(0, 5),
+            meatProducts: allProducts
+              .filter(
+                (p) =>
+                  p.category &&
+                  (p.category.toLowerCase().includes("meat") ||
+                    p.category.toLowerCase().includes("chicken") ||
+                    p.category.toLowerCase().includes("beef") ||
+                    p.category.toLowerCase().includes("fish"))
+              )
+              .slice(0, 5),
+            beverages: allProducts
+              .filter(
+                (p) =>
+                  p.category &&
+                  (p.category.toLowerCase().includes("beverage") ||
+                    p.category.toLowerCase().includes("drink") ||
+                    p.category.toLowerCase().includes("juice"))
+              )
+              .slice(0, 5),
           };
-          
+
           // Fill empty categories with random products
-          Object.keys(transformedData).forEach(key => {
-            if (key !== 'mostPopular' && transformedData[key].length === 0) {
+          Object.keys(transformedData).forEach((key) => {
+            if (key !== "mostPopular" && transformedData[key].length === 0) {
               transformedData[key] = allProducts.slice(0, 5);
             }
           });
         }
-        
-        console.log('Transformed data:', transformedData);
+
+        console.log("Transformed data:", transformedData);
         setHomepageData(transformedData);
-        
       } catch (error) {
-        console.error('Error fetching homepage products:', error);
+        console.error("Error fetching homepage products:", error);
         setError(`Failed to load products: ${error.message}`);
       } finally {
         setLoading(false);
@@ -355,7 +475,7 @@ const HomePage = () => {
 
   // Log cart changes for debugging
   useEffect(() => {
-    console.log('Cart updated:', cart);
+    console.log("Cart updated:", cart);
   }, [cart]);
 
   if (loading) {
@@ -363,7 +483,9 @@ const HomePage = () => {
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-purple-600" />
-          <div className="text-lg font-medium text-gray-700">Loading fresh products...</div>
+          <div className="text-lg font-medium text-gray-700">
+            Loading fresh products...
+          </div>
         </div>
       </div>
     );
@@ -374,7 +496,7 @@ const HomePage = () => {
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex items-center justify-center">
         <div className="text-center bg-white p-8 rounded-2xl shadow-lg">
           <div className="text-red-600 mb-4">⚠️ Error: {error}</div>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700"
           >
@@ -414,38 +536,38 @@ const HomePage = () => {
       key: "mostPopular",
       title: "Most Popular",
       subtitle: "Customer favorites",
-      products: homepageData.mostPopular
+      products: homepageData.mostPopular,
     },
     {
       key: "freshVegetables",
       title: "Fresh Vegetables",
       subtitle: "Farm fresh daily",
-      products: homepageData.freshVegetables
+      products: homepageData.freshVegetables,
     },
     {
       key: "freshFruits",
       title: "Fresh Fruits",
       subtitle: "Sweet & juicy",
-      products: homepageData.freshFruits
+      products: homepageData.freshFruits,
     },
     {
       key: "dairyProducts",
       title: "Dairy Products",
       subtitle: "Pure & fresh",
-      products: homepageData.dairyProducts
+      products: homepageData.dairyProducts,
     },
     {
       key: "meatProducts",
       title: "Meat Products",
       subtitle: "Premium quality",
-      products: homepageData.meatProducts
+      products: homepageData.meatProducts,
     },
     {
       key: "beverages",
       title: "Beverages",
       subtitle: "Refreshing drinks",
-      products: homepageData.beverages
-    }
+      products: homepageData.beverages,
+    },
   ];
 
   return (
@@ -457,6 +579,9 @@ const HomePage = () => {
         onFavoritesView={handleFavoritesView}
         onSidebarToggle={handleSidebarToggle}
       />
+
+      {/* CartBar Component - Pass cart items and update function */}
+      <CartBar cartItems={cart} setCartItems={setCart} />
 
       {/* Main Content Area - Responsive to sidebar state */}
       <div
@@ -488,9 +613,11 @@ const HomePage = () => {
             {/* Cart Debug Info (Remove in production) */}
             {cart.length > 0 && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <h3 className="font-semibold text-blue-800 mb-2">Cart Items ({cart.length}):</h3>
+                <h3 className="font-semibold text-blue-800 mb-2">
+                  Cart Items ({cart.length}):
+                </h3>
                 <div className="text-sm text-blue-700">
-                  {cart.map(item => (
+                  {cart.map((item) => (
                     <div key={item.id} className="flex justify-between">
                       <span>{item.name}</span>
                       <span>Qty: {item.quantity}</span>
