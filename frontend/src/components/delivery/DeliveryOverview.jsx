@@ -18,48 +18,90 @@ import {
   Users,
   TrendingUp,
   TrendingDown,
+  Loader2,
 } from "lucide-react";
+
+
+const API_BASE_URL = 'http://localhost:3000/api';
 
 export const DeliveryOverview = ({ searchTerm, filterRegion }) => {
   const [stats, setStats] = useState({
-    totalDeliveries: 248,
-    activeDeliveries: 45,
-    completedToday: 32,
-    onTimeRate: 94.2,
-    availableDeliveryBoys: 18,
-    busyDeliveryBoys: 12,
-    pendingAssignments: 8,
+    totalDeliveries: 0,
+    activeDeliveries: 0,
+    completedToday: 0,
+    onTimeRate: 0,
+    availableDeliveryBoys: 0,
+    busyDeliveryBoys: 0,
+    pendingAssignments: 0,
   });
 
-  const [recentOrders, setRecentOrders] = useState([
-    {
-      orderId: "ORD-2024-001",
-      customerName: "John Doe",
-      address: "123 Main St, Dhaka",
-      status: "assigned",
-      deliveryBoy: "Ahmed Hassan",
-      estimatedTime: "30 mins",
-      priority: "high",
-    },
-    {
-      orderId: "ORD-2024-002",
-      customerName: "Jane Smith",
-      address: "456 Park Ave, Chittagong",
-      status: "in_transit",
-      deliveryBoy: "Rahim Khan",
-      estimatedTime: "15 mins",
-      priority: "normal",
-    },
-    {
-      orderId: "ORD-2024-003",
-      customerName: "Bob Johnson",
-      address: "789 Oak St, Sylhet",
-      status: "pending",
-      deliveryBoy: "Unassigned",
-      estimatedTime: "N/A",
-      priority: "high",
-    },
-  ]);
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch delivery statistics
+  const fetchDeliveryStats = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/delivery/stats`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setStats(data);
+    } catch (error) {
+      console.error('Error fetching delivery stats:', error);
+      setError('Failed to fetch delivery statistics');
+    }
+  };
+
+  // Fetch recent orders with filters
+  const fetchRecentOrders = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('searchTerm', searchTerm);
+      if (filterRegion) params.append('filterRegion', filterRegion);
+      params.append('limit', '10');
+
+      const response = await fetch(`${API_BASE_URL}/delivery/recent-orders?${params}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setRecentOrders(data);
+    } catch (error) {
+      console.error('Error fetching recent orders:', error);
+      setError('Failed to fetch recent orders');
+    }
+  };
+
+  // Initial data fetch
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        await Promise.all([
+          fetchDeliveryStats(),
+          fetchRecentOrders()
+        ]);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setError('Failed to fetch data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Refetch orders when search term or filter region changes
+  useEffect(() => {
+    if (!loading) {
+      fetchRecentOrders();
+    }
+  }, [searchTerm, filterRegion]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -88,6 +130,32 @@ export const DeliveryOverview = ({ searchTerm, filterRegion }) => {
         return "bg-gray-100 text-gray-800";
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading delivery overview...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+          <p className="text-red-600">{error}</p>
+          <Button 
+            onClick={() => window.location.reload()} 
+            className="mt-4"
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -180,35 +248,41 @@ export const DeliveryOverview = ({ searchTerm, filterRegion }) => {
             <CardDescription>Latest orders requiring attention</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {recentOrders.map((order) => (
-              <div
-                key={order.orderId}
-                className="flex items-center justify-between p-3 border rounded-lg"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <span className="font-medium">{order.orderId}</span>
-                    <Badge className={getPriorityColor(order.priority)}>
-                      {order.priority}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {order.customerName}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {order.address}
-                  </p>
-                </div>
-                <div className="text-right space-y-1">
-                  <Badge className={getStatusColor(order.status)}>
-                    {order.status}
-                  </Badge>
-                  <p className="text-xs text-muted-foreground">
-                    {order.estimatedTime}
-                  </p>
-                </div>
+            {recentOrders.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No recent orders found
               </div>
-            ))}
+            ) : (
+              recentOrders.map((order) => (
+                <div
+                  key={order.orderId}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <span className="font-medium">{order.orderId}</span>
+                      <Badge className={getPriorityColor(order.priority)}>
+                        {order.priority}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {order.customerName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {order.address}
+                    </p>
+                  </div>
+                  <div className="text-right space-y-1">
+                    <Badge className={getStatusColor(order.status)}>
+                      {order.status}
+                    </Badge>
+                    <p className="text-xs text-muted-foreground">
+                      {order.estimatedTime}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
             <Button className="w-full py-2 px-4 bg-white !text-black border border-black rounded-md shadow-sm hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1">
               View All Orders
             </Button>

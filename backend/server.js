@@ -15,6 +15,9 @@ import searchRoute from "./routes/searchRoute.js";
 import productHomepageRoute from "./routes/productHomepageRoute.js";
 import warehouseRoute from "./routes/warehouseRoute.js";
 import inventoryRoute from "./routes/inventoryRoute.js";
+import deliveryOverview from "./routes/deliveryOverviewRoute.js";
+import activeDeliveryRoute from "./routes/ActiveDeliveryRoute.js";
+import deliveryBoyManagementRoute from "./routes/deliveryBoyManagementRoute.js";
 
 
 const app = express();
@@ -41,6 +44,9 @@ app.use("/api/search", searchRoute);
 app.use("/api/home",productHomepageRoute);
 app.use("/api/wh", warehouseRoute);
 app.use("/api/inventory", inventoryRoute);
+app.use("/api/delivery", deliveryOverview);
+app.use("/api/delivery", activeDeliveryRoute);
+app.use("/api/delivery", deliveryBoyManagementRoute);
 
 app.listen(port, () => {
   console.log(`Server running on ${port}`);
