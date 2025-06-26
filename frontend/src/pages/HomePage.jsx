@@ -3,34 +3,35 @@ import { Heart, Star, ArrowRight, Loader2, ShoppingCart } from "lucide-react";
 import Sidebar from "../components/layout/SideBar.jsx";
 import CartBar from "../components/layout/CartBar.jsx";
 import LoginModal from "../components/auth/LoginModal.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 
 // Product Card Component
 const ProductCard = ({ product, onProductClick, onAddToCart }) => {
+  const { user, isLoggedIn } = useAuth(); // Use global auth state
   const [quantity, setQuantity] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
-  const getCurrentUser = () => {
-    const userData = localStorage.getItem("user");
-    return userData ? JSON.parse(userData) : null;
-  };
+  // const getCurrentUser = () => {
+  //   const userData = localStorage.getItem("user");
+  //   return userData ? JSON.parse(userData) : null;
+  // };
 
-  const isUserLoggedIn = () => {
-    return localStorage.getItem("token") && localStorage.getItem("user");
-  };
+  // const isUserLoggedIn = () => {
+  //   return localStorage.getItem("token") && localStorage.getItem("user");
+  // };
 
   const handleAddToCart = async () => {
     if (quantity === 0) return;
 
-    if (!isUserLoggedIn()) {
+    if (!isLoggedIn()) {
       setShowLoginModal(true);
       return;
     }
 
     setIsLoading(true);
     try {
-      const user = getCurrentUser();
       const response = await fetch(
         "http://localhost:3000/api/cart/addToCart/add",
         {

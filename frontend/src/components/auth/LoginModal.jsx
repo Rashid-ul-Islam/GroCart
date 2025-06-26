@@ -3,8 +3,10 @@ import { useState, useEffect } from 'react';
 import { X, Eye, EyeOff, User, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '../ui/button.jsx';
 import { Input } from '../ui/input.jsx';
+import { useAuth } from '../../context/AuthContext.jsx'; // Import useAuth
 
 const LoginModal = ({ isOpen, onClose, onLoginSuccess, currentPath }) => {
+  const { login } = useAuth(); // Use the global login function
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -54,8 +56,7 @@ const LoginModal = ({ isOpen, onClose, onLoginSuccess, currentPath }) => {
 
       if (response.ok) {
         // Store token and user data
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        login(data.user, data.token);
         
         setSuccess('Login successful! Redirecting...');
         

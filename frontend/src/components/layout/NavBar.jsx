@@ -6,16 +6,37 @@ import { ShoppingCart, Heart, User, PackageSearch, Shield } from "lucide-react";
 import { Button } from "../ui/button.jsx";
 import { Input } from "../ui/input.jsx";
 import LoginModal from "../auth/LoginModal.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function NavBar() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [user, setUser] = useState(null);
+  const { user, isLoggedIn, logout: authLogout } = useAuth();
+  // const [isAdmin, setIsAdmin] = useState(false);
+  // const [setUser] = useState(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const cartItemCount = 3;
+  const [cartItemCount, setCartItemCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
-
+  const isAdmin = user?.role_id === "admin";
+  console.log("NavBar render - User:", user, "IsLoggedIn:", isLoggedIn);
+  const fetchCartCount = async () => {
+    if (!isLoggedIn || !user) return;
+    
+    try {
+      const response = await fetch(`http://localhost:3000/api/cart/getCart/${user.user_id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const count = data.data?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+        setCartItemCount(count);
+      }
+    } catch (error) {
+      console.error('Error fetching cart count:', error);
+    }
+  };
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchTerm.trim()) return;
@@ -52,37 +73,22 @@ export default function NavBar() {
 
   // Check if user is logged in on component mount
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userData = localStorage.getItem("user");
-    if (token && userData) {
-      try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
-        setIsLoggedIn(true);
-        setIsAdmin(parsedUser.role_id === "admin");
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-      }
+    if (isLoggedIn && user) {
+      fetchCartCount();
+    } else {
+      setCartItemCount(0);
     }
-  }, []);
+  }, [isLoggedIn, user]);
 
   // Handle login success
   const handleLoginSuccess = (userData) => {
-    setUser(userData);
-    setIsLoggedIn(true);
-    setIsAdmin(userData.role_id === "admin");
+    console.log("Login success in NavBar:", userData);
     setIsLoginModalOpen(false);
   };
 
   // Handle logout
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setUser(null);
-    setIsLoggedIn(false);
-    setIsAdmin(false);
+    authLogout(); // Use the global logout function
     window.location.href = "/";
   };
 
