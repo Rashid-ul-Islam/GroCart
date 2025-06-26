@@ -139,7 +139,7 @@ export const RouteOptimization = () => {
               ))}
             </SelectContent>
           </Select>
-          <Button onClick={handleOptimizeRoutes} disabled={optimizing}>
+          <Button variant="outline" size="sm" className="bg-white !text-black border-2 border-black-500 hover:bg-gray-100" onClick={handleOptimizeRoutes} disabled={optimizing}>
             {optimizing ? (
               <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -253,11 +253,11 @@ export const RouteOptimization = () => {
               <Separator />
               
               <div className="flex justify-between items-center">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="bg-white !text-black border-2 border-black-500 hover:bg-gray-100">
                   <Settings className="mr-2 h-4 w-4" />
                   Adjust Route
                 </Button>
-                <Button size="sm">
+                <Button variant="outline" size="sm" className="bg-white !text-black border-2 border-black-500 hover:bg-gray-100">
                   <Navigation className="mr-2 h-4 w-4" />
                   Start Navigation
                 </Button>

@@ -175,8 +175,8 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
               Monitor performance and manage delivery personnel
             </CardDescription>
           </div>
-          <Button>
-            <UserPlus className="mr-2 h-4 w-4" />
+          <Button variant="outline" size="sm" className="bg-white !text-black border-2 border-black-500 hover:bg-gray-100">
+            <UserPlus className="mr-2 h-4 w-4 " />
             Add Delivery Boy
           </Button>
         </CardHeader>
@@ -243,7 +243,7 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
                     <div className="flex items-center space-x-2">
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" onClick={() => setSelectedDeliveryBoy(boy)}>
+                          <Button variant="outline" size="sm" className="bg-white !text-black border-2 border-black-500 hover:bg-gray-100" onClick={() => setSelectedDeliveryBoy(boy)}>
                             View Details
                           </Button>
                         </DialogTrigger>
@@ -292,7 +292,7 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
                           )}
                         </DialogContent>
                       </Dialog>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" className="bg-white !text-black border-2 border-black-500 hover:bg-gray-100">
                         <Phone className="h-4 w-4" />
                       </Button>
                     </div>

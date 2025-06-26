@@ -225,7 +225,7 @@ export const ActiveDeliveries = ({ searchTerm, filterRegion }) => {
                     <div className="flex items-center space-x-2">
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" onClick={() => setSelectedDelivery(delivery)}>
+                          <Button variant="outline" size="sm" className="bg-white !text-black border-2 border-black-500 hover:bg-gray-100" onClick={() => setSelectedDelivery(delivery)}>
                             <Eye className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
@@ -273,7 +273,7 @@ export const ActiveDeliveries = ({ searchTerm, filterRegion }) => {
                           )}
                         </DialogContent>
                       </Dialog>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" className="bg-white !text-black border-2 border-black-500 hover:bg-gray-100">
                         <Phone className="h-4 w-4" />
                       </Button>
                     </div>

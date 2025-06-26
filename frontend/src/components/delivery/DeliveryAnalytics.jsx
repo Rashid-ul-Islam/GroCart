@@ -7,7 +7,7 @@ import { TrendingUp, TrendingDown, Package, Clock, Star, AlertTriangle } from "l
 
 export const DeliveryAnalytics = () => {
   const [timeRange, setTimeRange] = useState("7d");
-
+  const tabClass = "flex items-center justify-center py-1 px-4 rounded-md text-black transition-colors duration-200 hover:bg-slate-100 data-[state=active]:bg-white data-[state=active]:shadow-inner";
   // Sample data for charts
   const dailyDeliveryData = [
     { date: 'Mon', delivered: 32, failed: 3, onTime: 29 },
@@ -125,12 +125,15 @@ export const DeliveryAnalytics = () => {
 
       {/* Analytics Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="regions">Regions</TabsTrigger>
-          <TabsTrigger value="top-performers">Top Performers</TabsTrigger>
-        </TabsList>
+        
+
+<TabsList className="grid w-full grid-cols-5 bg-slate-200 rounded-md p-1">
+  <TabsTrigger value="overview" className={tabClass}>Overview</TabsTrigger>
+  <TabsTrigger value="performance" className={tabClass}>Performance</TabsTrigger>
+  <TabsTrigger value="regions" className={tabClass}>Regions</TabsTrigger>
+  <TabsTrigger value="top-performers" className={tabClass}>Top Performers</TabsTrigger>
+</TabsList>
+
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
