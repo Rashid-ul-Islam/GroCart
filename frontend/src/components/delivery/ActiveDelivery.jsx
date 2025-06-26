@@ -33,6 +33,9 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
+  Package,
+  Truck,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "../../hooks/use-toast.js";
 
@@ -126,30 +129,30 @@ export const ActiveDeliveries = ({ searchTerm, filterRegion }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case "assigned":
-        return "bg-blue-100 text-blue-800";
+        return "bg-gradient-to-r from-blue-500 to-blue-600 text-white";
       case "picked_up":
-        return "bg-orange-100 text-orange-800";
+        return "bg-gradient-to-r from-orange-500 to-orange-600 text-white";
       case "in_transit":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-gradient-to-r from-yellow-500 to-yellow-600 text-white";
       case "delivered":
-        return "bg-green-100 text-green-800";
+        return "bg-gradient-to-r from-green-500 to-green-600 text-white";
       case "failed":
-        return "bg-red-100 text-red-800";
+        return "bg-gradient-to-r from-red-500 to-red-600 text-white";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gradient-to-r from-gray-500 to-gray-600 text-white";
     }
   };
 
   const getPriorityColor = (priority) => {
     switch (priority) {
       case "high":
-        return "bg-red-100 text-red-800";
+        return "bg-gradient-to-r from-red-600 to-red-700 text-white";
       case "normal":
-        return "bg-blue-100 text-blue-800";
+        return "bg-gradient-to-r from-blue-500 to-blue-600 text-white";
       case "low":
-        return "bg-gray-100 text-gray-800";
+        return "bg-gradient-to-r from-gray-500 to-gray-600 text-white";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gradient-to-r from-gray-500 to-gray-600 text-white";
     }
   };
 
@@ -214,289 +217,275 @@ export const ActiveDeliveries = ({ searchTerm, filterRegion }) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Loading deliveries...</span>
+      <div className="min-h-screen bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-xl p-8 flex items-center">
+          <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+          <span className="ml-3 text-gray-800 font-semibold">Loading deliveries...</span>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 space-y-4">
-        <p className="text-red-600">{error}</p>
-        <Button onClick={fetchDeliveries}>Retry</Button>
+      <div className="min-h-screen bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600 text-lg font-semibold mb-4">{error}</p>
+          <Button 
+            onClick={fetchDeliveries}
+            className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300"
+          >
+            Retry
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <div className="p-2 bg-blue-100 rounded-full">
-                <Clock className="h-4 w-4 text-blue-600" />
-              </div>
+    <div className="min-h-screen bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400 p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="bg-white rounded-2xl shadow-xl p-6">
+          <h1 className="text-4xl font-bold text-purple-800 mb-2">
+            🚚 Active Deliveries
+          </h1>
+          <p className="text-gray-600 text-lg">
+            Monitor and manage ongoing deliveries in real-time
+          </p>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white rounded-2xl shadow-xl p-6 border-l-4 border-yellow-500">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">In Transit</p>
-                <p className="text-2xl font-bold">
+                <div className="bg-yellow-100 rounded-full p-3 mb-4">
+                  <Clock className="h-6 w-6 text-yellow-600" />
+                </div>
+                <p className="text-sm font-medium text-gray-600 mb-1">In Transit</p>
+                <p className="text-3xl font-bold text-gray-800">
                   {deliveries.filter((d) => d.status === "in_transit").length}
                 </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <div className="p-2 bg-orange-100 rounded-full">
-                <MapPin className="h-4 w-4 text-orange-600" />
-              </div>
+          <div className="bg-white rounded-2xl shadow-xl p-6 border-l-4 border-orange-500">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">Picked Up</p>
-                <p className="text-2xl font-bold">
+                <div className="bg-orange-100 rounded-full p-3 mb-4">
+                  <Package className="h-6 w-6 text-orange-600" />
+                </div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Picked Up</p>
+                <p className="text-3xl font-bold text-gray-800">
                   {deliveries.filter((d) => d.status === "picked_up").length}
                 </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <div className="p-2 bg-yellow-100 rounded-full">
-                <Navigation className="h-4 w-4 text-yellow-600" />
-              </div>
+          <div className="bg-white rounded-2xl shadow-xl p-6 border-l-4 border-blue-500">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">Assigned</p>
-                <p className="text-2xl font-bold">
+                <div className="bg-blue-100 rounded-full p-3 mb-4">
+                  <Navigation className="h-6 w-6 text-blue-600" />
+                </div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Assigned</p>
+                <p className="text-3xl font-bold text-gray-800">
                   {deliveries.filter((d) => d.status === "assigned").length}
                 </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <div className="p-2 bg-green-100 rounded-full">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-              </div>
+          <div className="bg-white rounded-2xl shadow-xl p-6 border-l-4 border-green-500">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">Total Value</p>
-                <p className="text-2xl font-bold">
-                  ৳
-                  {deliveries
-                    .reduce((sum, d) => sum + d.value, 0)
-                    .toLocaleString()}
+                <div className="bg-green-100 rounded-full p-3 mb-4">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+                <p className="text-sm font-medium text-gray-600 mb-1">Total Value</p>
+                <p className="text-3xl font-bold text-gray-800">
+                  ৳{deliveries.reduce((sum, d) => sum + d.value, 0).toLocaleString()}
                 </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </div>
 
-      {/* Active Deliveries Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Active Deliveries</CardTitle>
-          <CardDescription>
-            Monitor and manage ongoing deliveries in real-time
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {filteredDeliveries.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No active deliveries found.</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order ID</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Delivery Boy</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>ETA</TableHead>
-                  <TableHead>Value</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredDeliveries.map((delivery) => (
-                  <TableRow key={delivery.deliveryId}>
-                    <TableCell className="font-medium">
-                      {delivery.orderId}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{delivery.customerName}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {delivery.address}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{delivery.deliveryBoy}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {delivery.distance}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(delivery.status)}>
-                        {delivery.status.replace("_", " ")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getPriorityColor(delivery.priority)}>
-                        {delivery.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {delivery.estimatedArrival
-                        ? new Date(
-                            delivery.estimatedArrival
-                          ).toLocaleTimeString("en-US", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : "N/A"}
-                    </TableCell>
-                    <TableCell>৳{delivery.value.toLocaleString()}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="bg-white !text-black border-2 border-black-500 hover:bg-gray-100"
-                              onClick={() => setSelectedDelivery(delivery)}
-                            >
-                              <Eye className="h-4 w-4" />
+        {/* Active Deliveries Table */}
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Active Deliveries</h2>
+            <p className="text-gray-600">Monitor and manage ongoing deliveries in real-time</p>
+          </div>
+          
+          <div className="p-6">
+            {filteredDeliveries.length === 0 ? (
+              <div className="text-center py-12">
+                <Truck className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 text-lg">No active deliveries found.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="font-bold text-gray-700">Order ID</TableHead>
+                      <TableHead className="font-bold text-gray-700">Customer</TableHead>
+                      <TableHead className="font-bold text-gray-700">Delivery Boy</TableHead>
+                      <TableHead className="font-bold text-gray-700">Status</TableHead>
+                      <TableHead className="font-bold text-gray-700">Priority</TableHead>
+                      <TableHead className="font-bold text-gray-700">ETA</TableHead>
+                      <TableHead className="font-bold text-gray-700">Value</TableHead>
+                      <TableHead className="font-bold text-gray-700">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredDeliveries.map((delivery) => (
+                      <TableRow key={delivery.deliveryId} className="hover:bg-gray-50 transition duration-200">
+                        <TableCell className="font-medium text-gray-800">
+                          {delivery.orderId}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium text-gray-800">{delivery.customerName}</p>
+                            <p className="text-sm text-gray-600">
+                              {delivery.address}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium text-gray-800">{delivery.deliveryBoy}</p>
+                            <p className="text-sm text-gray-600">
+                              {delivery.distance}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={`${getStatusColor(delivery.status)} px-3 py-1 rounded-full font-semibold`}>
+                            {delivery.status.replace("_", " ")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={`${getPriorityColor(delivery.priority)} px-3 py-1 rounded-full font-semibold`}>
+                            {delivery.priority}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-gray-800 font-medium">
+                          {delivery.estimatedArrival
+                            ? new Date(delivery.estimatedArrival).toLocaleTimeString("en-US", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "N/A"}
+                        </TableCell>
+                        <TableCell className="text-gray-800 font-bold">
+                          ৳{delivery.value.toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button
+                                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-3 py-2 rounded-lg shadow-md transform hover:scale-105 transition duration-200"
+                                  onClick={() => setSelectedDelivery(delivery)}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-2xl bg-white rounded-2xl">
+                                <DialogHeader>
+                                  <DialogTitle className="text-2xl font-bold text-gray-800">
+                                    Delivery Details - {delivery.orderId}
+                                  </DialogTitle>
+                                  <DialogDescription className="text-gray-600">
+                                    Comprehensive delivery information and tracking
+                                  </DialogDescription>
+                                </DialogHeader>
+                                {selectedDelivery && (
+                                  <div className="space-y-6">
+                                    <div className="grid grid-cols-2 gap-6">
+                                      <div className="bg-gray-50 rounded-lg p-4">
+                                        <h4 className="font-bold text-gray-800 mb-3">
+                                          Customer Information
+                                        </h4>
+                                        <p className="mb-2">
+                                          <strong>Name:</strong> {selectedDelivery.customerName}
+                                        </p>
+                                        <p className="mb-2">
+                                          <strong>Phone:</strong> {selectedDelivery.customerPhone}
+                                        </p>
+                                        <p>
+                                          <strong>Address:</strong> {selectedDelivery.address}
+                                        </p>
+                                      </div>
+                                      <div className="bg-gray-50 rounded-lg p-4">
+                                        <h4 className="font-bold text-gray-800 mb-3">
+                                          Delivery Information
+                                        </h4>
+                                        <p className="mb-2">
+                                          <strong>Delivery Boy:</strong> {selectedDelivery.deliveryBoy}
+                                        </p>
+                                        <p className="mb-2">
+                                          <strong>Phone:</strong> {selectedDelivery.deliveryBoyPhone}
+                                        </p>
+                                        <p>
+                                          <strong>Distance:</strong> {selectedDelivery.distance}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex space-x-4">
+                                      <Button
+                                        onClick={() =>
+                                          handleStatusUpdate(selectedDelivery.deliveryId, "delivered")
+                                        }
+                                        className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300"
+                                        disabled={updatingStatus === selectedDelivery.deliveryId}
+                                      >
+                                        {updatingStatus === selectedDelivery.deliveryId ? (
+                                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <CheckCircle className="mr-2 h-4 w-4" />
+                                        )}
+                                        Mark Delivered
+                                      </Button>
+                                      <Button
+                                        onClick={() =>
+                                          handleStatusUpdate(selectedDelivery.deliveryId, "failed")
+                                        }
+                                        className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300"
+                                        disabled={updatingStatus === selectedDelivery.deliveryId}
+                                      >
+                                        {updatingStatus === selectedDelivery.deliveryId ? (
+                                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <XCircle className="mr-2 h-4 w-4" />
+                                        )}
+                                        Mark Failed
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </DialogContent>
+                            </Dialog>
+                            <Button className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-3 py-2 rounded-lg shadow-md transform hover:scale-105 transition duration-200">
+                              <Phone className="h-4 w-4" />
                             </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-2xl">
-                            <DialogHeader>
-                              <DialogTitle>
-                                Delivery Details - {delivery.orderId}
-                              </DialogTitle>
-                              <DialogDescription>
-                                Comprehensive delivery information and tracking
-                              </DialogDescription>
-                            </DialogHeader>
-                            {selectedDelivery && (
-                              <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <h4 className="font-semibold mb-2">
-                                      Customer Information
-                                    </h4>
-                                    <p>
-                                      <strong>Name:</strong>{" "}
-                                      {selectedDelivery.customerName}
-                                    </p>
-                                    <p>
-                                      <strong>Phone:</strong>{" "}
-                                      {selectedDelivery.customerPhone}
-                                    </p>
-                                    <p>
-                                      <strong>Address:</strong>{" "}
-                                      {selectedDelivery.address}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <h4 className="font-semibold mb-2">
-                                      Delivery Information
-                                    </h4>
-                                    <p>
-                                      <strong>Delivery Boy:</strong>{" "}
-                                      {selectedDelivery.deliveryBoy}
-                                    </p>
-                                    <p>
-                                      <strong>Phone:</strong>{" "}
-                                      {selectedDelivery.deliveryBoyPhone}
-                                    </p>
-                                    <p>
-                                      <strong>Distance:</strong>{" "}
-                                      {selectedDelivery.distance}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="flex space-x-2">
-                                  <Button
-                                    onClick={() =>
-                                      handleStatusUpdate(
-                                        selectedDelivery.deliveryId,
-                                        "delivered"
-                                      )
-                                    }
-                                    className="flex-1"
-                                    disabled={
-                                      updatingStatus ===
-                                      selectedDelivery.deliveryId
-                                    }
-                                  >
-                                    {updatingStatus ===
-                                    selectedDelivery.deliveryId ? (
-                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <CheckCircle className="mr-2 h-4 w-4" />
-                                    )}
-                                    Mark Delivered
-                                  </Button>
-                                  <Button
-                                    variant="destructive"
-                                    onClick={() =>
-                                      handleStatusUpdate(
-                                        selectedDelivery.deliveryId,
-                                        "failed"
-                                      )
-                                    }
-                                    className="flex-1"
-                                    disabled={
-                                      updatingStatus ===
-                                      selectedDelivery.deliveryId
-                                    }
-                                  >
-                                    {updatingStatus ===
-                                    selectedDelivery.deliveryId ? (
-                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <XCircle className="mr-2 h-4 w-4" />
-                                    )}
-                                    Mark Failed
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
-                          </DialogContent>
-                        </Dialog>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="bg-white !text-black border-2 border-black-500 hover:bg-gray-100"
-                        >
-                          <Phone className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

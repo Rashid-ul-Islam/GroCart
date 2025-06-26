@@ -1,11 +1,22 @@
 import React, { useState, useEffect } from "react";
-import { Heart, Star, ArrowRight, Loader2 } from "lucide-react";
+import { Heart, Star, ArrowRight, Loader2, ShoppingCart } from "lucide-react";
 import Sidebar from "../components/layout/SideBar.jsx";
 
 // Product Card Component
-const ProductCard = ({ product, onProductClick }) => {
-  const [quantity, setQuantity] = useState(1);
+const ProductCard = ({ product, onProductClick, onAddToCart }) => {
+  const [quantity, setQuantity] = useState(0); // Changed initial value to 0
   const [isLiked, setIsLiked] = useState(false);
+
+  const handleAddToCart = () => {
+    if (quantity > 0) {
+      // Call the parent's add to cart function
+      if (onAddToCart) {
+        onAddToCart(product, quantity);
+      }
+      // Reset quantity to 0 after adding to cart
+      setQuantity(0);
+    }
+  };
 
   return (
     <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 overflow-hidden group">
@@ -39,9 +50,9 @@ const ProductCard = ({ product, onProductClick }) => {
       </div>
 
       {/* Product Info */}
-      <div className="p-6 ">
+      <div className="p-6">
         <h3
-          className="font-bold text-gray-800 mb-2 text-lg hover:text-purple-600 transition-colors cursor-pointer line-clamp-2 "
+          className="font-bold text-gray-800 mb-2 text-lg hover:text-purple-600 transition-colors cursor-pointer line-clamp-2"
           onClick={() => onProductClick && onProductClick(product)}
         >
           {product.name}
@@ -82,13 +93,14 @@ const ProductCard = ({ product, onProductClick }) => {
         </div>
 
         {/* Quantity Selector */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <span className="text-sm font-medium text-gray-700">Qty:</span>
             <div className="flex items-center space-x-2">
               <button
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg flex items-center justify-center font-bold text-lg transition-all duration-200 transform hover:scale-110 shadow-md hover:shadow-lg active:scale-95"
+                onClick={() => setQuantity(Math.max(0, quantity - 1))} // Changed to allow 0
+                className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg flex items-center justify-center font-bold text-lg transition-all duration-200 transform hover:scale-110 shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                disabled={quantity <= 0}
               >
                 -
               </button>
@@ -102,6 +114,22 @@ const ProductCard = ({ product, onProductClick }) => {
             </div>
           </div>
         </div>
+
+        {/* Add to Cart Button */}
+        <button
+          onClick={handleAddToCart}
+          disabled={quantity === 0}
+          className={`w-full py-2 px-3 rounded-lg font-medium text-white transition-all duration-200 transform flex items-center justify-center space-x-2 text-sm ${
+            quantity > 0
+              ? "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 hover:scale-105 shadow-lg hover:shadow-xl active:scale-95"
+              : "bg-gray-400 cursor-not-allowed opacity-60"
+          }`}
+        >
+          <ShoppingCart className="w-4 h-4" />
+          <span>
+            {quantity > 0 ? `Add ${quantity} to Cart` : "Select Quantity"}
+          </span>
+        </button>
       </div>
     </div>
   );
@@ -119,9 +147,10 @@ const ProductCardSkeleton = () => {
           <div className="h-8 bg-gray-200 rounded w-20"></div>
           <div className="h-6 bg-gray-200 rounded w-16"></div>
         </div>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div className="h-8 bg-gray-200 rounded w-24"></div>
         </div>
+        <div className="h-12 bg-gray-200 rounded w-full"></div>
       </div>
     </div>
   );
@@ -134,6 +163,7 @@ const ProductSection = ({
   loading,
   onViewMore,
   onProductClick,
+  onAddToCart,
 }) => {
   return (
     <div className="mb-16">
@@ -159,6 +189,7 @@ const ProductSection = ({
                 key={product.id}
                 product={product}
                 onProductClick={onProductClick}
+                onAddToCart={onAddToCart}
               />
             ))}
       </div>
@@ -173,6 +204,7 @@ const HomePage = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [cart, setCart] = useState([]); // Added cart state
   
   // State for homepage sections
   const [homepageData, setHomepageData] = useState({
@@ -187,6 +219,31 @@ const HomePage = () => {
   // Add handler function
   const handleSidebarToggle = (collapsed) => {
     setIsSidebarCollapsed(collapsed);
+  };
+
+  // Add to cart handler
+  const handleAddToCart = (product, quantity) => {
+    console.log(`Adding ${quantity} of ${product.name} to cart`);
+    
+    setCart(prevCart => {
+      const existingItem = prevCart.find(item => item.id === product.id);
+      
+      if (existingItem) {
+        // If product already exists in cart, update quantity
+        return prevCart.map(item =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        );
+      } else {
+        // If product doesn't exist in cart, add new item
+        return [...prevCart, { ...product, quantity }];
+      }
+    });
+
+    // Optional: Show success message or notification
+    // You can implement a toast notification here
+    alert(`Added ${quantity} ${product.name} to cart!`);
   };
 
   const transformProduct = (apiProduct) => ({
@@ -295,6 +352,11 @@ const HomePage = () => {
 
     fetchHomepageProducts();
   }, []);
+
+  // Log cart changes for debugging
+  useEffect(() => {
+    console.log('Cart updated:', cart);
+  }, [cart]);
 
   if (loading) {
     return (
@@ -423,6 +485,21 @@ const HomePage = () => {
               <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
             </div>
 
+            {/* Cart Debug Info (Remove in production) */}
+            {cart.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <h3 className="font-semibold text-blue-800 mb-2">Cart Items ({cart.length}):</h3>
+                <div className="text-sm text-blue-700">
+                  {cart.map(item => (
+                    <div key={item.id} className="flex justify-between">
+                      <span>{item.name}</span>
+                      <span>Qty: {item.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Product Sections */}
             {sectionConfigs.map((config) => (
               <ProductSection
@@ -432,6 +509,7 @@ const HomePage = () => {
                 loading={false} // Loading is handled at the component level
                 onViewMore={() => handleViewMore(config.key)}
                 onProductClick={handleProductClick}
+                onAddToCart={handleAddToCart}
               />
             ))}
           </div>
