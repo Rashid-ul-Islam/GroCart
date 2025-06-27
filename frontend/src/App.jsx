@@ -13,6 +13,7 @@ import ManageInventory from "./pages/ManageInventory.jsx";
 import DeliveryDashboard from "./pages/DeliveryDashboard.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import DeliveryBoy from "./pages/DeliveryBoy.jsx"; 
+import FavoriteProducts from "./pages/FavoriteProducts.jsx"
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 export default function App() {
@@ -35,6 +36,7 @@ export default function App() {
             element={<DeliveryDashboard />}
           />
           <Route path="/delivery" element={<DeliveryBoy />} />
+          <Route path="favorites" element={<FavoriteProducts />}/>
           {/* Add more routes as needed */}
         </Routes>
       </Router>

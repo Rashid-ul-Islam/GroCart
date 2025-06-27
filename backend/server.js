@@ -20,6 +20,7 @@ import activeDeliveryRoute from "./routes/ActiveDeliveryRoute.js";
 import deliveryBoyManagementRoute from "./routes/deliveryBoyManagementRoute.js";
 import cartRoute from "./routes/cartRoute.js";
 import assignDeliveryRoute from "./routes/assignedDeliveryRoute.js";
+import favoritesRoute from "./routes/favoritesRoute.js";
 
 
 const app = express();
@@ -51,6 +52,7 @@ app.use("/api/delivery", activeDeliveryRoute);
 app.use("/api/delivery", deliveryBoyManagementRoute);
 app.use("/api/cart", cartRoute);
 app.use("/api/delivery", assignDeliveryRoute);
+app.use("/api/favorites",favoritesRoute);
 
 app.listen(port, () => {
   console.log(`Server running on ${port}`);

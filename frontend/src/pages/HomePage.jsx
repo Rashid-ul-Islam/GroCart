@@ -12,6 +12,33 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [likesLoading, setLikesLoading] = useState(false);
+
+  // Check if product is liked when component mounts or user changes
+  useEffect(() => {
+    if (isLoggedIn && user && user.user_id && product && product.id) {
+      checkIfLiked();
+    }
+  }, [isLoggedIn, user, product.id]);
+
+  const checkIfLiked = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/favorites/check/${user.user_id}/${product.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+          },
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setIsLiked(data.isFavorite);
+      }
+    } catch (error) {
+      console.error("Error checking favorite status:", error);
+    }
+  };
 
   const handleAddToCart = async () => {
     if (quantity === 0) return;
@@ -59,6 +86,68 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
     }
   };
 
+  const handleToggleFavorite = async () => {
+    if (!isLoggedIn) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    // Validate user and product data
+    if (!user || !user.user_id) {
+      console.error("User data is not available:", user);
+      alert("Please log in again to manage favorites");
+      setShowLoginModal(true);
+      return;
+    }
+
+    if (!product || !product.id) {
+      console.error("Product data is not available:", product);
+      alert("Product information is missing");
+      return;
+    }
+
+    setLikesLoading(true);
+    try {
+      const endpoint = isLiked
+        ? `http://localhost:3000/api/favorites/remove`
+        : `http://localhost:3000/api/favorites/add`;
+
+      console.log("Toggling favorite:", {
+        user_id: user.user_id,
+        product_id: product.id,
+        endpoint,
+        isLiked,
+      });
+
+      const response = await fetch(endpoint, {
+        method: isLiked ? "DELETE" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          user_id: parseInt(user.user_id),
+          product_id: parseInt(product.id),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setIsLiked(!isLiked);
+        console.log("Favorite toggled successfully:", data);
+      } else {
+        console.error("Failed to toggle favorite:", data.message);
+        alert(data.message || "Failed to update favorites");
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      alert("Failed to update favorites. Please try again.");
+    } finally {
+      setLikesLoading(false);
+    }
+  };
+
   const handleLoginSuccess = (userData) => {
     setShowLoginModal(false);
     // Automatically add to cart after login
@@ -81,14 +170,19 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
 
         {/* Favorite Button */}
         <button
-          onClick={() => setIsLiked(!isLiked)}
-          className="absolute top-3 right-3 p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white transition-all duration-200 shadow-lg"
+          onClick={handleToggleFavorite}
+          disabled={likesLoading}
+          className="absolute top-3 right-3 p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white transition-all duration-200 shadow-lg disabled:opacity-50"
         >
-          <Heart
-            className={`w-5 h-5 ${
-              isLiked ? "fill-red-500 text-red-500" : "text-gray-500"
-            } transition-colors duration-200`}
-          />
+          {likesLoading ? (
+            <div className="w-5 h-5 animate-spin rounded-full border-2 border-gray-300 border-t-red-500"></div>
+          ) : (
+            <Heart
+              className={`w-5 h-5 ${
+                isLiked ? "fill-red-500 text-red-500" : "text-gray-500"
+              } transition-colors duration-200`}
+            />
+          )}
         </button>
       </div>
 
@@ -131,7 +225,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
             )}
           </div>
           <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-            {product.unit || "each"}
+            {product.quantity || "each"} {product.unit || "each"}
           </span>
         </div>
 

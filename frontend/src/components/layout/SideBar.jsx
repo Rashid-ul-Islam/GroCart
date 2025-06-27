@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -21,10 +21,20 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView, onSidebarT
   const [categoryBreadcrumb, setCategoryBreadcrumb] = useState([]);
   const [categoryLoading, setCategoryLoading] = useState(false);
   const [currentLevel, setCurrentLevel] = useState(0);
+  
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     fetchRootCategories();
-  }, []);
+    
+    // Set active section based on current route
+    if (location.pathname === '/favorites') {
+      setActiveSection('favorites');
+    } else {
+      setActiveSection('categories');
+    }
+  }, [location.pathname]);
 
   const fetchRootCategories = async () => {
     setCategoryLoading(true);
@@ -86,32 +96,31 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView, onSidebarT
   };
 
   const handleCategorySelect = async (category) => {
-  const hasChildren = await checkHasChildren(category.category_id);
-  
-  if (hasChildren) {
-    const childCategories = await fetchChildCategories(category.category_id);
-    const newPath = [...selectedPath, category];
-    setSelectedPath(newPath);
-    setCategoryBreadcrumb(newPath);
-    setCategoryLevels((prev) => [...prev, childCategories]);
-    setCurrentLevel((prev) => prev + 1);
+    const hasChildren = await checkHasChildren(category.category_id);
     
-    if (onCategorySelect) {
-      onCategorySelect(category, false);
+    if (hasChildren) {
+      const childCategories = await fetchChildCategories(category.category_id);
+      const newPath = [...selectedPath, category];
+      setSelectedPath(newPath);
+      setCategoryBreadcrumb(newPath);
+      setCategoryLevels((prev) => [...prev, childCategories]);
+      setCurrentLevel((prev) => prev + 1);
+      
+      if (onCategorySelect) {
+        onCategorySelect(category, false);
+      }
+    } else {
+      // This is a leaf category - navigate to products page
+      const newPath = [...selectedPath, category];
+      setCategoryBreadcrumb(newPath);
+      
+      // Fix: Ensure category_name exists, fallback to 'Unknown Category'
+      const categoryName = category.category_name || 'Unknown Category';
+      
+      // Navigate to products page with category using React Router
+      navigate(`/products/category?categoryId=${category.category_id}&categoryName=${encodeURIComponent(categoryName)}`);
     }
-  } else {
-    // This is a leaf category - navigate to products page
-    const newPath = [...selectedPath, category];
-    setCategoryBreadcrumb(newPath);
-    
-    // Fix: Ensure category_name exists, fallback to 'Unknown Category'
-    const categoryName = category.category_name || 'Unknown Category';
-    
-    // Navigate to products page with category
-    window.location.href = `/products/category?categoryId=${category.category_id}&categoryName=${encodeURIComponent(categoryName)}`;
-  }
-};
-
+  };
 
   const handleBackToLevel = (targetLevel) => {
     if (targetLevel < 0) {
@@ -131,7 +140,10 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView, onSidebarT
     setCategoryBreadcrumb([]);
     setCurrentLevel(0);
 
-    // Call the favorites view handler
+    // Navigate to favorites page using React Router
+    navigate('/favorites');
+
+    // Call the favorites view handler (if still needed for other purposes)
     if (onFavoritesView) {
       onFavoritesView();
     }
@@ -140,7 +152,11 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView, onSidebarT
   const handleCategoriesClick = () => {
     setActiveSection("categories");
     fetchRootCategories();
+    
+    // Navigate to home or products page (adjust route as needed)
+    navigate('/');
   };
+
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
   };
@@ -151,6 +167,7 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView, onSidebarT
       onSidebarToggle(isCollapsed);
     }
   }, [isCollapsed, onSidebarToggle]);
+
   const currentCategories = categoryLevels[currentLevel] || [];
 
   return (
