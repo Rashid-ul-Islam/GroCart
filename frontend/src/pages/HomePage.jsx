@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Heart, Star, ArrowRight, Loader2, ShoppingCart } from "lucide-react";
 import Sidebar from "../components/layout/SideBar.jsx";
 import CartBar from "../components/layout/CartBar.jsx";
@@ -13,19 +13,10 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
-  // const getCurrentUser = () => {
-  //   const userData = localStorage.getItem("user");
-  //   return userData ? JSON.parse(userData) : null;
-  // };
-
-  // const isUserLoggedIn = () => {
-  //   return localStorage.getItem("token") && localStorage.getItem("user");
-  // };
-
   const handleAddToCart = async () => {
     if (quantity === 0) return;
 
-    if (!isLoggedIn()) {
+    if (!isLoggedIn) { // Fixed: removed parentheses
       setShowLoginModal(true);
       return;
     }
@@ -50,7 +41,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
 
       const data = await response.json();
       console.log("Add to cart response:", data);
-      console.log("Product:", product);
 
       if (response.ok) {
         // Success feedback
@@ -58,12 +48,9 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
           onAddToCart(product, quantity);
         }
         setQuantity(0);
-
-        // Optional: Show success message
         console.log("Item added to cart successfully");
       } else {
         console.error("Failed to add item to cart:", data.message);
-        // You can add a toast notification here
       }
     } catch (error) {
       console.error("Error adding to cart:", error);
@@ -103,13 +90,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
             } transition-colors duration-200`}
           />
         </button>
-
-        {/* Discount Badge
-        {product.discount && (
-          <div className="absolute top-3 left-3 bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-1 rounded-full text-sm font-bold">
-            -{product.discount}%
-          </div>
-        )} */}
       </div>
 
       {/* Product Info */}
@@ -283,15 +263,17 @@ const HomePage = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [cart, setCart] = useState([]); // Cart state for CartBar
+  
+  // Reference to CartBar component
+  const cartBarRef = useRef(null);
 
   // State for homepage sections
   const [homepageData, setHomepageData] = useState({
     mostPopular: [],
-    freshVegetables: [],
-    freshFruits: [],
-    dairyProducts: [],
-    meatProducts: [],
+    freshFromFarm: [],
+    trendingNow: [],
+    dairyAndMeatProducts: [],
+    dealsCantMiss: [],
     beverages: [],
   });
 
@@ -300,39 +282,14 @@ const HomePage = () => {
     setIsSidebarCollapsed(collapsed);
   };
 
-  // Add to cart handler - Updated to work with CartBar format
+  // Updated add to cart handler - triggers CartBar refresh
   const handleAddToCart = (product, quantity) => {
     console.log(`Adding ${quantity} of ${product.name} to cart`);
-
-    setCart((prevCart) => {
-      const existingItem = prevCart.find((item) => item.id === product.id);
-
-      if (existingItem) {
-        // If product already exists in cart, update quantity
-        return prevCart.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
-      } else {
-        // If product doesn't exist in cart, add new item
-        // Transform product to match CartBar expected format
-        const cartItem = {
-          id: product.id,
-          name: product.name,
-          price: parseFloat(product.price.replace("৳", "")) || 0, // Remove ৳ and convert to number
-          quantity: quantity,
-          image: product.image || "https://via.placeholder.com/100x100",
-          variant: `${product.unit || "each"}, ${product.origin || "Local"}`,
-        };
-
-        return [...prevCart, cartItem];
-      }
-    });
-
-    // Optional: Show success message or notification
-    // You can implement a toast notification here instead of alert
-    console.log(`Added ${quantity} ${product.name} to cart!`);
+    
+    // Trigger CartBar to refresh its data
+    if (cartBarRef.current && cartBarRef.current.refreshCart) {
+      cartBarRef.current.refreshCart();
+    }
   };
 
   const transformProduct = (apiProduct) => ({
@@ -390,16 +347,16 @@ const HomePage = () => {
             mostPopular: (apiResponse.data.mostPopular || []).map(
               transformProduct
             ),
-            freshVegetables: (apiResponse.data.freshVegetables || []).map(
+            freshFromFarm: (apiResponse.data.freshFromFarm || []).map(
               transformProduct
             ),
-            freshFruits: (apiResponse.data.freshFruits || []).map(
+            trendingNow: (apiResponse.data.trendingNow || []).map(
               transformProduct
             ),
-            dairyProducts: (apiResponse.data.dairyProducts || []).map(
+            dairyAndMeatProducts: (apiResponse.data.dairyAndMeatProducts || []).map(
               transformProduct
             ),
-            meatProducts: (apiResponse.data.meatProducts || []).map(
+            dealsCantMiss: (apiResponse.data.dealsCantMiss || []).map(
               transformProduct
             ),
             beverages: (apiResponse.data.beverages || []).map(transformProduct),
@@ -412,18 +369,18 @@ const HomePage = () => {
 
           transformedData = {
             mostPopular: allProducts.slice(0, 5),
-            freshVegetables: allProducts
+            freshFromFarm: allProducts
               .filter(
                 (p) =>
                   p.category && p.category.toLowerCase().includes("vegetable")
               )
               .slice(0, 5),
-            freshFruits: allProducts
+            trendingNow: allProducts
               .filter(
                 (p) => p.category && p.category.toLowerCase().includes("fruit")
               )
               .slice(0, 5),
-            dairyProducts: allProducts
+            dairyAndMeatProducts: allProducts
               .filter(
                 (p) =>
                   p.category &&
@@ -432,7 +389,7 @@ const HomePage = () => {
                     p.category.toLowerCase().includes("cheese"))
               )
               .slice(0, 5),
-            meatProducts: allProducts
+            dealsCantMiss: allProducts
               .filter(
                 (p) =>
                   p.category &&
@@ -473,11 +430,6 @@ const HomePage = () => {
 
     fetchHomepageProducts();
   }, []);
-
-  // Log cart changes for debugging
-  useEffect(() => {
-    console.log("Cart updated:", cart);
-  }, [cart]);
 
   if (loading) {
     return (
@@ -540,32 +492,32 @@ const HomePage = () => {
       products: homepageData.mostPopular,
     },
     {
-      key: "freshVegetables",
-      title: "Fresh Vegetables",
+      key: "freshFromFarm",
+      title: "Grabbed Fresh From The Farm",
       subtitle: "Farm fresh daily",
-      products: homepageData.freshVegetables,
+      products: homepageData.freshFromFarm,
     },
     {
-      key: "freshFruits",
-      title: "Fresh Fruits",
+      key: "trendingNow",
+      title: "Trending Now",
       subtitle: "Sweet & juicy",
-      products: homepageData.freshFruits,
+      products: homepageData.trendingNow,
     },
     {
-      key: "dairyProducts",
-      title: "Dairy Products",
+      key: "dairyAndMeatProducts",
+      title: "Keep youself strong",
       subtitle: "Pure & fresh",
-      products: homepageData.dairyProducts,
+      products: homepageData.dairyAndMeatProducts,
     },
     {
-      key: "meatProducts",
-      title: "Meat Products",
+      key: "dealsCantMiss",
+      title: "Deals You Can't Miss",
       subtitle: "Premium quality",
-      products: homepageData.meatProducts,
+      products: homepageData.dealsCantMiss,
     },
     {
       key: "beverages",
-      title: "Beverages",
+      title: "Recommended for you",
       subtitle: "Refreshing drinks",
       products: homepageData.beverages,
     },
@@ -581,8 +533,8 @@ const HomePage = () => {
         onSidebarToggle={handleSidebarToggle}
       />
 
-      {/* CartBar Component - Pass cart items and update function */}
-      <CartBar cartItems={cart} setCartItems={setCart} />
+      {/* CartBar Component - Pass ref for external control */}
+      <CartBar ref={cartBarRef} />
 
       {/* Main Content Area - Responsive to sidebar state */}
       <div
@@ -610,23 +562,6 @@ const HomePage = () => {
               <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
               <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
             </div>
-
-            {/* Cart Debug Info (Remove in production) */}
-            {cart.length > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <h3 className="font-semibold text-blue-800 mb-2">
-                  Cart Items ({cart.length}):
-                </h3>
-                <div className="text-sm text-blue-700">
-                  {cart.map((item) => (
-                    <div key={item.id} className="flex justify-between">
-                      <span>{item.name}</span>
-                      <span>Qty: {item.quantity}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Product Sections */}
             {sectionConfigs.map((config) => (

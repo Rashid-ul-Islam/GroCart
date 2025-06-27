@@ -179,7 +179,6 @@ const componentStyles = {
 
   // Tab styles
   tabsList: {
-    display: "inline-flex",
     height: "2.5rem",
     alignItems: "center",
     justifyContent: "center",
