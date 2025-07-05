@@ -21,7 +21,7 @@ import {
 const router = express.Router();
 
 // Assigned Delivery Routes
-router.get("/getAssignedDeliveries/:deliveryId", getAssignedDeliveries);
+router.get("/getAssignedDeliveries/:delivery_boy_id", getAssignedDeliveries);
 router.put("/markDeliveryCompleted/:deliveryId", markDeliveryCompleted);
 router.post("/reportDeliveryIssue/:deliveryId", reportDeliveryIssue);
 router.get("/deliveryBoyProfile/:deliveryBoyId", getDeliveryBoyProfile);

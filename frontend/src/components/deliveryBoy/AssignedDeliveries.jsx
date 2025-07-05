@@ -61,7 +61,7 @@ export const AssignedDeliveries = () => {
         `http://localhost:3000/api/delivery/getAssignedDeliveries/${user.user_id}`,
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
             'Content-Type': 'application/json'
           }
         }
@@ -106,7 +106,7 @@ export const AssignedDeliveries = () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           },
           body: JSON.stringify({
             delivery_boy_id: user.user_id,
@@ -154,7 +154,7 @@ export const AssignedDeliveries = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           },
           body: JSON.stringify({
             delivery_boy_id: user.user_id,

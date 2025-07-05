@@ -7,6 +7,14 @@ export const getAssignedDeliveries = async (req, res) => {
   try {
     const { delivery_boy_id } = req.params;
     
+    // Validate delivery_boy_id
+    if (!delivery_boy_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'delivery_boy_id is required'
+      });
+    }
+    
     const query = `
       SELECT 
         d.delivery_id,
@@ -29,12 +37,12 @@ export const getAssignedDeliveries = async (req, res) => {
         CASE 
           WHEN d.actual_arrival IS NOT NULL THEN 'completed'
           WHEN d.is_aborted = true THEN 'cancelled'
-          WHEN d.estimated_arrival < NOW() THEN 'overdue'
+          WHEN d.estimated_arrival IS NOT NULL AND d.estimated_arrival < NOW() THEN 'overdue'
           ELSE 'pending'
         END as status,
         CASE 
-          WHEN d.estimated_arrival < NOW() + INTERVAL '30 minutes' THEN 'high'
-          WHEN d.estimated_arrival < NOW() + INTERVAL '1 hour' THEN 'medium'
+          WHEN d.estimated_arrival IS NOT NULL AND d.estimated_arrival < NOW() + INTERVAL '30 minutes' THEN 'high'
+          WHEN d.estimated_arrival IS NOT NULL AND d.estimated_arrival < NOW() + INTERVAL '1 hour' THEN 'medium'
           ELSE 'low'
         END as priority
       FROM "Delivery" d
@@ -44,13 +52,17 @@ export const getAssignedDeliveries = async (req, res) => {
       JOIN "OrderItem" oi ON o.order_id = oi.order_id
       JOIN "Product" p ON oi.product_id = p.product_id
       WHERE d.delivery_boy_id = $1
-        AND d.actual_arrival IS NULL
-        AND d.is_aborted = false
+        AND (d.actual_arrival IS NULL OR d.actual_arrival IS NOT NULL)
+        AND (d.is_aborted IS NULL OR d.is_aborted = false)
       GROUP BY 
         d.delivery_id, d.order_id, d.estimated_arrival, d.actual_arrival, 
         d.is_aborted, o.total_amount, o.payment_status, o.order_date,
         u.first_name, u.last_name, u.email, u.phone_number, a.address
-      ORDER BY d.estimated_arrival ASC;
+      ORDER BY 
+        CASE 
+          WHEN d.estimated_arrival IS NOT NULL THEN d.estimated_arrival 
+          ELSE NOW() + INTERVAL '1 year' 
+        END ASC;
     `;
     
     const result = await client.query(query, [delivery_boy_id]);
@@ -59,15 +71,16 @@ export const getAssignedDeliveries = async (req, res) => {
       id: `ORD-${row.order_id.toString().padStart(3, '0')}`,
       delivery_id: row.delivery_id,
       order_id: row.order_id,
-      customerName: `${row.first_name} ${row.last_name}`,
+      customerName: `${row.first_name || ''} ${row.last_name || ''}`.trim(),
       customerEmail: row.email,
       customerPhone: row.phone_number,
       address: row.address,
       items: row.items ? row.items.split(', ') : [],
-      estimatedTime: new Date(row.estimated_arrival).toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
+      estimatedTime: row.estimated_arrival ? 
+        new Date(row.estimated_arrival).toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit'
+        }) : 'TBD',
       estimatedDateTime: row.estimated_arrival,
       totalAmount: parseFloat(row.total_amount),
       paymentStatus: row.payment_status,
