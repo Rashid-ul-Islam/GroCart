@@ -20,21 +20,25 @@ export default function NavBar() {
   const isDeliveryBoy = user?.role_id === "delivery_boy";
   const fetchCartCount = async () => {
     if (!isLoggedIn || !user) return;
-    
+
     try {
-      const response = await fetch(`http://localhost:3000/api/cart/getCart/${user.user_id}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+      const response = await fetch(
+        `http://localhost:3000/api/cart/getCart/${user.user_id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         }
-      });
-      
+      );
+
       if (response.ok) {
         const data = await response.json();
-        const count = data.data?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+        const count =
+          data.data?.reduce((sum, item) => sum + item.quantity, 0) || 0;
         setCartItemCount(count);
       }
     } catch (error) {
-      console.error('Error fetching cart count:', error);
+      console.error("Error fetching cart count:", error);
     }
   };
   const handleSearch = async (e) => {
@@ -102,11 +106,13 @@ export default function NavBar() {
           {/* Logo */}
           <Link
             to="/"
-            className="text-4xl font-extrabold flex items-center gap-3 text-purple-700 hover:text-yellow-400 transition-transform duration-300 hover:scale-110 select-none"
+            className="text-4xl font-extrabold flex items-center gap-3 text-purple-700 hover:from-yellow-500 to-purple-600 transition-transform duration-300 hover:scale-110 select-none"
           >
-            🛒 <span className="hidden sm:inline">GroCart</span>
+            🛒{" "}
+            <span className="hidden sm:inline bg-gradient-to-r from-purple-600 to-yellow-500 bg-clip-text text-transparent hover:from-yellow-500 hover:to-purple-600">
+              GroCart
+            </span>
           </Link>
-
           {/* Search bar */}
           <form onSubmit={handleSearch} className="flex-1 max-w-2xl mx-8">
             <div className="relative">
@@ -129,7 +135,6 @@ export default function NavBar() {
               )}
             </div>
           </form>
-
 
           {/* Right-side controls */}
           <div className="flex items-center gap-8 text-purple-700">

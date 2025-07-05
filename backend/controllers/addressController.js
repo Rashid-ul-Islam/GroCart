@@ -969,3 +969,185 @@ export const getWarehouses = async (req, res) => {
   }
 };
 
+
+// Get user addresses
+export const getUserAddresses = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    
+    const query = `
+      SELECT 
+        a.address_id,
+        a.address,
+        a.region_id,
+        a."isPrimary",
+        a.created_at,
+        r.name as region_name,
+        c.name as city_name,
+        d.name as district_name,
+        div.name as division_name
+      FROM "Address" a
+      LEFT JOIN "Region" r ON a.region_id = r.region_id
+      LEFT JOIN "City" c ON r.city_id = c.city_id
+      LEFT JOIN "District" d ON c.district_id = d.district_id
+      LEFT JOIN "Division" div ON d.division_id = div.division_id
+      WHERE a.user_id = $1
+      ORDER BY a.created_at DESC;
+    `;
+    
+    const result = await pool.query(query, [user_id]);
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching addresses:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching addresses',
+      error: error.message
+    });
+  }
+};
+
+// Add new address
+export const addAddress = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    const { user_id, address, region_id, isPrimary } = req.body;
+    
+    // If this is set as primary, update existing primary addresses
+    if (isPrimary) {
+      await client.query(
+        'UPDATE "Address" SET "isPrimary" = false WHERE user_id = $1',
+        [user_id]
+      );
+    }
+    
+    const insertQuery = `
+      INSERT INTO "Address" (user_id, address, region_id, isPrimary, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      RETURNING *;
+    `;
+    
+    const result = await client.query(insertQuery, [user_id, address, region_id, isPrimary]);
+    
+    await client.query('COMMIT');
+    
+    res.status(201).json({
+      success: true,
+      message: 'Address added successfully',
+      data: result.rows[0]
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error adding address:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error adding address',
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+};
+
+// Update address
+export const updateAddress = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    const { address_id } = req.params;
+    const { address, region_id, isPrimary } = req.body;
+    
+    // Get user_id for this address
+    const userQuery = await client.query(
+      'SELECT user_id FROM "Address" WHERE address_id = $1',
+      [address_id]
+    );
+    
+    if (userQuery.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: 'Address not found'
+      });
+    }
+    
+    const user_id = userQuery.rows[0].user_id;
+    
+    // If this is set as primary, update existing primary addresses
+    if (isPrimary) {
+      await client.query(
+        'UPDATE "Address" SET "isPrimary" = false WHERE user_id = $1',
+        [user_id]
+      );
+    }
+    
+    const updateQuery = `
+      UPDATE "Address" 
+      SET address = $1, region_id = $2, isPrimary = $3, updated_at = CURRENT_TIMESTAMP
+      WHERE address_id = $4
+      RETURNING *;
+    `;
+    
+    const result = await client.query(updateQuery, [address, region_id, isPrimary, address_id]);
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      success: true,
+      message: 'Address updated successfully',
+      data: result.rows[0]
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error updating address:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating address',
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+};
+
+// Delete address
+export const deleteAddress = async (req, res) => {
+  try {
+    const { address_id } = req.params;
+    
+    const deleteQuery = `
+      DELETE FROM "Address"
+      WHERE address_id = $1
+      RETURNING *;
+    `;
+    
+    const result = await pool.query(deleteQuery, [address_id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Address not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Address deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting address:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting address',
+      error: error.message
+    });
+  }
+};
+

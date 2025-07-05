@@ -14,7 +14,9 @@ import DeliveryDashboard from "./pages/DeliveryDashboard.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import DeliveryBoy from "./pages/DeliveryBoy.jsx"; 
 import FavoriteProducts from "./pages/FavoriteProducts.jsx"
+import CheckoutPage from "./pages/CheckOut.jsx";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import OrderDetails from "./pages/OrderDetails.jsx";
 
 export default function App() {
   return (
@@ -37,6 +39,8 @@ export default function App() {
           />
           <Route path="/delivery" element={<DeliveryBoy />} />
           <Route path="favorites" element={<FavoriteProducts />}/>
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/order-details/:orderId" element={<OrderDetails />} />
           {/* Add more routes as needed */}
         </Routes>
       </Router>

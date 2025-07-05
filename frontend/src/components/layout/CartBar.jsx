@@ -1,4 +1,9 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, {
+  useState,
+  useEffect,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import {
   ShoppingCart,
   X,
@@ -12,6 +17,7 @@ import {
   Gift,
 } from "lucide-react";
 import LoginModal from "../auth/LoginModal.jsx";
+import { Link } from 'react-router-dom';
 
 // Cart Sidebar Layout Component
 const CartSidebarLayout = forwardRef(({ children }, ref) => {
@@ -22,12 +28,12 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   const getCurrentUser = () => {
-    const userData = localStorage.getItem("user");
+    const userData = sessionStorage.getItem("user");
     return userData ? JSON.parse(userData) : null;
   };
 
   const isUserLoggedIn = () => {
-    return sessionStorage.getItem("token") && localStorage.getItem("user");
+    return sessionStorage.getItem("token") && sessionStorage.getItem("user");
   };
   // Calculate totals
   const subtotal = cartItems.reduce(
@@ -50,7 +56,7 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
         {
           method: "GET",
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
           },
         }
       );
@@ -85,7 +91,7 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
           },
           body: JSON.stringify({ quantity: newQuantity }),
         }
@@ -122,7 +128,7 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
         {
           method: "DELETE",
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
           },
         }
       );
@@ -149,7 +155,7 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
         {
           method: "DELETE",
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
           },
         }
       );
@@ -165,23 +171,26 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
   };
 
   const toggleCart = () => {
-    if (!isAnimating) {
-      // Check if user is logged in when opening cart
+    if (isAnimating) {
+      return;
+    }
+
+    // If the cart is currently closed and about to be opened
+    if (!isCartOpen) {
+      // First, check if the user is logged in
       if (!isUserLoggedIn()) {
+        // If not logged in, open the login modal and exit
         setIsLoginModalOpen(true);
         return;
       }
-
-      setIsAnimating(true);
-      setIsCartOpen(!isCartOpen);
-
-      // Fetch cart items when opening cart
-      if (!isCartOpen) {
-        fetchCartItems();
-      }
-
-      setTimeout(() => setIsAnimating(false), 500);
+      // If the user is logged in, fetch their cart items immediately
+      fetchCartItems();
     }
+
+    // Proceed with the open/close animation and state toggle
+    setIsAnimating(true);
+    setIsCartOpen(!isCartOpen);
+    setTimeout(() => setIsAnimating(false), 500);
   };
 
   const handleLoginSuccess = (userData) => {
@@ -409,11 +418,14 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
             </div>
 
             {/* Checkout Button */}
+            <Link to="/checkout">
             <button className="w-full bg-gradient-to-r from-blue-500 via-purple-600 to-pink-500 hover:from-blue-600 hover:via-purple-700 hover:to-pink-600 text-white py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl flex items-center justify-center space-x-2 group">
               <CreditCard className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
               <span>Proceed to Checkout</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
             </button>
+            </Link>
+            
 
             {/* Continue Shopping */}
             <button
@@ -455,6 +467,6 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
       `}</style>
     </>
   );
-})
+});
 
 export default CartSidebarLayout;

@@ -1,5 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Heart, Star, ArrowRight, Loader2, ShoppingCart } from "lucide-react";
+import {
+  Heart,
+  Star,
+  ArrowRight,
+  Loader2,
+  ShoppingCart,
+  ChevronLeft,
+  Filter,
+  Grid,
+  List,
+  Search,
+  X,
+} from "lucide-react";
 import Sidebar from "../components/layout/SideBar.jsx";
 import CartBar from "../components/layout/CartBar.jsx";
 import LoginModal from "../components/auth/LoginModal.jsx";
@@ -7,14 +19,13 @@ import { useAuth } from "../context/AuthContext.jsx";
 
 // Product Card Component
 const ProductCard = ({ product, onProductClick, onAddToCart }) => {
-  const { user, isLoggedIn } = useAuth(); // Use global auth state
+  const { user, isLoggedIn } = useAuth();
   const [quantity, setQuantity] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [likesLoading, setLikesLoading] = useState(false);
 
-  // Check if product is liked when component mounts or user changes
   useEffect(() => {
     if (isLoggedIn && user && user.user_id && product && product.id) {
       checkIfLiked();
@@ -43,7 +54,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
   const handleAddToCart = async () => {
     if (quantity === 0) return;
 
-    if (!isLoggedIn) { // Fixed: removed parentheses
+    if (!isLoggedIn) {
       setShowLoginModal(true);
       return;
     }
@@ -56,7 +67,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
           },
           body: JSON.stringify({
             user_id: user.user_id,
@@ -67,15 +78,12 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
       );
 
       const data = await response.json();
-      console.log("Add to cart response:", data);
 
       if (response.ok) {
-        // Success feedback
         if (onAddToCart) {
           onAddToCart(product, quantity);
         }
         setQuantity(0);
-        console.log("Item added to cart successfully");
       } else {
         console.error("Failed to add item to cart:", data.message);
       }
@@ -92,7 +100,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
       return;
     }
 
-    // Validate user and product data
     if (!user || !user.user_id) {
       console.error("User data is not available:", user);
       alert("Please log in again to manage favorites");
@@ -112,13 +119,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
         ? `http://localhost:3000/api/favorites/remove`
         : `http://localhost:3000/api/favorites/add`;
 
-      console.log("Toggling favorite:", {
-        user_id: user.user_id,
-        product_id: product.id,
-        endpoint,
-        isLiked,
-      });
-
       const response = await fetch(endpoint, {
         method: isLiked ? "DELETE" : "POST",
         headers: {
@@ -135,7 +135,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
 
       if (response.ok) {
         setIsLiked(!isLiked);
-        console.log("Favorite toggled successfully:", data);
       } else {
         console.error("Failed to toggle favorite:", data.message);
         alert(data.message || "Failed to update favorites");
@@ -150,7 +149,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
 
   const handleLoginSuccess = (userData) => {
     setShowLoginModal(false);
-    // Automatically add to cart after login
     setTimeout(() => {
       handleAddToCart();
     }, 500);
@@ -158,126 +156,120 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
 
   return (
     <>
-    <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 overflow-hidden group">
-      {/* Product Image */}
-      <div className="relative overflow-hidden">
-        <img
-          src={product.image || "https://via.placeholder.com/300x200"}
-          alt={product.name}
-          className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500 cursor-pointer"
-          onClick={() => onProductClick && onProductClick(product)}
-        />
+      <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 overflow-hidden group">
+        <div className="relative overflow-hidden">
+          <img
+            src={product.image || "https://via.placeholder.com/300x200"}
+            alt={product.name}
+            className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500 cursor-pointer"
+            onClick={() => onProductClick && onProductClick(product)}
+          />
 
-        {/* Favorite Button */}
-        <button
-          onClick={handleToggleFavorite}
-          disabled={likesLoading}
-          className="absolute top-3 right-3 p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white transition-all duration-200 shadow-lg disabled:opacity-50"
-        >
-          {likesLoading ? (
-            <div className="w-5 h-5 animate-spin rounded-full border-2 border-gray-300 border-t-red-500"></div>
-          ) : (
-            <Heart
-              className={`w-5 h-5 ${
-                isLiked ? "fill-red-500 text-red-500" : "text-gray-500"
-              } transition-colors duration-200`}
-            />
-          )}
-        </button>
-      </div>
-
-      {/* Product Info */}
-      <div className="p-6">
-        <h3
-          className="font-bold text-gray-800 mb-2 text-lg hover:text-purple-600 transition-colors cursor-pointer line-clamp-2"
-          onClick={() => onProductClick && onProductClick(product)}
-        >
-          {product.name}
-        </h3>
-
-        <div className="flex items-center mb-3">
-          <div className="flex items-center space-x-1">
-            {[...Array(5)].map((_, i) => (
-              <Star
-                key={i}
-                className={`w-4 h-4 ${
-                  i < (product.rating || 4)
-                    ? "fill-yellow-400 text-yellow-400"
-                    : "text-gray-300"
-                }`}
+          <button
+            onClick={handleToggleFavorite}
+            disabled={likesLoading}
+            className="absolute top-3 right-3 p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white transition-all duration-200 shadow-lg disabled:opacity-50"
+          >
+            {likesLoading ? (
+              <div className="w-5 h-5 animate-spin rounded-full border-2 border-gray-300 border-t-red-500"></div>
+            ) : (
+              <Heart
+                className={`w-5 h-5 ${
+                  isLiked ? "fill-red-500 text-red-500" : "text-gray-500"
+                } transition-colors duration-200`}
               />
-            ))}
-          </div>
-          <span className="text-sm text-gray-500 ml-2">
-            ({product.reviews || 0})
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex flex-col">
-            <span className="text-2xl font-bold text-purple-600">
-              {product.price || "৳0.00"}
-            </span>
-            {product.originalPrice && (
-              <span className="text-sm text-gray-500 line-through">
-                {product.originalPrice}
-              </span>
             )}
-          </div>
-          <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-            {product.quantity || "each"} {product.unit || "each"}
-          </span>
+          </button>
         </div>
 
-        {/* Quantity Selector */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <span className="text-sm font-medium text-gray-700">Qty:</span>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setQuantity(Math.max(0, quantity - 1))}
-                className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg flex items-center justify-center font-bold text-lg transition-all duration-200 transform hover:scale-110 shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                disabled={quantity <= 0}
-              >
-                -
-              </button>
-              <span className="w-8 text-center font-medium text-black">
-                {quantity}
+        <div className="p-6">
+          <h3
+            className="font-bold text-gray-800 mb-2 text-lg hover:text-purple-600 transition-colors cursor-pointer line-clamp-2"
+            onClick={() => onProductClick && onProductClick(product)}
+          >
+            {product.name}
+          </h3>
+
+          <div className="flex items-center mb-3">
+            <div className="flex items-center space-x-1">
+              {[...Array(5)].map((_, i) => (
+                <Star
+                  key={i}
+                  className={`w-4 h-4 ${
+                    i < (product.rating || 4)
+                      ? "fill-yellow-400 text-yellow-400"
+                      : "text-gray-300"
+                  }`}
+                />
+              ))}
+            </div>
+            <span className="text-sm text-gray-500 ml-2">
+              ({product.reviews || 0})
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col">
+              <span className="text-2xl font-bold text-purple-600">
+                {product.price || "৳0.00"}
               </span>
-              <button
-                onClick={() => setQuantity(quantity + 1)}
-                className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg flex items-center justify-center font-bold text-lg transition-all duration-200 transform hover:scale-110 shadow-md hover:shadow-lg active:scale-95"
-              >
-                +
-              </button>
+              {product.originalPrice && (
+                <span className="text-sm text-gray-500 line-through">
+                  {product.originalPrice}
+                </span>
+              )}
+            </div>
+            <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+              {product.quantity || "each"} {product.unit || "each"}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <span className="text-sm font-medium text-gray-700">Qty:</span>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setQuantity(Math.max(0, quantity - 1))}
+                  className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg flex items-center justify-center font-bold text-lg transition-all duration-200 transform hover:scale-110 shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  disabled={quantity <= 0}
+                >
+                  -
+                </button>
+                <span className="w-8 text-center font-medium text-black">
+                  {quantity}
+                </span>
+                <button
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg flex items-center justify-center font-bold text-lg transition-all duration-200 transform hover:scale-110 shadow-md hover:shadow-lg active:scale-95"
+                >
+                  +
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Add to Cart Button */}
-        <button
-          onClick={handleAddToCart}
-          disabled={quantity === 0 || isLoading}
-          className={`w-full py-2 px-3 rounded-lg font-medium text-white transition-all duration-200 transform flex items-center justify-center space-x-2 text-sm ${
-            quantity > 0 && !isLoading
-              ? "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 hover:scale-105 shadow-lg hover:shadow-xl active:scale-95"
-              : "bg-gray-400 cursor-not-allowed opacity-60"
-          }`}
-        >
-          {isLoading ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-          ) : (
-            <>
-              <ShoppingCart className="w-4 h-4" />
-              <span>
-                {quantity > 0 ? `Add ${quantity} to Cart` : "Select Quantity"}
-              </span>
-            </>
-          )}
-        </button>
+          <button
+            onClick={handleAddToCart}
+            disabled={quantity === 0 || isLoading}
+            className={`w-full py-2 px-3 rounded-lg font-medium text-white transition-all duration-200 transform flex items-center justify-center space-x-2 text-sm ${
+              quantity > 0 && !isLoading
+                ? "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 hover:scale-105 shadow-lg hover:shadow-xl active:scale-95"
+                : "bg-gray-400 cursor-not-allowed opacity-60"
+            }`}
+          >
+            {isLoading ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            ) : (
+              <>
+                <ShoppingCart className="w-4 h-4" />
+                <span>
+                  {quantity > 0 ? `Add ${quantity} to Cart` : "Select Quantity"}
+                </span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
-    </div>
-    {/* Login Modal */}
       <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
@@ -308,8 +300,38 @@ const ProductCardSkeleton = () => {
     </div>
   );
 };
-
-// Product Section Component
+const slideAnimationCSS = `
+  @keyframes slide-in {
+    from {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slide-out {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
+  
+  .animate-slide-in {
+    animation: slide-in 0.5s ease-in-out forwards;
+  }
+  
+  .animate-slide-out {
+    animation: slide-out 0.5s ease-in-out forwards;
+  }
+`;
+// Product Section Component with Sliding Animation
 const ProductSection = ({
   title,
   products,
@@ -317,7 +339,106 @@ const ProductSection = ({
   onViewMore,
   onProductClick,
   onAddToCart,
+  sectionKey,
 }) => {
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [currentProducts, setCurrentProducts] = useState(products);
+  const [expandedProducts, setExpandedProducts] = useState([]);
+  const [showingMore, setShowingMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
+
+  // Update current products when props change
+  useEffect(() => {
+    if (!showingMore) {
+      setCurrentProducts(products);
+    }
+  }, [products, showingMore]);
+
+  const fetchMoreProducts = async () => {
+    setLoadingMore(true);
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/home/section/${sectionKey}?page=${
+          pagination.currentPage + 1
+        }&limit=20`
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        const transformedProducts = (data.data?.products || []).map(
+          transformProduct
+        );
+        setExpandedProducts(transformedProducts);
+        setPagination(data.data?.pagination || pagination);
+        return transformedProducts;
+      }
+    } catch (error) {
+      console.error("Error fetching more products:", error);
+      return [];
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const transformProduct = (apiProduct) => ({
+    id: apiProduct.product_id,
+    name: apiProduct.product_name || apiProduct.name,
+    price: `৳${apiProduct.price}`,
+    unit: apiProduct.unit_measure || "kg",
+    origin: apiProduct.origin || "Local",
+    description: apiProduct.description,
+    image: apiProduct.image_url || "https://via.placeholder.com/300x200",
+    isAvailable: apiProduct.is_available,
+    isRefundable: apiProduct.is_refundable,
+    rating: parseFloat(apiProduct.avg_rating) || 4,
+    reviews: parseInt(apiProduct.review_count) || 0,
+    category: apiProduct.category_name,
+  });
+
+  const handleViewMore = async () => {
+    if (showingMore) {
+      // If already showing more, go back to original with slide animation
+      setIsAnimating(true);
+
+      // First slide out current products
+      setTimeout(() => {
+        setCurrentProducts(products);
+        setShowingMore(false);
+
+        // Then slide in original products
+        setTimeout(() => {
+          setIsAnimating(false);
+        }, 50);
+      }, 300);
+    } else {
+      // Fetch and show more products with slide animation
+      setIsAnimating(true);
+      const moreProducts = await fetchMoreProducts();
+
+      // Slide out current products
+      setTimeout(() => {
+        setCurrentProducts(moreProducts);
+        setShowingMore(true);
+
+        // Slide in new products
+        setTimeout(() => {
+          setIsAnimating(false);
+        }, 50);
+      }, 300);
+    }
+  };
+
   return (
     <div className="mb-16">
       <div className="flex items-center justify-between mb-8">
@@ -325,27 +446,88 @@ const ProductSection = ({
           <h2 className="text-3xl font-bold text-gray-800 mb-2">{title}</h2>
           <div className="w-20 h-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
         </div>
-        <button
-          onClick={onViewMore}
-          className="flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 rounded-full font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
-        >
-          <span>View More</span>
-          <ArrowRight className="w-5 h-5" />
-        </button>
+        <div className="flex items-center space-x-4">
+          {showingMore && (
+            <button
+              onClick={handleViewMore}
+              disabled={isAnimating || loadingMore}
+              className="flex items-center space-x-2 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-6 py-3 rounded-full font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-5 h-5" />
+              <span>Show Less</span>
+            </button>
+          )}
+          <button
+            onClick={handleViewMore}
+            disabled={isAnimating || loadingMore}
+            className="flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 rounded-full font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loadingMore ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Loading...</span>
+              </>
+            ) : (
+              <>
+                <span>{showingMore ? "Load More" : "View More"}</span>
+                <ArrowRight className="w-5 h-5" />
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-        {loading
-          ? [...Array(5)].map((_, index) => <ProductCardSkeleton key={index} />)
-          : products.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onProductClick={onProductClick}
-                onAddToCart={onAddToCart}
-              />
-            ))}
+      <div className="relative overflow-hidden">
+        {/* Products Container with Sliding Animation */}
+        <div
+          className={`transition-all duration-500 ease-in-out ${
+            isAnimating
+              ? "transform translate-x-full opacity-0"
+              : "transform translate-x-0 opacity-100"
+          }`}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+            {loading || loadingMore
+              ? [...Array(5)].map((_, index) => (
+                  <ProductCardSkeleton key={index} />
+                ))
+              : currentProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onProductClick={onProductClick}
+                    onAddToCart={onAddToCart}
+                  />
+                ))}
+          </div>
+        </div>
+
+        {/* Sliding Products Animation Overlay */}
+        {isAnimating && (
+          <div
+            className="absolute inset-0 transform transition-all duration-500 ease-in-out"
+            style={{
+              transform: "translateX(-100%)",
+              opacity: 0,
+              animation: "slide-in 0.5s ease-in-out forwards",
+            }}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+              {(showingMore ? products : expandedProducts).map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onProductClick={onProductClick}
+                  onAddToCart={onAddToCart}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Inject CSS for animations */}
+      <style jsx>{slideAnimationCSS}</style>
     </div>
   );
 };
@@ -357,11 +539,9 @@ const HomePage = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // Reference to CartBar component
+
   const cartBarRef = useRef(null);
 
-  // State for homepage sections
   const [homepageData, setHomepageData] = useState({
     mostPopular: [],
     freshFromFarm: [],
@@ -371,16 +551,13 @@ const HomePage = () => {
     beverages: [],
   });
 
-  // Add handler function
   const handleSidebarToggle = (collapsed) => {
     setIsSidebarCollapsed(collapsed);
   };
 
-  // Updated add to cart handler - triggers CartBar refresh
   const handleAddToCart = (product, quantity) => {
     console.log(`Adding ${quantity} of ${product.name} to cart`);
-    
-    // Trigger CartBar to refresh its data
+
     if (cartBarRef.current && cartBarRef.current.refreshCart) {
       cartBarRef.current.refreshCart();
     }
@@ -405,14 +582,12 @@ const HomePage = () => {
     category: apiProduct.category_name,
   });
 
-  // Fetch homepage products
   useEffect(() => {
     const fetchHomepageProducts = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        console.log("Fetching homepage products...");
         const response = await fetch(
           "http://localhost:3000/api/home/getProductsForHomepage"
         );
@@ -422,7 +597,6 @@ const HomePage = () => {
         }
 
         const apiResponse = await response.json();
-        console.log("API Response:", apiResponse);
 
         if (!apiResponse.success) {
           throw new Error(apiResponse.message || "Failed to fetch products");
@@ -447,9 +621,9 @@ const HomePage = () => {
             trendingNow: (apiResponse.data.trendingNow || []).map(
               transformProduct
             ),
-            dairyAndMeatProducts: (apiResponse.data.dairyAndMeatProducts || []).map(
-              transformProduct
-            ),
+            dairyAndMeatProducts: (
+              apiResponse.data.dairyAndMeatProducts || []
+            ).map(transformProduct),
             dealsCantMiss: (apiResponse.data.dealsCantMiss || []).map(
               transformProduct
             ),
@@ -568,11 +742,6 @@ const HomePage = () => {
     console.log("Favorites view selected");
   };
 
-  const handleViewMore = (sectionType) => {
-    console.log(`View more clicked for ${sectionType}`);
-    // Implement navigation to section page or load more products
-  };
-
   const handleProductClick = (product) => {
     console.log("Product clicked:", product);
     // Implement navigation to product detail page
@@ -599,7 +768,7 @@ const HomePage = () => {
     },
     {
       key: "dairyAndMeatProducts",
-      title: "Keep youself strong",
+      title: "Keep yourself strong",
       subtitle: "Pure & fresh",
       products: homepageData.dairyAndMeatProducts,
     },
@@ -636,7 +805,7 @@ const HomePage = () => {
           isSidebarCollapsed ? "ml-16" : "ml-80"
         } min-h-screen bg-gray-50`}
       >
-        {/* Main Content */}
+        {/* Home View */}
         <main className="w-full">
           <div className="container mx-auto px-6 py-8">
             {/* Hero Section */}
@@ -663,10 +832,10 @@ const HomePage = () => {
                 key={config.key}
                 title={config.title}
                 products={config.products}
-                loading={false} // Loading is handled at the component level
-                onViewMore={() => handleViewMore(config.key)}
+                loading={false}
                 onProductClick={handleProductClick}
                 onAddToCart={handleAddToCart}
+                sectionKey={config.key}
               />
             ))}
           </div>
@@ -678,8 +847,40 @@ const HomePage = () => {
         className="lg:hidden fixed inset-0 bg-black/20 opacity-0 pointer-events-none transition-opacity duration-300 z-30"
         id="sidebar-overlay"
       ></div>
+
+      {/* Custom CSS for slide animation */}
+      <style jsx>{`
+        @keyframes slide-in {
+          from {
+            transform: translateX(-100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+
+        @keyframes slide-out {
+          from {
+            transform: translateX(0);
+            opacity: 1;
+          }
+          to {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+        }
+
+        .animate-slide-in {
+          animation: slide-in 0.5s ease-in-out forwards;
+        }
+
+        .animate-slide-out {
+          animation: slide-out 0.5s ease-in-out forwards;
+        }
+      `}</style>
     </div>
   );
 };
-
 export default HomePage;

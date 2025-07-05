@@ -21,7 +21,7 @@ import deliveryBoyManagementRoute from "./routes/deliveryBoyManagementRoute.js";
 import cartRoute from "./routes/cartRoute.js";
 import assignDeliveryRoute from "./routes/assignedDeliveryRoute.js";
 import favoritesRoute from "./routes/favoritesRoute.js";
-
+import orderRoute from "./routes/orderRoute.js";
 
 const app = express();
 app.use(cors());
@@ -53,6 +53,7 @@ app.use("/api/delivery", deliveryBoyManagementRoute);
 app.use("/api/cart", cartRoute);
 app.use("/api/delivery", assignDeliveryRoute);
 app.use("/api/favorites",favoritesRoute);
+app.use("/api/order", orderRoute);
 
 app.listen(port, () => {
   console.log(`Server running on ${port}`);

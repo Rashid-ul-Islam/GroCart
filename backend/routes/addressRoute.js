@@ -46,7 +46,9 @@ import {
   
   // Utility operations
   getAddressHierarchy,
-  getWarehouses
+  getWarehouses,
+  getUserAddresses,
+  addAddress
 } from '../controllers/addressController.js';
 
 const router = express.Router();
@@ -98,5 +100,7 @@ router.get('/search-regions', searchRegions);
 // Hierarchy routes
 router.get('/address-hierarchy/:region_id', getAddressHierarchy);
 router.get('/warehouses', getWarehouses);
+router.get('/getAddress/:user_id', getUserAddresses);
+router.post('/addAddress', addAddress);
 
 export default router;
