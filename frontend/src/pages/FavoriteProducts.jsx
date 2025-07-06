@@ -78,7 +78,7 @@ function FavoriteProducts() {
 
   // Add to cart handler - triggers CartBar refresh
   const handleAddToCart = (product, quantity) => {
-    console.log(`Adding ${quantity} of ${product.product_name} to cart`);
+    console.log(`Adding ${quantity} of ${product.name} to cart`);
 
     // Trigger CartBar to refresh its data
     if (cartBarRef.current && cartBarRef.current.refreshCart) {
@@ -115,7 +115,7 @@ function FavoriteProducts() {
             },
             body: JSON.stringify({
               user_id: user.user_id,
-              product_id: product.product_id, // Fix: Use 'id' instead of 'product_id'
+              product_id: product.product_id, 
               quantity: quantity,
             }),
           }
@@ -213,7 +213,7 @@ function FavoriteProducts() {
           <div className="relative overflow-hidden">
             <img
               src={product.image_url || "https://via.placeholder.com/300x200"}
-              alt={product.product_name}
+              alt={product.name}
               className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500 cursor-pointer"
               onClick={() => onProductClick && onProductClick(product)}
             />
@@ -240,7 +240,7 @@ function FavoriteProducts() {
               className="font-bold text-gray-800 mb-2 text-lg hover:text-purple-600 transition-colors cursor-pointer line-clamp-2"
               onClick={() => onProductClick && onProductClick(product)}
             >
-              {product.product_name}
+              {product.name}
             </h3>
 
             <div className="flex items-center mb-3">
@@ -273,7 +273,7 @@ function FavoriteProducts() {
                 )}
               </div>
               <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                {product.price} {product.unit_measure || "each"}
+                {product.quantity} {product.unit || "each"}
               </span>
             </div>
 

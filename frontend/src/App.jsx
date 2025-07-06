@@ -17,6 +17,7 @@ import FavoriteProducts from "./pages/FavoriteProducts.jsx"
 import CheckoutPage from "./pages/CheckOut.jsx";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import OrderDetails from "./pages/OrderDetails.jsx";
+import ProductDetails from "./pages/ProductDetail.jsx";
 
 export default function App() {
   return (
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="favorites" element={<FavoriteProducts />}/>
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/order-details/:orderId" element={<OrderDetails />} />
+          <Route path="/product/:productId" element={<ProductDetails />} />
           {/* Add more routes as needed */}
         </Routes>
       </Router>

@@ -16,6 +16,7 @@ import Sidebar from "../components/layout/SideBar.jsx";
 import CartBar from "../components/layout/CartBar.jsx";
 import LoginModal from "../components/auth/LoginModal.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useNavigate } from "react-router-dom";
 
 // Product Card Component
 const ProductCard = ({ product, onProductClick, onAddToCart }) => {
@@ -25,6 +26,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [likesLoading, setLikesLoading] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (isLoggedIn && user && user.user_id && product && product.id) {
@@ -539,6 +541,7 @@ const HomePage = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   const cartBarRef = useRef(null);
 
@@ -578,7 +581,7 @@ const HomePage = () => {
     isRefundable: apiProduct.is_refundable,
     rating: parseFloat(apiProduct.avg_rating) || 4,
     reviews:
-      parseInt(apiProduct.review_count) || Math.floor(Math.random() * 200) + 10,
+      parseInt(apiProduct.review_count) || 0 ,
     category: apiProduct.category_name,
   });
 
@@ -744,7 +747,9 @@ const HomePage = () => {
 
   const handleProductClick = (product) => {
     console.log("Product clicked:", product);
-    // Implement navigation to product detail page
+    console.log("Navigating to product details page");
+    console.log("Product ID:", product.id);
+    navigate(`/product/${product.id}`);
   };
 
   const sectionConfigs = [

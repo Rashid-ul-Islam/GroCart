@@ -169,6 +169,7 @@ export const getUserFavorites = async (req, res) => {
           fp.added_at,
           p.name as product_name,
           p.price,
+          p.quantity,
           p.unit_measure,
           p.origin,
           p.description,
@@ -186,7 +187,7 @@ export const getUserFavorites = async (req, res) => {
         WHERE fp.user_id = $1
         GROUP BY 
           fp.user_id, fp.product_id, fp.added_at, p.product_id, 
-          p.name, p.price, p.unit_measure, p.origin, p.description,
+          p.name, p.price, p.unit_measure,p.quantity, p.origin, p.description,
           p.is_available, p.is_refundable, pi.image_url, c.name
         ORDER BY fp.added_at DESC
       `;
@@ -199,6 +200,7 @@ export const getUserFavorites = async (req, res) => {
           fp.added_at,
           p.name as product_name,
           p.price,
+          p.quantity,
           p.unit_measure,
           p.origin,
           p.description,
@@ -216,7 +218,7 @@ export const getUserFavorites = async (req, res) => {
         WHERE fp.user_id = $1
         GROUP BY 
           fp.user_id, fp.product_id, fp.added_at, p.product_id, 
-          p.name, p.price, p.unit_measure, p.origin, p.description,
+          p.name, p.price,p.quantity, p.unit_measure, p.origin, p.description,
           p.is_available, p.is_refundable, pi.image_url, c.name
         ORDER BY fp.added_at DESC
       `;
@@ -229,6 +231,7 @@ export const getUserFavorites = async (req, res) => {
       id: row.product_id,
       name: row.product_name,
       price: row.price,
+      quantity: row.quantity || 1,
       unit: row.unit_measure || 'kg',
       origin: row.origin || 'Local',
       description: row.description,

@@ -477,12 +477,10 @@ export const getProductById = async (req, res) => {
         r.review_id,
         r.rating,
         r.comment,
-        r.created_at,
-        u.name AS user_name
+        u.username AS user_name
       FROM "Review" r
       LEFT JOIN "User" u ON r.user_id = u.user_id
       WHERE r.product_id = $1 AND r.review_status = 'approved'
-      ORDER BY r.created_at DESC
       LIMIT 10
     `;
 
