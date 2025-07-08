@@ -29,7 +29,7 @@ export const getDashboardStats = async (req, res) => {
         const productCountQuery = `SELECT COUNT(*) as total FROM "Product"`;
         const userCountQuery = `SELECT COUNT(*) as total FROM "User"`;
         const salesQuery = `SELECT SUM(total_amount) as total FROM "Order" WHERE payment_status = 'completed'`;
-        
+
         const [productResult, userResult, salesResult] = await Promise.all([
             pool.query(productCountQuery),
             pool.query(userCountQuery),
@@ -65,7 +65,7 @@ const getDescendantCategoryIds = async (categoryId) => {
             )
             SELECT category_id FROM category_tree;
         `;
-        
+
         const result = await pool.query(query, [categoryId]);
         return result.rows.map(row => row.category_id);
     } catch (error) {
@@ -103,7 +103,7 @@ export const getProducts = async (req, res) => {
         // Filter by category (including child categories)
         if (category_id) {
             const categoryIds = await getDescendantCategoryIds(parseInt(category_id));
-            
+
             if (categoryIds.length === 1) {
                 whereConditions.push(`p.category_id = $${paramIndex}`);
                 queryParams.push(categoryIds[0]);
@@ -274,5 +274,97 @@ export const deleteProduct = async (req, res) => {
     } catch (error) {
         console.error("Error deleting product:", error);
         res.status(500).json({ message: "Failed to delete product" });
+    }
+};
+
+export const getProductById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const query = `
+            SELECT 
+                p.*,
+                c.name as category_name
+            FROM "Product" p
+            LEFT JOIN "Category" c ON p.category_id = c.category_id
+            WHERE p.product_id = $1
+        `;
+
+        const result = await pool.query(query, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        res.status(200).json(result.rows[0]);
+
+    } catch (error) {
+        console.error("Error fetching product:", error);
+        res.status(500).json({ message: "Failed to fetch product" });
+    }
+};
+
+export const updateProduct = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        // Build dynamic query based on provided fields
+        const updateFields = [];
+        const values = [];
+        let valueIndex = 1;
+
+        // Define allowed fields for update
+        const allowedFields = [
+            'name', 'category_id', 'price', 'quantity', 'unit_measure',
+            'origin', 'description', 'is_refundable', 'is_available'
+        ];
+
+        // Only include fields that are provided in the request
+        Object.keys(updateData).forEach(field => {
+            if (allowedFields.includes(field) && updateData[field] !== undefined && updateData[field] !== '') {
+                updateFields.push(`"${field}" = $${valueIndex}`);
+                values.push(updateData[field]);
+                valueIndex++;
+            }
+        });
+
+        if (updateFields.length === 0) {
+            return res.status(400).json({ message: "No valid fields provided for update" });
+        }
+
+        // Add updated_at field
+        updateFields.push(`"updated_at" = NOW()`);
+
+        // Add product ID as the last parameter
+        values.push(id);
+
+        const query = `
+            UPDATE "Product" 
+            SET ${updateFields.join(', ')}
+            WHERE product_id = $${valueIndex}
+            RETURNING *
+        `;
+
+        console.log("Update query:", query);
+        console.log("Values:", values);
+
+        const result = await pool.query(query, values);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        res.status(200).json({
+            message: "Product updated successfully",
+            product: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error("Error updating product:", error);
+        res.status(500).json({
+            message: "Failed to update product",
+            error: error.message
+        });
     }
 };

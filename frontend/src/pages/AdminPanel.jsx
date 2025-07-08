@@ -15,9 +15,11 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { Button } from "../components/ui/button.jsx";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function AdminPanel() {
+  const navigate = useNavigate();
+
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -257,7 +259,7 @@ export default function AdminPanel() {
   };
 
   const handleEditProduct = (productId) => {
-    alert(`Edit Product ID: ${productId}`);
+    navigate(`/admin/product-edit/${productId}`);
   };
 
   const handleDeleteProduct = async (productId) => {
