@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Heart, Star, ShoppingCart } from "lucide-react";
 import Sidebar from "../components/layout/SideBar.jsx";
 import CartBar from "../components/layout/CartBar.jsx";
@@ -8,6 +8,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 
 function ProductsPage() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -368,6 +369,11 @@ function ProductsPage() {
   const handleProductClick = (product) => {
     // Handle product click - navigate to product details page
     console.log("Product clicked:", product);
+    // Navigate to product detail page using the product's ID
+    const productId = product.product_id || product.id;
+    if (productId) {
+      navigate(`/product/${productId}`);
+    }
   };
 
   return (

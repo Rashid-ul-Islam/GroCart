@@ -17,7 +17,7 @@ import {
   Gift,
 } from "lucide-react";
 import LoginModal from "../auth/LoginModal.jsx";
-import { Link } from 'react-router-dom';
+import { Link } from "react-router-dom";
 
 // Cart Sidebar Layout Component
 const CartSidebarLayout = forwardRef(({ children }, ref) => {
@@ -26,6 +26,7 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
 
   const getCurrentUser = () => {
     const userData = sessionStorage.getItem("user");
@@ -35,40 +36,82 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
   const isUserLoggedIn = () => {
     return sessionStorage.getItem("token") && sessionStorage.getItem("user");
   };
-  // Calculate totals
+
+  // Calculate totals with error handling
   const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item) =>
+      sum + (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 0),
     0
   );
   const tax = subtotal * 0.08; // 8% tax
   const shipping = subtotal > 100 ? 0 : 50;
   const total = subtotal + tax + shipping;
-  const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const itemCount = cartItems.reduce(
+    (sum, item) => sum + (parseInt(item.quantity) || 0),
+    0
+  );
 
   const fetchCartItems = async () => {
-    if (!isUserLoggedIn()) return;
+    if (!isUserLoggedIn()) {
+      setCartItems([]);
+      setFetchError(null);
+      return;
+    }
 
     setIsLoading(true);
+    setFetchError(null);
+
     try {
       const user = getCurrentUser();
+      if (!user || !user.user_id) {
+        console.error("User data not available");
+        setCartItems([]);
+        return;
+      }
+
       const response = await fetch(
         `http://localhost:3000/api/cart/getCart/${user.user_id}`,
         {
           method: "GET",
           headers: {
             Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+            "Content-Type": "application/json",
           },
         }
       );
 
       if (response.ok) {
         const data = await response.json();
-        setCartItems(data.data || []);
+
+        // Ensure we have valid cart items array
+        const validCartItems = Array.isArray(data.data) ? data.data : [];
+
+        // Validate each cart item has required properties
+        const sanitizedItems = validCartItems
+          .filter(
+            (item) =>
+              item &&
+              item.id &&
+              item.name &&
+              typeof item.price !== "undefined" &&
+              typeof item.quantity !== "undefined"
+          )
+          .map((item) => ({
+            ...item,
+            price: parseFloat(item.price) || 0,
+            quantity: parseInt(item.quantity) || 0,
+          }));
+
+        setCartItems(sanitizedItems);
       } else {
-        console.error("Failed to fetch cart items");
+        console.error("Failed to fetch cart items, status:", response.status);
+        setFetchError("Failed to load cart items");
+        // Don't clear cart items on error - keep existing state
       }
     } catch (error) {
       console.error("Error fetching cart items:", error);
+      setFetchError("Network error while loading cart");
+      // Don't clear cart items on error - keep existing state
     } finally {
       setIsLoading(false);
     }
@@ -81,8 +124,38 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
     },
   }));
 
+  // Auto-fetch cart items when user logs in or component mounts
+  useEffect(() => {
+    if (isUserLoggedIn()) {
+      fetchCartItems();
+    }
+  }, []);
+
+  // Also fetch when login status might change
+  useEffect(() => {
+    const handleStorageChange = () => {
+      if (isUserLoggedIn()) {
+        fetchCartItems();
+      } else {
+        setCartItems([]);
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
   const updateQuantity = async (cart_item_id, newQuantity) => {
     if (!isUserLoggedIn()) return;
+
+    // Validate inputs
+    if (!cart_item_id || newQuantity < 0) return;
+
+    // If quantity is 0, remove the item instead
+    if (newQuantity === 0) {
+      await removeItem(cart_item_id);
+      return;
+    }
 
     try {
       const response = await fetch(
@@ -98,29 +171,28 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
       );
 
       if (response.ok) {
-        if (newQuantity === 0) {
-          setCartItems((items) =>
-            items.filter((item) => item.id !== cart_item_id)
-          );
-        } else {
-          setCartItems((items) =>
-            items.map((item) =>
-              item.id === cart_item_id
-                ? { ...item, quantity: newQuantity }
-                : item
-            )
-          );
-        }
+        // Update local state optimistically
+        setCartItems((items) =>
+          items.map((item) =>
+            item.id === cart_item_id
+              ? { ...item, quantity: parseInt(newQuantity) || 0 }
+              : item
+          )
+        );
       } else {
         console.error("Failed to update cart item");
+        // Refresh cart to ensure consistency
+        await fetchCartItems();
       }
     } catch (error) {
       console.error("Error updating cart item:", error);
+      // Refresh cart to ensure consistency
+      await fetchCartItems();
     }
   };
 
   const removeItem = async (cart_item_id) => {
-    if (!isUserLoggedIn()) return;
+    if (!isUserLoggedIn() || !cart_item_id) return;
 
     try {
       const response = await fetch(
@@ -129,19 +201,25 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+            "Content-Type": "application/json",
           },
         }
       );
 
       if (response.ok) {
+        // Update local state optimistically
         setCartItems((items) =>
           items.filter((item) => item.id !== cart_item_id)
         );
       } else {
         console.error("Failed to remove cart item");
+        // Refresh cart to ensure consistency
+        await fetchCartItems();
       }
     } catch (error) {
       console.error("Error removing cart item:", error);
+      // Refresh cart to ensure consistency
+      await fetchCartItems();
     }
   };
 
@@ -242,6 +320,13 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
             </div>
           )}
 
+          {/* Loading indicator for cart operations */}
+          {isLoading && (
+            <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+              <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          )}
+
           {/* Ripple effect */}
           <div className="absolute inset-0 rounded-full border-2 border-blue-300 opacity-0 group-hover:opacity-60 animate-ping"></div>
         </div>
@@ -292,7 +377,28 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
 
         {/* Cart Items */}
         <div className="relative z-10 flex-1 overflow-y-auto p-6 space-y-4 max-h-[calc(100vh-300px)]">
-          {cartItems.length === 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p className="text-gray-500">Loading cart items...</p>
+            </div>
+          ) : fetchError ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <X className="w-10 h-10 text-red-500" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                Error loading cart
+              </h3>
+              <p className="text-gray-500 mb-4">{fetchError}</p>
+              <button
+                onClick={fetchCartItems}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          ) : cartItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                 <ShoppingCart className="w-10 h-10 text-gray-400" />
@@ -419,13 +525,12 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
 
             {/* Checkout Button */}
             <Link to="/checkout">
-            <button className="w-full bg-gradient-to-r from-blue-500 via-purple-600 to-pink-500 hover:from-blue-600 hover:via-purple-700 hover:to-pink-600 text-white py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl flex items-center justify-center space-x-2 group">
-              <CreditCard className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
-              <span>Proceed to Checkout</span>
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
-            </button>
+              <button className="w-full bg-gradient-to-r from-blue-500 via-purple-600 to-pink-500 hover:from-blue-600 hover:via-purple-700 hover:to-pink-600 text-white py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl flex items-center justify-center space-x-2 group">
+                <CreditCard className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
+                <span>Proceed to Checkout</span>
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
+              </button>
             </Link>
-            
 
             {/* Continue Shopping */}
             <button

@@ -13,7 +13,12 @@ import {
 } from "lucide-react";
 
 // Sidebar component
-function Sidebar({ onCategorySelect, onProductsView, onFavoritesView, onSidebarToggle }) {
+function Sidebar({
+  onCategorySelect,
+  onProductsView,
+  onFavoritesView,
+  onSidebarToggle,
+}) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [activeSection, setActiveSection] = useState("categories");
   const [categoryLevels, setCategoryLevels] = useState([]);
@@ -21,18 +26,18 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView, onSidebarT
   const [categoryBreadcrumb, setCategoryBreadcrumb] = useState([]);
   const [categoryLoading, setCategoryLoading] = useState(false);
   const [currentLevel, setCurrentLevel] = useState(0);
-  
+
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
     fetchRootCategories();
-    
+
     // Set active section based on current route
-    if (location.pathname === '/favorites') {
-      setActiveSection('favorites');
+    if (location.pathname === "/favorites") {
+      setActiveSection("favorites");
     } else {
-      setActiveSection('categories');
+      setActiveSection("categories");
     }
   }, [location.pathname]);
 
@@ -97,7 +102,7 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView, onSidebarT
 
   const handleCategorySelect = async (category) => {
     const hasChildren = await checkHasChildren(category.category_id);
-    
+
     if (hasChildren) {
       const childCategories = await fetchChildCategories(category.category_id);
       const newPath = [...selectedPath, category];
@@ -105,20 +110,29 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView, onSidebarT
       setCategoryBreadcrumb(newPath);
       setCategoryLevels((prev) => [...prev, childCategories]);
       setCurrentLevel((prev) => prev + 1);
-      
-      if (onCategorySelect) {
-        onCategorySelect(category, false);
-      }
+
+      // Don't call onCategorySelect for parent categories with children
+      // This prevents unwanted navigation
     } else {
       // This is a leaf category - navigate to products page
       const newPath = [...selectedPath, category];
       setCategoryBreadcrumb(newPath);
-      
+
       // Fix: Ensure category_name exists, fallback to 'Unknown Category'
-      const categoryName = category.category_name || 'Unknown Category';
-      
+      const categoryName =
+        category.category_name || category.name || "Unknown Category";
+
       // Navigate to products page with category using React Router
-      navigate(`/products/category?categoryId=${category.category_id}&categoryName=${encodeURIComponent(categoryName)}`);
+      navigate(
+        `/products/category?categoryId=${
+          category.category_id
+        }&categoryName=${encodeURIComponent(categoryName)}`
+      );
+
+      // Optionally call onCategorySelect for leaf categories if needed
+      if (onCategorySelect) {
+        onCategorySelect(category, false);
+      }
     }
   };
 
@@ -141,7 +155,7 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView, onSidebarT
     setCurrentLevel(0);
 
     // Navigate to favorites page using React Router
-    navigate('/favorites');
+    navigate("/favorites");
 
     // Call the favorites view handler (if still needed for other purposes)
     if (onFavoritesView) {
@@ -152,9 +166,9 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView, onSidebarT
   const handleCategoriesClick = () => {
     setActiveSection("categories");
     fetchRootCategories();
-    
-    // Navigate to home or products page (adjust route as needed)
-    navigate('/');
+
+    // Don't navigate anywhere - just show categories
+    // The navigation should only happen when a specific category is selected
   };
 
   const toggleSidebar = () => {
@@ -304,7 +318,7 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView, onSidebarT
                         onClick={() => handleBackToLevel(index)}
                         className="hover:text-emerald-600 font-semibold transition-colors duration-200 px-2 py-1 rounded-lg hover:bg-emerald-50"
                       >
-                        {item.name}
+                        {item.category_name || item.name}
                       </button>
                     </React.Fragment>
                   ))}
@@ -351,7 +365,7 @@ function Sidebar({ onCategorySelect, onProductsView, onFavoritesView, onSidebarT
                       </div>
                       <div className="flex flex-col items-start">
                         <span className="font-semibold text-slate-800 group-hover:text-emerald-700 transition-colors duration-300">
-                          {category.name}
+                          {category.category_name || category.name}
                         </span>
                         <span className="text-xs text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                           {category.has_children

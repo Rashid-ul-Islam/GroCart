@@ -4,12 +4,14 @@ import Sidebar from "../components/layout/SideBar.jsx";
 import CartBar from "../components/layout/CartBar.jsx";
 import LoginModal from "../components/auth/LoginModal.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useNavigate } from "react-router-dom";
 
 function FavoriteProducts() {
   const [favoriteProducts, setFavoriteProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { user, isLoggedIn } = useAuth();
+  const navigate = useNavigate();
 
   // Reference to CartBar component
   const cartBarRef = useRef(null);
@@ -22,7 +24,7 @@ function FavoriteProducts() {
 
   const fetchFavoriteProducts = async () => {
     if (!user?.user_id) return;
-    
+
     setLoading(true);
     try {
       const response = await fetch(
@@ -39,7 +41,10 @@ function FavoriteProducts() {
         // Fix: Access the data property from the response
         setFavoriteProducts(data.data || []);
       } else {
-        console.error("Failed to fetch favorite products:", response.statusText);
+        console.error(
+          "Failed to fetch favorite products:",
+          response.statusText
+        );
       }
     } catch (error) {
       console.error("Failed to fetch favorite products:", error);
@@ -103,6 +108,14 @@ function FavoriteProducts() {
         return;
       }
 
+      // Get the correct product ID
+      const productId = product.product_id || product.id;
+      if (!productId) {
+        console.error("Product ID not found:", product);
+        alert("Product information is missing");
+        return;
+      }
+
       setIsLoading(true);
       try {
         const response = await fetch(
@@ -115,7 +128,7 @@ function FavoriteProducts() {
             },
             body: JSON.stringify({
               user_id: user.user_id,
-              product_id: product.product_id, 
+              product_id: productId,
               quantity: quantity,
             }),
           }
@@ -130,9 +143,11 @@ function FavoriteProducts() {
           console.log("Item added to cart successfully");
         } else {
           console.error("Failed to add item to cart:", data.message);
+          alert(data.message || "Failed to add item to cart");
         }
       } catch (error) {
         console.error("Error adding to cart:", error);
+        alert("Failed to add item to cart. Please try again.");
       } finally {
         setIsLoading(false);
       }
@@ -152,8 +167,14 @@ function FavoriteProducts() {
         return;
       }
 
-      if (!product || !product.product_id) {
+      // Get the correct product ID - try multiple possible property names
+      const productId = product.product_id || product.id;
+      if (!product || !productId) {
         console.error("Product data is not available:", product);
+        console.error(
+          "Available product properties:",
+          Object.keys(product || {})
+        );
         alert("Product information is missing");
         return;
       }
@@ -171,7 +192,7 @@ function FavoriteProducts() {
             },
             body: JSON.stringify({
               user_id: parseInt(user.user_id),
-              product_id: parseInt(product.product_id), // Fix: Use 'id' instead of 'product_id'
+              product_id: parseInt(productId),
             }),
           }
         );
@@ -181,8 +202,8 @@ function FavoriteProducts() {
         if (response.ok) {
           console.log("Favorite removed successfully:", data);
           // Remove the product from the favorites list
-          setFavoriteProducts(prev => 
-            prev.filter(p => p.id !== product.product_id) // Fix: Use 'id' instead of 'product_id'
+          setFavoriteProducts((prev) =>
+            prev.filter((p) => (p.product_id || p.id) !== productId)
           );
         } else {
           console.error("Failed to remove favorite:", data.message);
@@ -340,8 +361,10 @@ function FavoriteProducts() {
   };
 
   const handleProductClick = (product) => {
-    // Handle product click - navigate to product details page
-    console.log("Product clicked:", product);
+    // Navigate to product details page
+    console.log("Navigating to product details page");
+    console.log("Product ID:", product.product_id || product.id);
+    navigate(`/product/${product.product_id || product.id}`);
   };
 
   // Redirect to login if not authenticated
@@ -412,7 +435,7 @@ function FavoriteProducts() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {favoriteProducts.map((product) => (
               <ProductCard
-                key={product.product_id}
+                key={product.product_id || product.id}
                 product={product}
                 onProductClick={handleProductClick}
               />
