@@ -2,7 +2,7 @@ import {
     createOrder,
     getUserOrders,
     getOrderDetails,
-    updateOrderStatus
+    updateOrderStatusHandler
 } from '../controllers/orderController.js';
 
 import express from 'express';
@@ -14,5 +14,5 @@ router.get('/user/:user_id', getUserOrders);
 // Get order details
 router.get('/:order_id', getOrderDetails);
 // Update order status
-router.put('/update/:order_id', updateOrderStatus);
+router.put('/update/:order_id', updateOrderStatusHandler);
 export default router;

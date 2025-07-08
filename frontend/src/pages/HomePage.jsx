@@ -19,12 +19,16 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
 
 // Product Card Component
-const ProductCard = ({ product, onProductClick, onAddToCart }) => {
+const ProductCard = ({
+  product,
+  onProductClick,
+  onAddToCart,
+  onShowLoginModal,
+}) => {
   const { user, isLoggedIn } = useAuth();
   const [quantity, setQuantity] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const [likesLoading, setLikesLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -57,7 +61,9 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
     if (quantity === 0) return;
 
     if (!isLoggedIn) {
-      setShowLoginModal(true);
+      if (onShowLoginModal) {
+        onShowLoginModal(() => handleAddToCart);
+      }
       return;
     }
 
@@ -98,14 +104,18 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
 
   const handleToggleFavorite = async () => {
     if (!isLoggedIn) {
-      setShowLoginModal(true);
+      if (onShowLoginModal) {
+        onShowLoginModal(() => handleToggleFavorite);
+      }
       return;
     }
 
     if (!user || !user.user_id) {
       console.error("User data is not available:", user);
       alert("Please log in again to manage favorites");
-      setShowLoginModal(true);
+      if (onShowLoginModal) {
+        onShowLoginModal(() => handleToggleFavorite);
+      }
       return;
     }
 
@@ -147,13 +157,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
     } finally {
       setLikesLoading(false);
     }
-  };
-
-  const handleLoginSuccess = (userData) => {
-    setShowLoginModal(false);
-    setTimeout(() => {
-      handleAddToCart();
-    }, 500);
   };
 
   return (
@@ -272,12 +275,6 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
           </button>
         </div>
       </div>
-      <LoginModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-        onLoginSuccess={handleLoginSuccess}
-        currentPath="/"
-      />
     </>
   );
 };
@@ -341,6 +338,7 @@ const ProductSection = ({
   onViewMore,
   onProductClick,
   onAddToCart,
+  onShowLoginModal,
   sectionKey,
 }) => {
   const [isAnimating, setIsAnimating] = useState(false);
@@ -499,6 +497,7 @@ const ProductSection = ({
                     product={product}
                     onProductClick={onProductClick}
                     onAddToCart={onAddToCart}
+                    onShowLoginModal={onShowLoginModal}
                   />
                 ))}
           </div>
@@ -521,6 +520,7 @@ const ProductSection = ({
                   product={product}
                   onProductClick={onProductClick}
                   onAddToCart={onAddToCart}
+                  onShowLoginModal={onShowLoginModal}
                 />
               ))}
             </div>
@@ -541,7 +541,10 @@ const HomePage = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
 
   const cartBarRef = useRef(null);
 
@@ -566,6 +569,34 @@ const HomePage = () => {
     }
   };
 
+  const handleShowLoginModal = (action) => {
+    setPendingAction(action);
+    setShowLoginModal(true);
+  };
+
+  const handleLoginSuccess = (userData) => {
+    setShowLoginModal(false);
+
+    // Refresh cart after successful login
+    if (cartBarRef.current && cartBarRef.current.refreshCart) {
+      setTimeout(() => {
+        cartBarRef.current.refreshCart();
+      }, 300);
+    }
+
+    if (pendingAction) {
+      setTimeout(() => {
+        pendingAction();
+        setPendingAction(null);
+      }, 500);
+    }
+  };
+
+  const handleCloseLoginModal = () => {
+    setShowLoginModal(false);
+    setPendingAction(null);
+  };
+
   const transformProduct = (apiProduct) => ({
     id: apiProduct.product_id,
     name: apiProduct.product_name || apiProduct.name,
@@ -580,8 +611,7 @@ const HomePage = () => {
     isAvailable: apiProduct.is_available,
     isRefundable: apiProduct.is_refundable,
     rating: parseFloat(apiProduct.avg_rating) || 4,
-    reviews:
-      parseInt(apiProduct.review_count) || 0 ,
+    reviews: parseInt(apiProduct.review_count) || 0,
     category: apiProduct.category_name,
   });
 
@@ -701,6 +731,21 @@ const HomePage = () => {
 
     fetchHomepageProducts();
   }, []);
+
+  // Auto-close login modal when user logs in
+  useEffect(() => {
+    if (isLoggedIn && showLoginModal) {
+      setShowLoginModal(false);
+      setPendingAction(null);
+
+      // Refresh cart when user logs in
+      if (cartBarRef.current && cartBarRef.current.refreshCart) {
+        setTimeout(() => {
+          cartBarRef.current.refreshCart();
+        }, 300);
+      }
+    }
+  }, [isLoggedIn, showLoginModal]);
 
   if (loading) {
     return (
@@ -840,6 +885,7 @@ const HomePage = () => {
                 loading={false}
                 onProductClick={handleProductClick}
                 onAddToCart={handleAddToCart}
+                onShowLoginModal={handleShowLoginModal}
                 sectionKey={config.key}
               />
             ))}
@@ -852,6 +898,14 @@ const HomePage = () => {
         className="lg:hidden fixed inset-0 bg-black/20 opacity-0 pointer-events-none transition-opacity duration-300 z-30"
         id="sidebar-overlay"
       ></div>
+
+      {/* Login Modal - Positioned at the top level with high z-index */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={handleCloseLoginModal}
+        onLoginSuccess={handleLoginSuccess}
+        currentPath="/"
+      />
 
       {/* Custom CSS for slide animation */}
       <style jsx>{`

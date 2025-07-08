@@ -1,27 +1,35 @@
 // src/components/auth/LoginModal.jsx
-import { useState, useEffect } from 'react';
-import { X, Eye, EyeOff, User, Lock, AlertCircle, CheckCircle } from 'lucide-react';
-import { Button } from '../ui/button.jsx';
-import { Input } from '../ui/input.jsx';
-import { useAuth } from '../../context/AuthContext.jsx'; // Import useAuth
+import { useState, useEffect } from "react";
+import {
+  X,
+  Eye,
+  EyeOff,
+  User,
+  Lock,
+  AlertCircle,
+  CheckCircle,
+} from "lucide-react";
+import { Button } from "../ui/button.jsx";
+import { Input } from "../ui/input.jsx";
+import { useAuth } from "../../context/AuthContext.jsx"; // Import useAuth
 
 const LoginModal = ({ isOpen, onClose, onLoginSuccess, currentPath }) => {
   const { login } = useAuth(); // Use the global login function
   const [formData, setFormData] = useState({
-    username: '',
-    password: ''
+    username: "",
+    password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   // Reset form when modal opens/closes
   useEffect(() => {
     if (isOpen) {
-      setFormData({ username: '', password: '' });
-      setError('');
-      setSuccess('');
+      setFormData({ username: "", password: "" });
+      setError("");
+      setSuccess("");
       setShowPassword(false);
     }
   }, [isOpen]);
@@ -29,25 +37,25 @@ const LoginModal = ({ isOpen, onClose, onLoginSuccess, currentPath }) => {
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
     // Clear error when user starts typing
-    if (error) setError('');
+    if (error) setError("");
   };
 
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError("");
 
     try {
-      const response = await fetch('http://localhost:3000/api/auth/login', {
-        method: 'POST',
+      const response = await fetch("http://localhost:3000/api/auth/login", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
@@ -57,24 +65,27 @@ const LoginModal = ({ isOpen, onClose, onLoginSuccess, currentPath }) => {
       if (response.ok) {
         // Store token and user data
         login(data.user, data.token);
-        
-        setSuccess('Login successful! Redirecting...');
-        
+
+        setSuccess("Login successful! Redirecting...");
+
+        // Dispatch custom event for other components to listen to
+        window.dispatchEvent(new Event("userLoggedIn"));
+
         // Call success callback
         setTimeout(() => {
           onLoginSuccess(data.user);
-          
+
           // Handle navigation based on current path
-          if (currentPath === '/register' || currentPath === '/signup') {
-            window.location.href = '/';
+          if (currentPath === "/register" || currentPath === "/signup") {
+            window.location.href = "/";
           }
-        }, 1000);
+        }, 500); // Reduced from 1000ms to 500ms
       } else {
-        setError(data.error || 'Login failed. Please try again.');
+        setError(data.error || "Login failed. Please try again.");
       }
     } catch (error) {
-      console.error('Login error:', error);
-      setError('Network error. Please check your connection and try again.');
+      console.error("Login error:", error);
+      setError("Network error. Please check your connection and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -90,26 +101,26 @@ const LoginModal = ({ isOpen, onClose, onLoginSuccess, currentPath }) => {
   // Handle escape key
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === 'Escape' && isOpen) {
+      if (e.key === "Escape" && isOpen) {
         onClose();
       }
     };
 
     if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
+      document.addEventListener("keydown", handleEscape);
+      document.body.style.overflow = "hidden";
     }
 
     return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "unset";
     };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm transition-opacity duration-300"
       onClick={handleBackdropClick}
     >
@@ -130,7 +141,9 @@ const LoginModal = ({ isOpen, onClose, onLoginSuccess, currentPath }) => {
             <div className="mx-auto w-16 h-16 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full flex items-center justify-center mb-4 shadow-lg">
               <User className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Welcome Back
+            </h2>
             <p className="text-gray-600">Sign in to your GroCart account</p>
           </div>
 
@@ -154,11 +167,17 @@ const LoginModal = ({ isOpen, onClose, onLoginSuccess, currentPath }) => {
 
             {/* Username/Email Field */}
             <div className="mb-4">
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Username or Email
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                <User
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
                 <input
                   type="text"
                   id="username"
@@ -175,13 +194,19 @@ const LoginModal = ({ isOpen, onClose, onLoginSuccess, currentPath }) => {
 
             {/* Password Field */}
             <div className="mb-6">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                <Lock
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   id="password"
                   name="password"
                   value={formData.password}
@@ -233,19 +258,19 @@ const LoginModal = ({ isOpen, onClose, onLoginSuccess, currentPath }) => {
                   Signing in...
                 </div>
               ) : (
-                'Sign In'
+                "Sign In"
               )}
             </button>
 
             {/* Sign Up Link */}
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
-                Don't have an account?{' '}
+                Don't have an account?{" "}
                 <button
                   type="button"
                   onClick={() => {
                     onClose();
-                    window.location.href = '/register';
+                    window.location.href = "/register";
                   }}
                   className="text-green-600 hover:text-green-800 font-medium transition-colors duration-200"
                   disabled={isLoading}

@@ -1,10 +1,11 @@
 
 import pool from '../db.js';
+import { updateOrderStatus } from './statusTrackingUtility.js';
 
 export const getActiveDeliveries = async (req, res) => {
   try {
     const { search, region } = req.query;
-    
+
     let query = `
       SELECT 
         d.delivery_id,
@@ -35,19 +36,20 @@ export const getActiveDeliveries = async (req, res) => {
       JOIN "User" db_user ON db.user_id = db_user.user_id
       JOIN "OrderItem" oi ON o.order_id = oi.order_id
       LEFT JOIN (
-        SELECT DISTINCT ON (order_id) 
-          order_id, status, updated_at
-        FROM "OrderStatusHistory"
-        ORDER BY order_id, updated_at DESC
+        SELECT DISTINCT ON (entity_id) 
+          entity_id as order_id, status, updated_at
+        FROM "StatusHistory"
+        WHERE entity_type = 'order'
+        ORDER BY entity_id, updated_at DESC
       ) osh ON o.order_id = osh.order_id
       WHERE d.actual_arrival IS NULL 
         AND d.is_aborted = false
         AND osh.status IN ('assigned', 'picked_up', 'in_transit')
     `;
-    
+
     const params = [];
     let paramIndex = 1;
-    
+
     if (search) {
       query += ` AND (
         o.order_id::text ILIKE $${paramIndex} OR
@@ -57,13 +59,13 @@ export const getActiveDeliveries = async (req, res) => {
       params.push(`%${search}%`);
       paramIndex++;
     }
-    
+
     if (region && region !== 'all') {
       query += ` AND r.name ILIKE $${paramIndex}`;
       params.push(`%${region}%`);
       paramIndex++;
     }
-    
+
     query += `
       GROUP BY d.delivery_id, o.order_id, u.first_name, u.last_name, 
                u.phone_number, a.address, db_user.first_name, db_user.last_name,
@@ -71,9 +73,9 @@ export const getActiveDeliveries = async (req, res) => {
                d.actual_arrival, o.total_amount, r.name
       ORDER BY d.estimated_arrival ASC
     `;
-    
+
     const result = await pool.query(query, params);
-    
+
     // Transform the data to match frontend expectations
     const deliveries = result.rows.map(row => ({
       deliveryId: `DEL-${row.delivery_id}`,
@@ -92,7 +94,7 @@ export const getActiveDeliveries = async (req, res) => {
       items: parseInt(row.items),
       value: parseFloat(row.value)
     }));
-    
+
     res.json(deliveries);
   } catch (error) {
     console.error('Error fetching active deliveries:', error);
@@ -102,29 +104,29 @@ export const getActiveDeliveries = async (req, res) => {
 
 export const updateDeliveryStatus = async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     const { deliveryId } = req.params;
     const { status } = req.body;
-    
+
     // Extract numeric delivery ID
     const numericDeliveryId = deliveryId.replace('DEL-', '');
-    
+
     // Get order_id from delivery
     const deliveryResult = await client.query(
       'SELECT order_id FROM "Delivery" WHERE delivery_id = $1',
       [numericDeliveryId]
     );
-    
+
     if (deliveryResult.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Delivery not found' });
     }
-    
+
     const orderId = deliveryResult.rows[0].order_id;
-    
+
     // Update delivery actual_arrival if status is delivered
     if (status === 'delivered') {
       await client.query(
@@ -132,19 +134,16 @@ export const updateDeliveryStatus = async (req, res) => {
         [numericDeliveryId]
       );
     }
-    
-    // Insert new status in OrderStatusHistory
-    await client.query(
-      'INSERT INTO "OrderStatusHistory" (order_id, status, updated_at) VALUES ($1, $2, NOW())',
-      [orderId, status]
-    );
-    
+
+    // Insert new status in StatusHistory using consolidated approach
+    await updateOrderStatus(orderId, status, null, 'Delivery status updated');
+
     await client.query('COMMIT');
-    
-    res.json({ 
+
+    res.json({
       message: 'Delivery status updated successfully',
       deliveryId,
-      status 
+      status
     });
   } catch (error) {
     await client.query('ROLLBACK');
@@ -159,7 +158,7 @@ export const getDeliveryDetails = async (req, res) => {
   try {
     const { deliveryId } = req.params;
     const numericDeliveryId = deliveryId.replace('DEL-', '');
-    
+
     const query = `
       SELECT 
         d.delivery_id,
@@ -190,10 +189,11 @@ export const getDeliveryDetails = async (req, res) => {
       JOIN "User" db_user ON db.user_id = db_user.user_id
       JOIN "OrderItem" oi ON o.order_id = oi.order_id
       LEFT JOIN (
-        SELECT DISTINCT ON (order_id) 
-          order_id, status, updated_at
-        FROM "OrderStatusHistory"
-        ORDER BY order_id, updated_at DESC
+        SELECT DISTINCT ON (entity_id) 
+          entity_id as order_id, status, updated_at
+        FROM "StatusHistory"
+        WHERE entity_type = 'order'
+        ORDER BY entity_id, updated_at DESC
       ) osh ON o.order_id = osh.order_id
       WHERE d.delivery_id = $1
       GROUP BY d.delivery_id, o.order_id, u.first_name, u.last_name, 
@@ -201,13 +201,13 @@ export const getDeliveryDetails = async (req, res) => {
                db_user.phone_number, osh.status, d.estimated_arrival, 
                d.actual_arrival, o.total_amount, r.name
     `;
-    
+
     const result = await pool.query(query, [numericDeliveryId]);
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Delivery not found' });
     }
-    
+
     const row = result.rows[0];
     const delivery = {
       deliveryId: `DEL-${row.delivery_id}`,
@@ -226,7 +226,7 @@ export const getDeliveryDetails = async (req, res) => {
       items: parseInt(row.items),
       value: parseFloat(row.value)
     };
-    
+
     res.json(delivery);
   } catch (error) {
     console.error('Error fetching delivery details:', error);

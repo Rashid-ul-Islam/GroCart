@@ -11,9 +11,10 @@ import ProductsByCategory from "./pages/ProductByCategory.jsx";
 import SearchResultsPage from "./pages/SearchResultPage.jsx";
 import ManageInventory from "./pages/ManageInventory.jsx";
 import DeliveryDashboard from "./pages/DeliveryDashboard.jsx";
+import Approvals from "./pages/Approvals.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
-import DeliveryBoy from "./pages/DeliveryBoy.jsx"; 
-import FavoriteProducts from "./pages/FavoriteProducts.jsx"
+import DeliveryBoy from "./pages/DeliveryBoy.jsx";
+import FavoriteProducts from "./pages/FavoriteProducts.jsx";
 import CheckoutPage from "./pages/CheckOut.jsx";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import OrderDetails from "./pages/OrderDetails.jsx";
@@ -38,8 +39,9 @@ export default function App() {
             path="/admin/delivery-dashboard"
             element={<DeliveryDashboard />}
           />
+          <Route path="/admin/approvals" element={<Approvals />} />
           <Route path="/delivery" element={<DeliveryBoy />} />
-          <Route path="favorites" element={<FavoriteProducts />}/>
+          <Route path="favorites" element={<FavoriteProducts />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/order-details/:orderId" element={<OrderDetails />} />
           <Route path="/product/:productId" element={<ProductDetails />} />

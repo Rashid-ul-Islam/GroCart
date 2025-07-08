@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Filter,
   X,
+  CheckCircle,
 } from "lucide-react";
 import { Button } from "../components/ui/button.jsx";
 import { Link } from "react-router-dom";
@@ -404,21 +405,24 @@ export default function AdminPanel() {
                 Address book
               </Button>
             </Link>
-            <Link to='/manage-inventory'>
+            <Link to="/manage-inventory">
               <Button className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3">
                 <Package className="w-6 h-6" />
                 Manage Inventory
               </Button>
             </Link>
-            <Link to='delivery-dashboard'>
-            <Button
-              className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3"
-            >
-              <BarChart3 className="w-6 h-6" />
-              Delivery Dashboard
-            </Button>
+            <Link to="delivery-dashboard">
+              <Button className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3">
+                <BarChart3 className="w-6 h-6" />
+                Delivery Dashboard
+              </Button>
             </Link>
-            
+            <Link to="/admin/approvals">
+              <Button className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3">
+                <CheckCircle className="w-6 h-6" />
+                Approvals
+              </Button>
+            </Link>
           </div>
         </div>
 

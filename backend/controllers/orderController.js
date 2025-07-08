@@ -1,11 +1,12 @@
 import pool from '../db.js';
+import { updateOrderStatus } from './statusTrackingUtility.js';
 
 // Create new order
 export const createOrder = async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    
+
     const {
       user_id,
       items,
@@ -18,7 +19,7 @@ export const createOrder = async (req, res) => {
       discount_total,
       coupon_id
     } = req.body;
-    
+
     // Validate required fields
     if (!user_id || !items || items.length === 0 || !address_id || !payment_method || !total_amount) {
       await client.query('ROLLBACK');
@@ -36,7 +37,7 @@ export const createOrder = async (req, res) => {
       WHERE a.address_id = $1 AND a.user_id = $2;
     `;
     const addressResult = await client.query(addressQuery, [address_id, user_id]);
-    
+
     if (addressResult.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(400).json({
@@ -47,7 +48,7 @@ export const createOrder = async (req, res) => {
 
     const addressData = addressResult.rows[0];
     const delivery_region_id = addressData.delivery_region_id;
-    
+
     // Check stock availability and validate items
     const productIds = items.map(item => item.product_id);
     const stockQuery = `
@@ -56,7 +57,7 @@ export const createOrder = async (req, res) => {
       WHERE product_id = ANY($1);
     `;
     const stockResult = await client.query(stockQuery, [productIds]);
-    
+
     if (stockResult.rows.length !== items.length) {
       await client.query('ROLLBACK');
       return res.status(400).json({
@@ -64,17 +65,17 @@ export const createOrder = async (req, res) => {
         message: 'One or more products not found'
       });
     }
-    
+
     // Create a map for quick lookup
     const productMap = new Map();
     stockResult.rows.forEach(product => {
       productMap.set(product.product_id, product);
     });
-    
+
     // Validate each item
     for (const item of items) {
       const product = productMap.get(item.product_id);
-      
+
       if (!product) {
         await client.query('ROLLBACK');
         return res.status(400).json({
@@ -82,7 +83,7 @@ export const createOrder = async (req, res) => {
           message: `Product with ID ${item.product_id} not found`
         });
       }
-      
+
       if (!product.is_available) {
         await client.query('ROLLBACK');
         return res.status(400).json({
@@ -90,7 +91,7 @@ export const createOrder = async (req, res) => {
           message: `Product "${product.name}" is not available`
         });
       }
-      
+
       if (product.quantity < item.quantity) {
         await client.query('ROLLBACK');
         return res.status(400).json({
@@ -120,7 +121,7 @@ export const createOrder = async (req, res) => {
           AND end_date >= CURRENT_TIMESTAMP;
       `;
       const couponResult = await client.query(couponQuery, [coupon_id]);
-      
+
       if (couponResult.rows.length === 0) {
         await client.query('ROLLBACK');
         return res.status(400).json({
@@ -130,7 +131,7 @@ export const createOrder = async (req, res) => {
       }
 
       const coupon = couponResult.rows[0];
-      
+
       // Check usage limit
       if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
         await client.query('ROLLBACK');
@@ -149,7 +150,7 @@ export const createOrder = async (req, res) => {
         });
       }
     }
-    
+
     // Create order
     const orderQuery = `
       INSERT INTO "Order" (
@@ -160,28 +161,28 @@ export const createOrder = async (req, res) => {
       VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4, $5, $6, $7, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING order_id;
     `;
-    
+
     const orderResult = await client.query(orderQuery, [
-      user_id, total_amount, product_total || 0, tax_total || 0, 
+      user_id, total_amount, product_total || 0, tax_total || 0,
       shipping_total || 0, discount_total || 0, payment_method
     ]);
-    
+
     const order_id = orderResult.rows[0].order_id;
-    
+
     // Create order items and update product quantities
     for (const item of items) {
       const product = productMap.get(item.product_id);
-      
+
       // Use the price from the product if not provided in the item
       const itemPrice = item.price || product.price;
-      
+
       // Insert order item
       const orderItemQuery = `
         INSERT INTO "OrderItem" (order_id, product_id, quantity, price)
         VALUES ($1, $2, $3, $4);
       `;
       await client.query(orderItemQuery, [order_id, item.product_id, item.quantity, itemPrice]);
-      
+
       // Update product quantity
       const updateProductQuery = `
         UPDATE "Product"
@@ -190,7 +191,7 @@ export const createOrder = async (req, res) => {
       `;
       await client.query(updateProductQuery, [item.quantity, item.product_id]);
     }
-    
+
     // Apply coupon if provided
     if (coupon_id && discount_total > 0) {
       const orderCouponQuery = `
@@ -198,7 +199,7 @@ export const createOrder = async (req, res) => {
         VALUES ($1, $2, $3);
       `;
       await client.query(orderCouponQuery, [order_id, coupon_id, discount_total]);
-      
+
       // Update coupon usage count
       const updateCouponQuery = `
         UPDATE "Coupon"
@@ -207,24 +208,20 @@ export const createOrder = async (req, res) => {
       `;
       await client.query(updateCouponQuery, [coupon_id]);
     }
-    
-    // Create order status history
-    const statusHistoryQuery = `
-      INSERT INTO "OrderStatusHistory" (order_id, status, updated_at, updated_by)
-      VALUES ($1, 'pending', CURRENT_TIMESTAMP, $2);
-    `;
-    await client.query(statusHistoryQuery, [order_id, user_id]);
-    
+
+    // Create order status history using consolidated approach
+    await updateOrderStatus(order_id, 'pending', user_id, 'Order created', client);
+
     // Clear user's cart
     const clearCartQuery = `
       DELETE FROM "ShoppingCart"
       WHERE user_id = $1 AND now_in_cart = true;
     `;
     await client.query(clearCartQuery, [user_id]);
-    
+
     // Find an available delivery boy in the region
     let delivery_id = null;
-    
+
     if (delivery_region_id) {
       const deliveryBoyQuery = `
         SELECT user_id
@@ -234,10 +231,10 @@ export const createOrder = async (req, res) => {
         LIMIT 1;
       `;
       const deliveryBoyResult = await client.query(deliveryBoyQuery, [delivery_region_id]);
-      
+
       if (deliveryBoyResult.rows.length > 0) {
         const delivery_boy_id = deliveryBoyResult.rows[0].user_id;
-        
+
         // Create delivery record
         const deliveryQuery = `
           INSERT INTO "Delivery" (order_id, address_id, delivery_boy_id, created_at, updated_at)
@@ -246,7 +243,10 @@ export const createOrder = async (req, res) => {
         `;
         const deliveryResult = await client.query(deliveryQuery, [order_id, address_id, delivery_boy_id]);
         delivery_id = deliveryResult.rows[0].delivery_id;
-        
+
+        // Update order status to 'assigned' when delivery boy is assigned
+        await updateOrderStatus(order_id, 'assigned', delivery_boy_id, 'Order assigned to delivery boy', client);
+
         // Update delivery boy's current load
         const updateDeliveryBoyQuery = `
           UPDATE "DeliveryBoy"
@@ -274,9 +274,9 @@ export const createOrder = async (req, res) => {
       const deliveryResult = await client.query(deliveryQuery, [order_id, address_id]);
       delivery_id = deliveryResult.rows[0].delivery_id;
     }
-    
+
     await client.query('COMMIT');
-    
+
     res.status(201).json({
       success: true,
       message: 'Order created successfully',
@@ -305,7 +305,7 @@ export const createOrder = async (req, res) => {
 export const getUserOrders = async (req, res) => {
   try {
     const { user_id } = req.params;
-    
+
     // Validate user_id
     if (!user_id || isNaN(user_id)) {
       return res.status(400).json({
@@ -313,7 +313,7 @@ export const getUserOrders = async (req, res) => {
         message: 'Valid user ID is required'
       });
     }
-    
+
     const query = `
       SELECT 
         o.order_id,
@@ -331,17 +331,18 @@ export const getUserOrders = async (req, res) => {
       LEFT JOIN "OrderItem" oi ON o.order_id = oi.order_id
       LEFT JOIN "Product" p ON oi.product_id = p.product_id
       LEFT JOIN (
-        SELECT DISTINCT ON (order_id) order_id, status
-        FROM "OrderStatusHistory"
-        ORDER BY order_id, updated_at DESC
+        SELECT DISTINCT ON (entity_id) entity_id as order_id, status
+        FROM "StatusHistory"
+        WHERE entity_type = 'order'
+        ORDER BY entity_id, updated_at DESC
       ) latest_status ON o.order_id = latest_status.order_id
       WHERE o.user_id = $1
       GROUP BY o.order_id, o.order_date, o.total_amount, o.payment_method, o.payment_status, a.address, latest_status.status
       ORDER BY o.order_date DESC;
     `;
-    
+
     const result = await pool.query(query, [user_id]);
-    
+
     res.json({
       success: true,
       data: result.rows
@@ -360,7 +361,7 @@ export const getUserOrders = async (req, res) => {
 export const getOrderDetails = async (req, res) => {
   try {
     const { order_id } = req.params;
-    
+
     // Validate order_id
     if (!order_id || isNaN(order_id)) {
       return res.status(400).json({
@@ -368,7 +369,7 @@ export const getOrderDetails = async (req, res) => {
         message: 'Valid order ID is required'
       });
     }
-    
+
     const orderQuery = `
       SELECT 
         o.*,
@@ -390,13 +391,14 @@ export const getOrderDetails = async (req, res) => {
       LEFT JOIN "User" u ON o.user_id = u.user_id
       LEFT JOIN "DeliveryBoy" db ON d.delivery_boy_id = db.user_id
       LEFT JOIN (
-        SELECT DISTINCT ON (order_id) order_id, status
-        FROM "OrderStatusHistory"
-        ORDER BY order_id, updated_at DESC
+        SELECT DISTINCT ON (entity_id) entity_id as order_id, status
+        FROM "StatusHistory"
+        WHERE entity_type = 'order'
+        ORDER BY entity_id, updated_at DESC
       ) latest_status ON o.order_id = latest_status.order_id
       WHERE o.order_id = $1;
     `;
-    
+
     const itemsQuery = `
       SELECT 
         oi.*,
@@ -413,13 +415,13 @@ export const getOrderDetails = async (req, res) => {
 
     const statusHistoryQuery = `
       SELECT 
-        osh.*,
+        sh.*,
         u.first_name,
         u.last_name
-      FROM "OrderStatusHistory" osh
-      LEFT JOIN "User" u ON osh.updated_by = u.user_id
-      WHERE osh.order_id = $1
-      ORDER BY osh.updated_at DESC;
+      FROM "StatusHistory" sh
+      LEFT JOIN "User" u ON sh.updated_by = u.user_id
+      WHERE sh.entity_type = 'order' AND sh.entity_id = $1
+      ORDER BY sh.updated_at DESC;
     `;
 
     const couponQuery = `
@@ -431,26 +433,26 @@ export const getOrderDetails = async (req, res) => {
       JOIN "Coupon" c ON oc.coupon_id = c.coupon_id
       WHERE oc.order_id = $1;
     `;
-    
+
     const [orderResult, itemsResult, statusHistoryResult, couponResult] = await Promise.all([
       pool.query(orderQuery, [order_id]),
       pool.query(itemsQuery, [order_id]),
       pool.query(statusHistoryQuery, [order_id]),
       pool.query(couponQuery, [order_id])
     ]);
-    
+
     if (orderResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Order not found'
       });
     }
-    
+
     const order = orderResult.rows[0];
     const items = itemsResult.rows;
     const statusHistory = statusHistoryResult.rows;
     const coupons = couponResult.rows;
-    
+
     res.json({
       success: true,
       data: {
@@ -471,14 +473,14 @@ export const getOrderDetails = async (req, res) => {
 };
 
 // Update order status
-export const updateOrderStatus = async (req, res) => {
+export const updateOrderStatusHandler = async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    
+
     const { order_id } = req.params;
     const { status, updated_by } = req.body;
-    
+
     // Validate inputs
     if (!order_id || isNaN(order_id)) {
       await client.query('ROLLBACK');
@@ -501,7 +503,7 @@ export const updateOrderStatus = async (req, res) => {
       SELECT order_id FROM "Order" WHERE order_id = $1;
     `;
     const orderExistsResult = await client.query(orderExistsQuery, [order_id]);
-    
+
     if (orderExistsResult.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({
@@ -512,11 +514,11 @@ export const updateOrderStatus = async (req, res) => {
 
     // Check if this status already exists for this order
     const statusExistsQuery = `
-      SELECT order_id FROM "OrderStatusHistory" 
-      WHERE order_id = $1 AND status = $2;
+      SELECT entity_id FROM "StatusHistory" 
+      WHERE entity_type = 'order' AND entity_id = $1 AND status = $2;
     `;
     const statusExistsResult = await client.query(statusExistsQuery, [order_id, status]);
-    
+
     if (statusExistsResult.rows.length > 0) {
       await client.query('ROLLBACK');
       return res.status(400).json({
@@ -524,7 +526,7 @@ export const updateOrderStatus = async (req, res) => {
         message: 'This status has already been set for this order'
       });
     }
-    
+
     // Update order payment status if it's a payment-related status
     if (['paid', 'failed', 'refunded'].includes(status)) {
       const updateOrderQuery = `
@@ -534,13 +536,9 @@ export const updateOrderStatus = async (req, res) => {
       `;
       await client.query(updateOrderQuery, [status, order_id]);
     }
-    
-    // Add to order status history
-    const statusHistoryQuery = `
-      INSERT INTO "OrderStatusHistory" (order_id, status, updated_at, updated_by)
-      VALUES ($1, $2, CURRENT_TIMESTAMP, $3);
-    `;
-    await client.query(statusHistoryQuery, [order_id, status, updated_by]);
+
+    // Add to order status history using consolidated approach
+    await updateOrderStatus(order_id, status, updated_by, 'Order status updated', client);
 
     // Update delivery boy availability if order is delivered or cancelled
     if (['delivered', 'cancelled'].includes(status)) {
@@ -553,9 +551,9 @@ export const updateOrderStatus = async (req, res) => {
       `;
       await client.query(updateDeliveryBoyQuery, [order_id]);
     }
-    
+
     await client.query('COMMIT');
-    
+
     res.json({
       success: true,
       message: 'Order status updated successfully'
@@ -578,10 +576,10 @@ export const cancelOrder = async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    
+
     const { order_id } = req.params;
     const { cancelled_by, reason } = req.body;
-    
+
     // Validate inputs
     if (!order_id || isNaN(order_id)) {
       await client.query('ROLLBACK');
@@ -597,14 +595,15 @@ export const cancelOrder = async (req, res) => {
              COALESCE(latest_status.status, 'pending') as current_status
       FROM "Order" o
       LEFT JOIN (
-        SELECT DISTINCT ON (order_id) order_id, status
-        FROM "OrderStatusHistory"
-        ORDER BY order_id, updated_at DESC
+        SELECT DISTINCT ON (entity_id) entity_id as order_id, status
+        FROM "StatusHistory"
+        WHERE entity_type = 'order'
+        ORDER BY entity_id, updated_at DESC
       ) latest_status ON o.order_id = latest_status.order_id
       WHERE o.order_id = $1;
     `;
     const orderResult = await client.query(orderQuery, [order_id]);
-    
+
     if (orderResult.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({
@@ -614,7 +613,7 @@ export const cancelOrder = async (req, res) => {
     }
 
     const order = orderResult.rows[0];
-    
+
     // Check if order can be cancelled
     const nonCancellableStatuses = ['delivered', 'cancelled', 'refunded'];
     if (nonCancellableStatuses.includes(order.current_status)) {
@@ -630,7 +629,7 @@ export const cancelOrder = async (req, res) => {
       SELECT product_id, quantity FROM "OrderItem" WHERE order_id = $1;
     `;
     const orderItemsResult = await client.query(orderItemsQuery, [order_id]);
-    
+
     // Restore product quantities
     for (const item of orderItemsResult.rows) {
       const restoreStockQuery = `
@@ -640,13 +639,9 @@ export const cancelOrder = async (req, res) => {
       `;
       await client.query(restoreStockQuery, [item.quantity, item.product_id]);
     }
-    
-    // Update order status to cancelled
-    const statusHistoryQuery = `
-      INSERT INTO "OrderStatusHistory" (order_id, status, updated_at, updated_by)
-      VALUES ($1, 'cancelled', CURRENT_TIMESTAMP, $2);
-    `;
-    await client.query(statusHistoryQuery, [order_id, cancelled_by]);
+
+    // Update order status to cancelled using consolidated approach
+    await updateOrderStatus(order_id, 'cancelled', cancelled_by, `Order cancelled. Reason: ${cancellation_reason}`, client);
 
     // Update delivery boy availability
     const updateDeliveryBoyQuery = `
@@ -657,9 +652,9 @@ export const cancelOrder = async (req, res) => {
       );
     `;
     await client.query(updateDeliveryBoyQuery, [order_id]);
-    
+
     await client.query('COMMIT');
-    
+
     res.json({
       success: true,
       message: 'Order cancelled successfully'
@@ -682,10 +677,10 @@ export const assignDeliveryBoy = async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    
+
     const { order_id } = req.params;
     const { delivery_boy_id } = req.body;
-    
+
     // Validate inputs
     if (!order_id || isNaN(order_id)) {
       await client.query('ROLLBACK');
@@ -710,7 +705,7 @@ export const assignDeliveryBoy = async (req, res) => {
       WHERE user_id = $1;
     `;
     const deliveryBoyResult = await client.query(deliveryBoyQuery, [delivery_boy_id]);
-    
+
     if (deliveryBoyResult.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({
@@ -720,7 +715,7 @@ export const assignDeliveryBoy = async (req, res) => {
     }
 
     const deliveryBoy = deliveryBoyResult.rows[0];
-    
+
     if (deliveryBoy.availability_status !== 'available') {
       await client.query('ROLLBACK');
       return res.status(400).json({
@@ -734,7 +729,7 @@ export const assignDeliveryBoy = async (req, res) => {
       SELECT delivery_id, delivery_boy_id FROM "Delivery" WHERE order_id = $1;
     `;
     const deliveryResult = await client.query(deliveryQuery, [order_id]);
-    
+
     if (deliveryResult.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({
@@ -744,7 +739,7 @@ export const assignDeliveryBoy = async (req, res) => {
     }
 
     const delivery = deliveryResult.rows[0];
-    
+
     // If there's already a delivery boy assigned, decrease their load
     if (delivery.delivery_boy_id) {
       const decreaseLoadQuery = `
@@ -754,7 +749,7 @@ export const assignDeliveryBoy = async (req, res) => {
       `;
       await client.query(decreaseLoadQuery, [delivery.delivery_boy_id]);
     }
-    
+
     // Update delivery record with new delivery boy
     const updateDeliveryQuery = `
       UPDATE "Delivery"
@@ -770,9 +765,9 @@ export const assignDeliveryBoy = async (req, res) => {
       WHERE user_id = $1;
     `;
     await client.query(increaseLoadQuery, [delivery_boy_id]);
-    
+
     await client.query('COMMIT');
-    
+
     res.json({
       success: true,
       message: 'Delivery boy assigned successfully'

@@ -145,6 +145,20 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
+  // Listen for custom login events
+  useEffect(() => {
+    const handleLoginEvent = () => {
+      if (isUserLoggedIn()) {
+        setTimeout(() => {
+          fetchCartItems();
+        }, 300);
+      }
+    };
+
+    window.addEventListener("userLoggedIn", handleLoginEvent);
+    return () => window.removeEventListener("userLoggedIn", handleLoginEvent);
+  }, []);
+
   const updateQuantity = async (cart_item_id, newQuantity) => {
     if (!isUserLoggedIn()) return;
 

@@ -14,12 +14,13 @@ export const getDeliveryStats = async (req, res) => {
     const activeDeliveriesQuery = `
       SELECT COUNT(*) as active_deliveries 
       FROM "Delivery" d
-      JOIN "OrderStatusHistory" osh ON d.order_id = osh.order_id
-      WHERE osh.status NOT IN ('delivered', 'cancelled')
-      AND osh.updated_at = (
+      JOIN "StatusHistory" sh ON d.order_id = sh.entity_id
+      WHERE sh.entity_type = 'order'
+      AND sh.status NOT IN ('delivered', 'cancelled')
+      AND sh.updated_at = (
         SELECT MAX(updated_at) 
-        FROM "OrderStatusHistory" 
-        WHERE order_id = d.order_id
+        FROM "StatusHistory" 
+        WHERE entity_type = 'order' AND entity_id = d.order_id
       )
     `;
 
@@ -27,13 +28,14 @@ export const getDeliveryStats = async (req, res) => {
     const completedTodayQuery = `
       SELECT COUNT(*) as completed_today
       FROM "Delivery" d
-      JOIN "OrderStatusHistory" osh ON d.order_id = osh.order_id
-      WHERE osh.status = 'delivered'
-      AND DATE(osh.updated_at) = CURRENT_DATE
-      AND osh.updated_at = (
+      JOIN "StatusHistory" sh ON d.order_id = sh.entity_id
+      WHERE sh.entity_type = 'order'
+      AND sh.status = 'delivered'
+      AND DATE(sh.updated_at) = CURRENT_DATE
+      AND sh.updated_at = (
         SELECT MAX(updated_at) 
-        FROM "OrderStatusHistory" 
-        WHERE order_id = d.order_id
+        FROM "StatusHistory" 
+        WHERE entity_type = 'order' AND entity_id = d.order_id
       )
     `;
 
@@ -65,13 +67,14 @@ export const getDeliveryStats = async (req, res) => {
       SELECT COUNT(*) as pending_assignments
       FROM "Order" o
       LEFT JOIN "Delivery" d ON o.order_id = d.order_id
-      JOIN "OrderStatusHistory" osh ON o.order_id = osh.order_id
+      JOIN "StatusHistory" sh ON o.order_id = sh.entity_id
       WHERE d.delivery_id IS NULL
-      AND osh.status NOT IN ('cancelled', 'delivered')
-      AND osh.updated_at = (
+      AND sh.entity_type = 'order'
+      AND sh.status NOT IN ('cancelled', 'delivered')
+      AND sh.updated_at = (
         SELECT MAX(updated_at) 
-        FROM "OrderStatusHistory" 
-        WHERE order_id = o.order_id
+        FROM "StatusHistory" 
+        WHERE entity_type = 'order' AND entity_id = o.order_id
       )
     `;
 
@@ -136,13 +139,14 @@ export const getRecentOrders = async (req, res) => {
       LEFT JOIN "Region" r ON a.region_id = r.region_id
       LEFT JOIN "DeliveryBoy" db ON d.delivery_boy_id = db.user_id
       LEFT JOIN "User" db_user ON db.user_id = db_user.user_id
-      JOIN "OrderStatusHistory" osh ON o.order_id = osh.order_id
-      WHERE osh.updated_at = (
+      JOIN "StatusHistory" sh ON o.order_id = sh.entity_id
+      WHERE sh.entity_type = 'order'
+      AND sh.updated_at = (
         SELECT MAX(updated_at) 
-        FROM "OrderStatusHistory" 
-        WHERE order_id = o.order_id
+        FROM "StatusHistory" 
+        WHERE entity_type = 'order' AND entity_id = o.order_id
       )
-      AND osh.status NOT IN ('delivered', 'cancelled')
+      AND sh.status NOT IN ('delivered', 'cancelled')
     `;
 
     const queryParams = [];

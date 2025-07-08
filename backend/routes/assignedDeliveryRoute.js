@@ -15,13 +15,29 @@ import {
     getWeeklyPerformance,
     getRealTimePerformanceMetrics,
     getPerformanceByPeriod
-
 } from "../controllers/assignedDeliveryController.js";
+
+import {
+    markProductsFetched,
+    markDeliveryCompletedNew,
+    rateCustomer,
+    fixDeliveryStatusHistory,
+    debugDeliveries,
+    updatePendingDeliveriesToAssigned,
+    updateDeliveryToAssigned
+} from "../controllers/newDeliveryFunctions.js";
 
 const router = express.Router();
 
 // Assigned Delivery Routes
 router.get("/getAssignedDeliveries/:delivery_boy_id", getAssignedDeliveries);
+
+// New delivery workflow routes
+router.put("/markProductsFetched/:delivery_id", markProductsFetched);
+router.put("/markDeliveryCompletedNew/:delivery_id", markDeliveryCompletedNew);
+router.post("/rateCustomer/:delivery_id", rateCustomer);
+
+// Legacy routes (kept for backward compatibility)
 router.put("/markDeliveryCompleted/:deliveryId", markDeliveryCompleted);
 router.post("/reportDeliveryIssue/:deliveryId", reportDeliveryIssue);
 router.get("/deliveryBoyProfile/:deliveryBoyId", getDeliveryBoyProfile);
@@ -37,6 +53,12 @@ router.get("/search/:delivery_boy_id", searchDeliveries);
 router.get("/weeklyPerformance/:deliveryId", getWeeklyPerformance);
 router.get("/realTimePerformance/:deliveryId", getRealTimePerformanceMetrics);
 router.get("/performanceByPeriod/:deliveryId", getPerformanceByPeriod);
+
+// Utility routes
+router.post("/fixDeliveryStatusHistory", fixDeliveryStatusHistory);
+router.get("/debugDeliveries", debugDeliveries);
+router.post("/updatePendingToAssigned", updatePendingDeliveriesToAssigned);
+router.post("/updateDeliveryToAssigned", updateDeliveryToAssigned);
 
 
 export default router;

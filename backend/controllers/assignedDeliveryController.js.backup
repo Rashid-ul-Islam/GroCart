@@ -1,5 +1,22 @@
 import pool from '../db.js';
 
+// Utility function to update order status in OrderStatusHistory
+const updateOrderStatusHistory = async (client, orderId, status, updatedBy = null) => {
+  try {
+    await client.query(
+      `INSERT INTO "OrderStatusHistory" (order_id, status, updated_at, updated_by) 
+       VALUES ($1, $2, NOW(), $3)
+       ON CONFLICT (order_id, status) DO UPDATE SET 
+       updated_at = NOW(), updated_by = $3`,
+      [orderId, status, updatedBy]
+    );
+    console.log(`Order ${orderId} status updated to: ${status}`);
+  } catch (error) {
+    console.error(`Error updating order status history:`, error);
+    throw error;
+  }
+};
+
 // Get assigned deliveries for a delivery boy
 export const getAssignedDeliveries = async (req, res) => {
   const client = await pool.connect();
@@ -34,13 +51,18 @@ export const getAssignedDeliveries = async (req, res) => {
           CONCAT(oi.quantity, 'x ', p.name), 
           ', ' ORDER BY oi.order_item_id
         ) as items,
-        COALESCE(sh.status, 'assigned') as current_status,
+        COALESCE(
+          (SELECT status FROM "OrderStatusHistory" 
+           WHERE order_id = o.order_id 
+           ORDER BY updated_at DESC LIMIT 1),
+          'assigned'
+        ) as current_status,
         CASE 
           WHEN d.actual_arrival IS NOT NULL THEN 'completed'
           WHEN d.is_aborted = true THEN 'cancelled'
           WHEN d.estimated_arrival IS NOT NULL AND d.estimated_arrival < NOW() THEN 'overdue'
           ELSE 'pending'
-        END as status,
+        END as delivery_status,
         CASE 
           WHEN d.estimated_arrival IS NOT NULL AND d.estimated_arrival < NOW() + INTERVAL '30 minutes' THEN 'high'
           WHEN d.estimated_arrival IS NOT NULL AND d.estimated_arrival < NOW() + INTERVAL '1 hour' THEN 'medium'
@@ -52,21 +74,13 @@ export const getAssignedDeliveries = async (req, res) => {
       JOIN "Address" a ON d.address_id = a.address_id
       JOIN "OrderItem" oi ON o.order_id = oi.order_id
       JOIN "Product" p ON oi.product_id = p.product_id
-      LEFT JOIN LATERAL (
-        SELECT status 
-        FROM "StatusHistory" 
-        WHERE entity_type = 'order' AND entity_id = o.order_id 
-        ORDER BY updated_at DESC LIMIT 1
-      ) sh ON true
-      LEFT JOIN "DeliveryReview" dr ON d.delivery_id = dr.delivery_id AND d.delivery_boy_id = dr.delivery_boy_id
       WHERE d.delivery_boy_id = $1
         AND (d.actual_arrival IS NULL OR d.actual_arrival IS NOT NULL)
         AND (d.is_aborted IS NULL OR d.is_aborted = false)
-        AND dr.review_id IS NULL
       GROUP BY 
         d.delivery_id, d.order_id, d.estimated_arrival, d.actual_arrival, 
         d.is_aborted, o.total_amount, o.payment_status, o.order_date,
-        u.first_name, u.last_name, u.email, u.phone_number, a.address, sh.status
+        u.first_name, u.last_name, u.email, u.phone_number, a.address, o.order_id
       ORDER BY 
         CASE 
           WHEN d.estimated_arrival IS NOT NULL THEN d.estimated_arrival 
@@ -94,7 +108,7 @@ export const getAssignedDeliveries = async (req, res) => {
       totalAmount: parseFloat(row.total_amount),
       paymentStatus: row.payment_status,
       orderDate: row.order_date,
-      status: row.status,
+      status: row.delivery_status,
       currentStatus: row.current_status,
       priority: row.priority
     }));
@@ -107,12 +121,6 @@ export const getAssignedDeliveries = async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching assigned deliveries:', error);
-    console.error('Error details:', {
-      message: error.message,
-      code: error.code,
-      detail: error.detail,
-      stack: error.stack
-    });
     res.status(500).json({
       success: false,
       message: 'Error fetching assigned deliveries',
@@ -198,9 +206,41 @@ export const getAssignedDeliveriesForDashboard = async (req, res) => {
 
     const result = await client.query(query, params);
 
-    // ... rest of the existing code
+    const deliveries = result.rows.map(row => ({
+      id: `ORD-${row.order_id.toString().padStart(3, '0')}`,
+      delivery_id: row.delivery_id,
+      order_id: row.order_id,
+      customerName: `${row.first_name || ''} ${row.last_name || ''}`.trim(),
+      customerEmail: row.email,
+      customerPhone: row.phone_number,
+      address: row.address,
+      items: row.items ? row.items.split(', ') : [],
+      estimatedTime: row.estimated_arrival ?
+        new Date(row.estimated_arrival).toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit'
+        }) : 'TBD',
+      estimatedDateTime: row.estimated_arrival,
+      totalAmount: parseFloat(row.total_amount),
+      paymentStatus: row.payment_status,
+      orderDate: row.order_date,
+      status: row.status,
+      priority: row.priority
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: deliveries,
+      count: deliveries.length
+    });
+
   } catch (error) {
-    // ... error handling
+    console.error('Error fetching assigned deliveries for dashboard:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching assigned deliveries for dashboard',
+      error: error.message
+    });
   } finally {
     client.release();
   }
@@ -217,34 +257,86 @@ export const markDeliveryCompleted = async (req, res) => {
     const { delivery_id } = req.params;
     const { delivery_boy_id, customer_rating, feedback } = req.body;
 
+    console.log('markDeliveryCompleted called with:', {
+      delivery_id,
+      delivery_boy_id,
+      customer_rating,
+      feedback
+    });
+
+    // First, let's check if the delivery exists
+    const checkDeliveryQuery = `
+      SELECT delivery_id, order_id, delivery_boy_id, actual_arrival, is_aborted
+      FROM "Delivery"
+      WHERE delivery_id = $1;
+    `;
+
+    const checkResult = await client.query(checkDeliveryQuery, [delivery_id]);
+    console.log('Delivery check result:', checkResult.rows);
+
+    if (checkResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: `Delivery with ID ${delivery_id} not found`
+      });
+    }
+
+    const delivery = checkResult.rows[0];
+
+    // Check if delivery is already completed
+    if (delivery.actual_arrival) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'Delivery is already completed'
+      });
+    }
+
+    // Check if delivery is aborted
+    if (delivery.is_aborted) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot complete an aborted delivery'
+      });
+    }
+
+    // Check if delivery_boy_id matches (if provided)
+    if (delivery_boy_id && delivery.delivery_boy_id !== parseInt(delivery_boy_id)) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({
+        success: false,
+        message: `Delivery is not assigned to delivery boy ${delivery_boy_id}. Assigned to: ${delivery.delivery_boy_id}`
+      });
+    }
+
     // Update delivery status
     const updateDeliveryQuery = `
       UPDATE "Delivery"
       SET actual_arrival = CURRENT_TIMESTAMP,
           updated_at = CURRENT_TIMESTAMP
-      WHERE delivery_id = $1 AND delivery_boy_id = $2
+      WHERE delivery_id = $1
       RETURNING order_id;
     `;
 
-    const deliveryResult = await client.query(updateDeliveryQuery, [delivery_id, delivery_boy_id]);
+    const deliveryResult = await client.query(updateDeliveryQuery, [delivery_id]);
+
+    console.log('Update delivery result:', deliveryResult.rows);
 
     if (deliveryResult.rows.length === 0) {
       await client.query('ROLLBACK');
-      return res.status(404).json({
+      return res.status(500).json({
         success: false,
-        message: 'Delivery not found or not assigned to this delivery boy'
+        message: 'Failed to update delivery status'
       });
     }
 
     const order_id = deliveryResult.rows[0].order_id;
 
-    // Update order status using consolidated StatusHistory table
-    const updateOrderStatusQuery = `
-      INSERT INTO "StatusHistory" (entity_type, entity_id, status, updated_at, updated_by)
-      VALUES ('order', $1, 'delivered', CURRENT_TIMESTAMP, $2);
-    `;
-
-    await client.query(updateOrderStatusQuery, [order_id, delivery_boy_id]);
+    // Update order status using consolidated approach
+    const actualDeliveryBoyId = delivery_boy_id || delivery.delivery_boy_id;
+    await updateOrderStatus(order_id, 'delivered', actualDeliveryBoyId, 'Delivery completed by delivery boy');
 
     // Record delivery performance
     const performanceQuery = `
@@ -260,7 +352,7 @@ export const markDeliveryCompleted = async (req, res) => {
       deliveryTime <= new Date(estimatedResult.rows[0].estimated_arrival);
 
     await client.query(performanceQuery, [
-      delivery_boy_id,
+      actualDeliveryBoyId,
       delivery_id,
       onTime,
       customer_rating || null,
@@ -315,13 +407,8 @@ export const reportDeliveryIssue = async (req, res) => {
 
     const order_id = result.rows[0].order_id;
 
-    // Update order status using consolidated StatusHistory table
-    const statusQuery = `
-      INSERT INTO "StatusHistory" (entity_type, entity_id, status, updated_at, updated_by)
-      VALUES ('order', $1, 'delivery_failed', CURRENT_TIMESTAMP, $2);
-    `;
-
-    await client.query(statusQuery, [order_id, delivery_boy_id]);
+    // Update order status using consolidated approach
+    await updateOrderStatus(order_id, 'delivery_failed', delivery_boy_id, `Delivery issue reported: ${issue}`);
 
     res.status(200).json({
       success: true,
@@ -1210,6 +1297,273 @@ export const getRealTimePerformanceMetrics = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching real-time performance metrics',
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+};
+
+// Action 1: Products Fetched (Delivery boy has collected products from warehouse)
+export const markProductsFetched = async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const { delivery_id } = req.params;
+    const { delivery_boy_id } = req.body;
+
+    console.log('markProductsFetched called with:', { delivery_id, delivery_boy_id });
+
+    // Verify delivery exists and belongs to the delivery boy
+    const deliveryQuery = `
+      SELECT d.delivery_id, d.order_id, d.delivery_boy_id, d.actual_arrival, d.is_aborted
+      FROM "Delivery" d
+      WHERE d.delivery_id = $1 AND d.delivery_boy_id = $2
+    `;
+
+    const deliveryResult = await client.query(deliveryQuery, [delivery_id, delivery_boy_id]);
+    
+    if (deliveryResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: 'Delivery not found or not assigned to this delivery boy'
+      });
+    }
+
+    const delivery = deliveryResult.rows[0];
+    const orderId = delivery.order_id;
+
+    if (delivery.is_aborted) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot update status for aborted delivery'
+      });
+    }
+
+    // Update to "left_warehouse" status
+    await updateOrderStatusHistory(client, orderId, 'left_warehouse', delivery_boy_id);
+
+    await client.query('COMMIT');
+
+    res.status(200).json({
+      success: true,
+      message: 'Products marked as fetched, delivery left warehouse'
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error marking products as fetched:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error marking products as fetched',
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+};
+
+// Action 2: Delivery Completed (Customer received products)
+export const markDeliveryCompletedNew = async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const { delivery_id } = req.params;
+    const { delivery_boy_id } = req.body;
+
+    console.log('markDeliveryCompletedNew called with:', { delivery_id, delivery_boy_id });
+
+    // Verify delivery exists and belongs to the delivery boy
+    const deliveryQuery = `
+      SELECT d.delivery_id, d.order_id, d.delivery_boy_id, d.actual_arrival, d.is_aborted
+      FROM "Delivery" d
+      WHERE d.delivery_id = $1 AND d.delivery_boy_id = $2
+    `;
+
+    const deliveryResult = await client.query(deliveryQuery, [delivery_id, delivery_boy_id]);
+    
+    if (deliveryResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: 'Delivery not found or not assigned to this delivery boy'
+      });
+    }
+
+    const delivery = deliveryResult.rows[0];
+    const orderId = delivery.order_id;
+
+    if (delivery.is_aborted) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot update status for aborted delivery'
+      });
+    }
+
+    // Check current status - should be in_transit
+    const currentStatusQuery = `
+      SELECT status FROM "OrderStatusHistory" 
+      WHERE order_id = $1 
+      ORDER BY updated_at DESC LIMIT 1
+    `;
+    const statusResult = await client.query(currentStatusQuery, [orderId]);
+    const currentStatus = statusResult.rows[0]?.status || 'assigned';
+
+    if (currentStatus !== 'in_transit') {
+      // Auto-transition through required statuses if needed
+      if (currentStatus === 'assigned') {
+        await updateOrderStatusHistory(client, orderId, 'left_warehouse', delivery_boy_id);
+      }
+      if (currentStatus === 'assigned' || currentStatus === 'left_warehouse') {
+        await updateOrderStatusHistory(client, orderId, 'in_transit', delivery_boy_id);
+      }
+    }
+
+    // Update to "delivery_completed" status
+    await updateOrderStatusHistory(client, orderId, 'delivery_completed', delivery_boy_id);
+
+    // Update delivery table
+    await client.query(
+      'UPDATE "Delivery" SET actual_arrival = NOW(), updated_at = NOW() WHERE delivery_id = $1',
+      [delivery_id]
+    );
+
+    await client.query('COMMIT');
+
+    res.status(200).json({
+      success: true,
+      message: 'Delivery marked as completed'
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error marking delivery as completed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error marking delivery as completed',
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+};
+
+// Action 3: Rate Customer (Available after payment received)
+export const rateCustomer = async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const { delivery_id } = req.params;
+    const { delivery_boy_id, rating, comment, was_customer_available, behavior } = req.body;
+
+    console.log('rateCustomer called with:', { 
+      delivery_id, 
+      delivery_boy_id, 
+      rating, 
+      comment, 
+      was_customer_available, 
+      behavior 
+    });
+
+    // Verify delivery exists and belongs to the delivery boy
+    const deliveryQuery = `
+      SELECT d.delivery_id, d.order_id, d.delivery_boy_id, o.user_id as customer_id, o.payment_status
+      FROM "Delivery" d
+      JOIN "Order" o ON d.order_id = o.order_id
+      WHERE d.delivery_id = $1 AND d.delivery_boy_id = $2
+    `;
+
+    const deliveryResult = await client.query(deliveryQuery, [delivery_id, delivery_boy_id]);
+    
+    if (deliveryResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: 'Delivery not found or not assigned to this delivery boy'
+      });
+    }
+
+    const delivery = deliveryResult.rows[0];
+    const orderId = delivery.order_id;
+    const customerId = delivery.customer_id;
+
+    // Check if payment has been received
+    const currentStatusQuery = `
+      SELECT status FROM "OrderStatusHistory" 
+      WHERE order_id = $1 
+      ORDER BY updated_at DESC LIMIT 1
+    `;
+    const statusResult = await client.query(currentStatusQuery, [orderId]);
+    const currentStatus = statusResult.rows[0]?.status;
+
+    if (currentStatus !== 'payment_received') {
+      // Auto-transition to payment_received if delivery is completed and payment status is confirmed
+      if (currentStatus === 'delivery_completed' && 
+          (delivery.payment_status === 'completed' || delivery.payment_status === 'paid')) {
+        await updateOrderStatusHistory(client, orderId, 'payment_received', delivery_boy_id);
+      } else {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot rate customer until payment is received'
+        });
+      }
+    }
+
+    // Validate rating
+    if (!rating || rating < 1 || rating > 5) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'Rating must be between 1 and 5'
+      });
+    }
+
+    // Check if review already exists
+    const existingReviewQuery = `
+      SELECT review_id FROM "DeliveryReview" 
+      WHERE delivery_id = $1 AND delivery_boy_id = $2
+    `;
+    const existingResult = await client.query(existingReviewQuery, [delivery_id, delivery_boy_id]);
+
+    if (existingResult.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'Customer has already been rated for this delivery'
+      });
+    }
+
+    // Insert delivery review
+    await client.query(
+      `INSERT INTO "DeliveryReview" 
+       (delivery_id, delivery_boy_id, customer_id, rating, comment, was_customer_available, behavior)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)",
+      [delivery_id, delivery_boy_id, customerId, rating, comment, was_customer_available, behavior]
+    );
+
+    await client.query('COMMIT');
+
+    res.status(200).json({
+      success: true,
+      message: 'Customer rating submitted successfully'
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error rating customer:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error rating customer',
       error: error.message
     });
   } finally {
