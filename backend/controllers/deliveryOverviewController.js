@@ -15,13 +15,13 @@ export const getDeliveryStats = async (req, res) => {
       SELECT COUNT(*) as active_deliveries 
       FROM "Delivery" d
       JOIN "StatusHistory" sh ON d.order_id = sh.entity_id
-      WHERE sh.entity_type = 'order'
-      AND sh.status NOT IN ('delivered', 'cancelled')
-      AND sh.updated_at = (
-        SELECT MAX(updated_at) 
-        FROM "StatusHistory" 
-        WHERE entity_type = 'order' AND entity_id = d.order_id
-      )
+      WHERE sh.entity_type = 'order' 
+        AND sh.status NOT IN ('delivered', 'cancelled')
+        AND sh.updated_at = (
+          SELECT MAX(updated_at) 
+          FROM "StatusHistory" 
+          WHERE entity_id = d.order_id AND entity_type = 'order'
+        )
     `;
 
     // Get completed today
@@ -29,14 +29,14 @@ export const getDeliveryStats = async (req, res) => {
       SELECT COUNT(*) as completed_today
       FROM "Delivery" d
       JOIN "StatusHistory" sh ON d.order_id = sh.entity_id
-      WHERE sh.entity_type = 'order'
-      AND sh.status = 'delivered'
-      AND DATE(sh.updated_at) = CURRENT_DATE
-      AND sh.updated_at = (
-        SELECT MAX(updated_at) 
-        FROM "StatusHistory" 
-        WHERE entity_type = 'order' AND entity_id = d.order_id
-      )
+      WHERE sh.entity_type = 'order' 
+        AND sh.status = 'delivered'
+        AND DATE(sh.updated_at) = CURRENT_DATE
+        AND sh.updated_at = (
+          SELECT MAX(updated_at) 
+          FROM "StatusHistory" 
+          WHERE entity_id = d.order_id AND entity_type = 'order'
+        )
     `;
 
     // Get on-time delivery rate
@@ -69,13 +69,13 @@ export const getDeliveryStats = async (req, res) => {
       LEFT JOIN "Delivery" d ON o.order_id = d.order_id
       JOIN "StatusHistory" sh ON o.order_id = sh.entity_id
       WHERE d.delivery_id IS NULL
-      AND sh.entity_type = 'order'
-      AND sh.status NOT IN ('cancelled', 'delivered')
-      AND sh.updated_at = (
-        SELECT MAX(updated_at) 
-        FROM "StatusHistory" 
-        WHERE entity_type = 'order' AND entity_id = o.order_id
-      )
+        AND sh.entity_type = 'order'
+        AND sh.status NOT IN ('cancelled', 'delivered')
+        AND sh.updated_at = (
+          SELECT MAX(updated_at) 
+          FROM "StatusHistory" 
+          WHERE entity_id = o.order_id AND entity_type = 'order'
+        )
     `;
 
     const results = await Promise.all([
@@ -116,7 +116,7 @@ export const getRecentOrders = async (req, res) => {
         o.order_id,
         CONCAT(u.first_name, ' ', u.last_name) as customer_name,
         a.address,
-        osh.status,
+        sh.status,
         CASE 
           WHEN d.delivery_boy_id IS NOT NULL THEN CONCAT(db_user.first_name, ' ', db_user.last_name)
           ELSE 'Unassigned'
@@ -141,12 +141,12 @@ export const getRecentOrders = async (req, res) => {
       LEFT JOIN "User" db_user ON db.user_id = db_user.user_id
       JOIN "StatusHistory" sh ON o.order_id = sh.entity_id
       WHERE sh.entity_type = 'order'
-      AND sh.updated_at = (
-        SELECT MAX(updated_at) 
-        FROM "StatusHistory" 
-        WHERE entity_type = 'order' AND entity_id = o.order_id
-      )
-      AND sh.status NOT IN ('delivered', 'cancelled')
+        AND sh.updated_at = (
+          SELECT MAX(updated_at) 
+          FROM "StatusHistory" 
+          WHERE entity_id = o.order_id AND entity_type = 'order'
+        )
+        AND sh.status NOT IN ('delivered', 'cancelled')
     `;
 
     const queryParams = [];

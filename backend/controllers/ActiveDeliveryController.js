@@ -15,7 +15,7 @@ export const getActiveDeliveries = async (req, res) => {
         a.address,
         CONCAT(db_user.first_name, ' ', db_user.last_name) as delivery_boy,
         db_user.phone_number as delivery_boy_phone,
-        osh.status,
+        sh.status,
         d.estimated_arrival,
         d.actual_arrival,
         CASE 
@@ -41,10 +41,10 @@ export const getActiveDeliveries = async (req, res) => {
         FROM "StatusHistory"
         WHERE entity_type = 'order'
         ORDER BY entity_id, updated_at DESC
-      ) osh ON o.order_id = osh.order_id
+      ) sh ON o.order_id = sh.order_id
       WHERE d.actual_arrival IS NULL 
         AND d.is_aborted = false
-        AND osh.status IN ('assigned', 'picked_up', 'in_transit')
+        AND sh.status IN ('assigned', 'picked_up', 'in_transit')
     `;
 
     const params = [];
@@ -69,7 +69,7 @@ export const getActiveDeliveries = async (req, res) => {
     query += `
       GROUP BY d.delivery_id, o.order_id, u.first_name, u.last_name, 
                u.phone_number, a.address, db_user.first_name, db_user.last_name,
-               db_user.phone_number, osh.status, d.estimated_arrival, 
+               db_user.phone_number, sh.status, d.estimated_arrival, 
                d.actual_arrival, o.total_amount, r.name
       ORDER BY d.estimated_arrival ASC
     `;
@@ -168,7 +168,7 @@ export const getDeliveryDetails = async (req, res) => {
         a.address,
         CONCAT(db_user.first_name, ' ', db_user.last_name) as delivery_boy,
         db_user.phone_number as delivery_boy_phone,
-        osh.status,
+        sh.status,
         d.estimated_arrival,
         d.actual_arrival,
         CASE 
@@ -194,11 +194,11 @@ export const getDeliveryDetails = async (req, res) => {
         FROM "StatusHistory"
         WHERE entity_type = 'order'
         ORDER BY entity_id, updated_at DESC
-      ) osh ON o.order_id = osh.order_id
+      ) sh ON o.order_id = sh.order_id
       WHERE d.delivery_id = $1
       GROUP BY d.delivery_id, o.order_id, u.first_name, u.last_name, 
                u.phone_number, a.address, db_user.first_name, db_user.last_name,
-               db_user.phone_number, osh.status, d.estimated_arrival, 
+               db_user.phone_number, sh.status, d.estimated_arrival, 
                d.actual_arrival, o.total_amount, r.name
     `;
 
