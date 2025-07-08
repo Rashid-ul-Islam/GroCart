@@ -9,6 +9,7 @@ import RegisterPage from "./pages/regPage.jsx";
 import AddressManagement from "./pages/AddressManagement.jsx";
 import ProductsByCategory from "./pages/ProductByCategory.jsx";
 import SearchResultsPage from "./pages/SearchResultPage.jsx";
+import EnhancedSearchResults from "./pages/EnhancedSearchResults.jsx";
 import ManageInventory from "./pages/ManageInventory.jsx";
 import DeliveryDashboard from "./pages/DeliveryDashboard.jsx";
 import Approvals from "./pages/Approvals.jsx";
@@ -33,7 +34,8 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/address-management" element={<AddressManagement />} />
           <Route path="/products/category" element={<ProductsByCategory />} />
-          <Route path="/search" element={<SearchResultsPage />} />
+          <Route path="/search" element={<EnhancedSearchResults />} />
+          <Route path="/search-basic" element={<SearchResultsPage />} />
           <Route path="/manage-inventory" element={<ManageInventory />} />
           <Route
             path="/admin/delivery-dashboard"

@@ -7,6 +7,7 @@ import { Button } from "../ui/button.jsx";
 import { Input } from "../ui/input.jsx";
 import LoginModal from "../auth/LoginModal.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
+import EnhancedSearchBar from "../common/EnhancedSearchBar.jsx";
 
 export default function NavBar() {
   const { user, isLoggedIn, logout: authLogout } = useAuth();
@@ -113,28 +114,10 @@ export default function NavBar() {
               GroCart
             </span>
           </Link>
-          {/* Search bar */}
-          <form onSubmit={handleSearch} className="flex-1 max-w-2xl mx-8">
-            <div className="relative">
-              <Input
-                type="text"
-                placeholder="Search for products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 placeholder-gray-500"
-              />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={clearSearch}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          </form>
+          {/* Enhanced Search bar */}
+          <div className="flex-1 max-w-2xl mx-8">
+            <EnhancedSearchBar />
+          </div>
 
           {/* Right-side controls */}
           <div className="flex items-center gap-8 text-purple-700">
