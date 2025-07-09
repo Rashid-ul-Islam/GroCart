@@ -199,10 +199,10 @@ export default function ProductEdit() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Package className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading product details...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center bg-white rounded-xl shadow-xl p-8 max-w-md mx-4">
+          <Package className="w-16 h-16 text-blue-600 animate-spin mx-auto mb-6" />
+          <p className="text-gray-700 text-lg font-medium">Loading product details...</p>
         </div>
       </div>
     );
@@ -210,15 +210,15 @@ export default function ProductEdit() {
 
   if (error && !product) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 mb-4">{error}</p>
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 flex items-center justify-center">
+        <div className="text-center bg-white rounded-xl shadow-xl p-8 max-w-md mx-4">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-6" />
+          <p className="text-red-600 mb-6 text-lg font-medium">{error}</p>
           <Button
             onClick={() => navigate("/admin")}
-            className="bg-blue-500 hover:bg-blue-600"
+            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 rounded-lg shadow-md transform hover:scale-105 transition-all duration-200"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="w-5 h-5 mr-2" />
             Back to Admin Panel
           </Button>
         </div>
@@ -227,23 +227,23 @@ export default function ProductEdit() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 py-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-10">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Edit Product</h1>
-              <p className="mt-2 text-gray-600">
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">Edit Product</h1>
+              <p className="text-lg text-gray-600">
                 Update product information. All fields are optional - only
                 modify what you need to change.
               </p>
             </div>
             <Button
               onClick={handleCancel}
-              className="bg-gray-500 hover:bg-gray-600 text-white flex items-center gap-2"
+              className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-6 py-3 rounded-xl shadow-md transform hover:scale-105 transition-all duration-200 flex items-center gap-2"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-5 h-5" />
               Back to Admin Panel
             </Button>
           </div>
@@ -251,10 +251,10 @@ export default function ProductEdit() {
 
         {/* Success Message */}
         {success && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6 shadow-lg">
             <div className="flex items-center">
-              <Package className="w-5 h-5 text-green-500 mr-2" />
-              <p className="text-green-700 font-medium">
+              <Package className="w-6 h-6 text-green-600 mr-3" />
+              <p className="text-green-800 font-semibold text-lg">
                 Product updated successfully! Redirecting to admin panel...
               </p>
             </div>
@@ -263,37 +263,39 @@ export default function ProductEdit() {
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="mb-6 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl p-6 shadow-lg">
             <div className="flex items-center">
-              <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-              <p className="text-red-700">{error}</p>
+              <AlertCircle className="w-6 h-6 text-red-600 mr-3" />
+              <p className="text-red-800 font-semibold text-lg">{error}</p>
             </div>
           </div>
         )}
 
         {/* Edit Form */}
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="bg-white rounded-2xl shadow-2xl p-10 border border-gray-100">
+          <form onSubmit={handleSubmit} className="space-y-8">
             {/* Current Product Info */}
             {product && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <h3 className="font-semibold text-blue-800 mb-2">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 mb-8">
+                <h3 className="font-bold text-blue-900 mb-4 text-lg">
                   Current Product Information
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">Name:</span> {product.name}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                  <div className="flex items-center p-3 bg-white rounded-lg shadow-sm">
+                    <span className="font-semibold text-gray-700 mr-2">Name:</span> 
+                    <span className="text-gray-900">{product.name}</span>
                   </div>
-                  <div>
-                    <span className="font-medium">Price:</span> ${product.price}
+                  <div className="flex items-center p-3 bg-white rounded-lg shadow-sm">
+                    <span className="font-semibold text-gray-700 mr-2">Price:</span> 
+                    <span className="text-gray-900">${product.price}</span>
                   </div>
-                  <div>
-                    <span className="font-medium">Quantity:</span>{" "}
-                    {product.quantity} {product.unit_measure}
+                  <div className="flex items-center p-3 bg-white rounded-lg shadow-sm">
+                    <span className="font-semibold text-gray-700 mr-2">Quantity:</span>{" "}
+                    <span className="text-gray-900">{product.quantity} {product.unit_measure}</span>
                   </div>
-                  <div>
-                    <span className="font-medium">Origin:</span>{" "}
-                    {product.origin || "Not specified"}
+                  <div className="flex items-center p-3 bg-white rounded-lg shadow-sm">
+                    <span className="font-semibold text-gray-700 mr-2">Origin:</span>{" "}
+                    <span className="text-gray-900">{product.origin || "Not specified"}</span>
                   </div>
                 </div>
               </div>
@@ -302,7 +304,7 @@ export default function ProductEdit() {
             {/* Basic Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-800 mb-3">
                   Product Name
                 </label>
                 <input
@@ -311,26 +313,26 @@ export default function ProductEdit() {
                   value={formData.name}
                   onChange={handleInputChange}
                   placeholder="Enter new product name (optional)"
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    validationErrors.name ? "border-red-500" : "border-gray-300"
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-black ${
+                    validationErrors.name ? "border-red-500 bg-red-50" : "border-gray-300 bg-gray-50 hover:bg-white"
                   }`}
                 />
                 {validationErrors.name && (
-                  <p className="mt-1 text-sm text-red-600">
+                  <p className="mt-2 text-sm text-red-600 font-medium">
                     {validationErrors.name}
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-800 mb-3">
                   Category
                 </label>
                 <select
                   name="category_id"
                   value={formData.category_id}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border-2 border-gray-300 bg-gray-50 hover:bg-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-black"
                 >
                   <option value="">Keep current category</option>
                   {Array.isArray(categories) &&
@@ -349,7 +351,7 @@ export default function ProductEdit() {
             {/* Price and Quantity */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-800 mb-3">
                   Price ($)
                 </label>
                 <input
@@ -360,21 +362,21 @@ export default function ProductEdit() {
                   step="0.01"
                   min="0"
                   placeholder="New price (optional)"
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-black ${
                     validationErrors.price
-                      ? "border-red-500"
-                      : "border-gray-300"
+                      ? "border-red-500 bg-red-50"
+                      : "border-gray-300 bg-gray-50 hover:bg-white"
                   }`}
                 />
                 {validationErrors.price && (
-                  <p className="mt-1 text-sm text-red-600">
+                  <p className="mt-2 text-sm text-red-600 font-medium">
                     {validationErrors.price}
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-800 mb-3">
                   Quantity
                 </label>
                 <input
@@ -384,21 +386,21 @@ export default function ProductEdit() {
                   onChange={handleInputChange}
                   min="0"
                   placeholder="New quantity (optional)"
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-black ${
                     validationErrors.quantity
-                      ? "border-red-500"
-                      : "border-gray-300"
+                      ? "border-red-500 bg-red-50"
+                      : "border-gray-300 bg-gray-50 hover:bg-white"
                   }`}
                 />
                 {validationErrors.quantity && (
-                  <p className="mt-1 text-sm text-red-600">
+                  <p className="mt-2 text-sm text-red-600 font-medium">
                     {validationErrors.quantity}
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-800 mb-3">
                   Unit of Measure
                 </label>
                 <input
@@ -407,7 +409,7 @@ export default function ProductEdit() {
                   value={formData.unit_measure}
                   onChange={handleInputChange}
                   placeholder="kg, pcs, liters (optional)"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border-2 border-gray-300 bg-gray-50 hover:bg-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-black"
                 />
               </div>
             </div>
@@ -415,7 +417,7 @@ export default function ProductEdit() {
             {/* Origin and Description */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-800 mb-3">
                   Origin
                 </label>
                 <input
@@ -424,12 +426,12 @@ export default function ProductEdit() {
                   value={formData.origin}
                   onChange={handleInputChange}
                   placeholder="Product origin (optional)"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border-2 border-gray-300 bg-gray-50 hover:bg-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-black"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-800 mb-3">
                   Description
                 </label>
                 <textarea
@@ -438,35 +440,22 @@ export default function ProductEdit() {
                   onChange={handleInputChange}
                   rows="3"
                   placeholder="Product description (optional)"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border-2 border-gray-300 bg-gray-50 hover:bg-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-black"
                 />
               </div>
             </div>
 
             {/* Checkboxes */}
-            <div className="flex flex-wrap gap-6">
-              <label className="flex items-center">
+            <div className="flex flex-wrap gap-8">
+              <label className="flex items-center bg-gray-50 p-4 rounded-xl border hover:bg-gray-100 transition-colors cursor-pointer">
                 <input
                   type="checkbox"
                   name="is_refundable"
                   checked={formData.is_refundable}
                   onChange={handleInputChange}
-                  className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 />
-                <span className="ml-2 text-sm text-gray-700">Refundable</span>
-              </label>
-
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="is_available"
-                  checked={formData.is_available}
-                  onChange={handleInputChange}
-                  className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <span className="ml-2 text-sm text-gray-700">
-                  Available for sale
-                </span>
+                <span className="ml-3 text-sm font-semibold text-gray-800">Refundable</span>
               </label>
             </div>
 
