@@ -146,7 +146,7 @@ export default function NavBar() {
             </Link> */}
 
             {/* Cart */}
-            <Link
+            {/* <Link
               to="/cart"
               className="relative hover:text-yellow-400 transition duration-300"
             >
@@ -156,7 +156,7 @@ export default function NavBar() {
                   {cartItemCount}
                 </span>
               )}
-            </Link>
+            </Link> */}
 
             {/* Admin Panel - Only show if user is admin */}
             {isAdmin && (

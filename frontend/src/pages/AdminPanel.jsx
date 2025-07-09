@@ -419,12 +419,12 @@ export default function AdminPanel() {
                 Delivery Dashboard
               </Button>
             </Link>
-            <Link to="/admin/approvals">
+            {/* <Link to="/admin/approvals">
               <Button className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3">
                 <CheckCircle className="w-6 h-6" />
                 Approvals
               </Button>
-            </Link>
+            </Link> */}
           </div>
         </div>
 

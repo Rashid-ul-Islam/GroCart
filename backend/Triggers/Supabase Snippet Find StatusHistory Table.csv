@@ -1,8 +1,0 @@
-column_name,data_type,is_nullable,column_default
-status_history_id,integer,NO,null
-entity_type,character varying,NO,null
-entity_id,integer,NO,null
-status,character varying,NO,null
-updated_at,timestamp without time zone,YES,now()
-updated_by,integer,YES,null
-notes,text,YES,null

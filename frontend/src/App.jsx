@@ -21,6 +21,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import OrderDetails from "./pages/OrderDetails.jsx";
 import ProductDetails from "./pages/ProductDetail.jsx";
 import ProductEdit from "./components/admin/ProductEdit.jsx";
+import UserProfile from "./pages/UserProfile.jsx";
 
 export default function App() {
   return (
@@ -52,6 +53,7 @@ export default function App() {
             path="/admin/product-edit/:productId"
             element={<ProductEdit />}
           />
+          <Route path="/profile" element={<UserProfile />} />
           {/* Add more routes as needed */}
         </Routes>
       </Router>
