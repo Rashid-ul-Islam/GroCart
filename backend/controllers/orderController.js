@@ -305,7 +305,6 @@ export const createOrder = async (req, res) => {
 export const getUserOrders = async (req, res) => {
   try {
     const { user_id } = req.params;
-
     if (!user_id || isNaN(user_id)) {
       return res.status(400).json({
         success: false,
@@ -314,10 +313,15 @@ export const getUserOrders = async (req, res) => {
     }
 
     const query = `
-      SELECT 
+      SELECT
         o.order_id,
         o.order_date,
         o.total_amount,
+        o.product_total,
+        o.tax_total,
+        o.shipping_total,
+        o.discount_total,
+        o.payment_method,
         d.address_id,
         a.address as delivery_address,
         (SELECT COUNT(*) FROM "OrderItem" oi WHERE oi.order_id = o.order_id) as item_count,
@@ -327,26 +331,64 @@ export const getUserOrders = async (req, res) => {
           WHERE sh.entity_type = 'order' AND sh.entity_id = o.order_id
           ORDER BY sh.updated_at DESC
           LIMIT 1
-        ) as status
+        ) as status,
+        -- Get coupon info if used
+        oc.coupon_id,
+        c.code as coupon_code
       FROM "Order" o
       LEFT JOIN "Delivery" d ON o.order_id = d.order_id
       LEFT JOIN "Address" a ON d.address_id = a.address_id
+      LEFT JOIN "OrderCoupon" oc ON o.order_id = oc.order_id
+      LEFT JOIN "Coupon" c ON oc.coupon_id = c.coupon_id
       WHERE o.user_id = $1
       ORDER BY o.order_date DESC;
     `;
 
     const result = await pool.query(query, [user_id]);
 
-    const orders = result.rows.map(order => ({
-      ...order,
-      order_id: `ORD-${String(order.order_id).padStart(6, '0')}`,
-      items: Array(parseInt(order.item_count, 10)).fill({}), // Create a dummy array for length
-    }));
+    // Get order items for each order
+    const ordersWithItems = await Promise.all(
+      result.rows.map(async (order) => {
+        const itemsQuery = `
+          SELECT 
+            oi.product_id,
+            oi.quantity,
+            oi.price,
+            p.name as product_name
+          FROM "OrderItem" oi
+          JOIN "Product" p ON oi.product_id = p.product_id
+          WHERE oi.order_id = $1
+        `;
+        const itemsResult = await pool.query(itemsQuery, [order.order_id]);
 
+        return {
+          ...order,
+          order_id: `ORD-${String(order.order_id).padStart(6, '0')}`,
+          items: itemsResult.rows,
+          // Add reorder data structure
+          reorder_data: {
+            user_id: parseInt(user_id),
+            items: itemsResult.rows.map(item => ({
+              product_id: item.product_id,
+              quantity: item.quantity,
+              price: item.price
+            })),
+            address_id: order.address_id,
+            payment_method: order.payment_method,
+            total_amount: order.total_amount,
+            product_total: order.product_total,
+            tax_total: order.tax_total,
+            shipping_total: order.shipping_total,
+            discount_total: order.discount_total,
+            coupon_id: order.coupon_id
+          }
+        };
+      })
+    );
 
     res.json({
       success: true,
-      data: orders
+      data: ordersWithItems
     });
   } catch (error) {
     console.error('Error fetching orders:', error);
@@ -357,6 +399,7 @@ export const getUserOrders = async (req, res) => {
     });
   }
 };
+
 
 // Get order details
 export const getOrderDetails = async (req, res) => {
@@ -809,5 +852,293 @@ export const assignDeliveryBoy = async (req, res) => {
     });
   } finally {
     client.release();
+  }
+};
+
+export const getActiveOrders = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    if (!user_id || isNaN(user_id)) {
+      return res.status(400).json({ success: false, message: 'Valid user ID is required' });
+    }
+
+    const query = `
+      SELECT
+        o.order_id,
+        o.order_date,
+        o.total_amount,
+        o.product_total,
+        o.tax_total,
+        o.shipping_total,
+        o.discount_total,
+        o.payment_method,
+        d.address_id,
+        a.address AS delivery_address,
+        (SELECT COUNT(*) FROM "OrderItem" oi WHERE oi.order_id = o.order_id) AS item_count,
+        (
+          SELECT sh.status
+          FROM "StatusHistory" sh
+          WHERE sh.entity_type = 'order' AND sh.entity_id = o.order_id
+          ORDER BY sh.updated_at DESC
+          LIMIT 1
+        ) AS status,
+        oc.coupon_id,
+        c.code as coupon_code
+      FROM "Order" o
+      LEFT JOIN "Delivery" d ON o.order_id = d.order_id
+      LEFT JOIN "Address" a ON d.address_id = a.address_id
+      LEFT JOIN "OrderCoupon" oc ON o.order_id = oc.order_id
+      LEFT JOIN "Coupon" c ON oc.coupon_id = c.coupon_id
+      WHERE o.user_id = $1
+      AND (
+        SELECT sh.status
+        FROM "StatusHistory" sh
+        WHERE sh.entity_type = 'order' AND sh.entity_id = o.order_id
+        ORDER BY sh.updated_at DESC
+        LIMIT 1
+      ) NOT IN ('payment_received', 'cancelled')
+      ORDER BY o.order_date DESC;
+    `;
+
+    const result = await pool.query(query, [user_id]);
+
+    const ordersWithItems = await Promise.all(
+      result.rows.map(async (order) => {
+        const itemsQuery = `
+          SELECT 
+            oi.product_id,
+            oi.quantity,
+            oi.price,
+            p.name as product_name
+          FROM "OrderItem" oi
+          JOIN "Product" p ON oi.product_id = p.product_id
+          WHERE oi.order_id = $1
+        `;
+        const itemsResult = await pool.query(itemsQuery, [order.order_id]);
+
+        return {
+          ...order,
+          order_id: `ORD-${String(order.order_id).padStart(6, '0')}`,
+          items: itemsResult.rows,
+          reorder_data: {
+            user_id: parseInt(user_id),
+            items: itemsResult.rows.map(item => ({
+              product_id: item.product_id,
+              quantity: item.quantity,
+              price: item.price
+            })),
+            address_id: order.address_id,
+            payment_method: order.payment_method,
+            total_amount: order.total_amount,
+            product_total: order.product_total,
+            tax_total: order.tax_total,
+            shipping_total: order.shipping_total,
+            discount_total: order.discount_total,
+            coupon_id: order.coupon_id
+          }
+        };
+      })
+    );
+
+    res.json({ success: true, data: ordersWithItems });
+  } catch (error) {
+    console.error('Error fetching active orders:', error);
+    res.status(500).json({ success: false, message: 'Error fetching active orders', error: error.message });
+  }
+};
+
+
+export const getCompletedOrders = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    if (!user_id || isNaN(user_id)) {
+      return res.status(400).json({ success: false, message: 'Valid user ID is required' });
+    }
+
+    const query = `
+      SELECT
+        o.order_id,
+        o.order_date,
+        o.total_amount,
+        o.product_total,
+        o.tax_total,
+        o.shipping_total,
+        o.discount_total,
+        o.payment_method,
+        d.address_id,
+        a.address AS delivery_address,
+        (SELECT COUNT(*) FROM "OrderItem" oi WHERE oi.order_id = o.order_id) AS item_count,
+        (
+          SELECT sh.status
+          FROM "StatusHistory" sh
+          WHERE sh.entity_type = 'order' AND sh.entity_id = o.order_id
+          ORDER BY sh.updated_at DESC
+          LIMIT 1
+        ) AS status,
+        oc.coupon_id,
+        c.code as coupon_code
+      FROM "Order" o
+      LEFT JOIN "Delivery" d ON o.order_id = d.order_id
+      LEFT JOIN "Address" a ON d.address_id = a.address_id
+      LEFT JOIN "OrderCoupon" oc ON o.order_id = oc.order_id
+      LEFT JOIN "Coupon" c ON oc.coupon_id = c.coupon_id
+      WHERE o.user_id = $1
+      AND (
+        SELECT sh.status
+        FROM "StatusHistory" sh
+        WHERE sh.entity_type = 'order' AND sh.entity_id = o.order_id
+        ORDER BY sh.updated_at DESC
+        LIMIT 1
+      ) = 'payment_received'
+      ORDER BY o.order_date DESC;
+    `;
+
+    const result = await pool.query(query, [user_id]);
+
+    const ordersWithItems = await Promise.all(
+      result.rows.map(async (order) => {
+        const itemsQuery = `
+          SELECT 
+            oi.product_id,
+            oi.quantity,
+            oi.price,
+            p.name as product_name
+          FROM "OrderItem" oi
+          JOIN "Product" p ON oi.product_id = p.product_id
+          WHERE oi.order_id = $1
+        `;
+        const itemsResult = await pool.query(itemsQuery, [order.order_id]);
+
+        return {
+          ...order,
+          order_id: `ORD-${String(order.order_id).padStart(6, '0')}`,
+          items: itemsResult.rows,
+          reorder_data: {
+            user_id: parseInt(user_id),
+            items: itemsResult.rows.map(item => ({
+              product_id: item.product_id,
+              quantity: item.quantity,
+              price: item.price
+            })),
+            address_id: order.address_id,
+            payment_method: order.payment_method,
+            total_amount: order.total_amount,
+            product_total: order.product_total,
+            tax_total: order.tax_total,
+            shipping_total: order.shipping_total,
+            discount_total: order.discount_total,
+            coupon_id: order.coupon_id
+          }
+        };
+      })
+    );
+
+    res.json({ success: true, data: ordersWithItems });
+  } catch (error) {
+    console.error('Error fetching completed orders:', error);
+    res.status(500).json({ success: false, message: 'Error fetching completed orders', error: error.message });
+  }
+};
+
+
+
+export const getCancelledOrders = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    if (!user_id || isNaN(user_id)) {
+      return res.status(400).json({ success: false, message: 'Valid user ID is required' });
+    }
+
+    const query = `
+      SELECT
+        o.order_id,
+        o.order_date,
+        o.total_amount,
+        d.address_id,
+        a.address AS delivery_address,
+        (SELECT COUNT(*) FROM "OrderItem" oi WHERE oi.order_id = o.order_id) AS item_count,
+        (
+          SELECT sh.status
+          FROM "StatusHistory" sh
+          WHERE sh.entity_type = 'order' AND sh.entity_id = o.order_id
+          ORDER BY sh.updated_at DESC
+          LIMIT 1
+        ) AS status
+      FROM "Order" o
+      LEFT JOIN "Delivery" d ON o.order_id = d.order_id
+      LEFT JOIN "Address" a ON d.address_id = a.address_id
+      WHERE o.user_id = $1
+      AND (
+        SELECT sh.status
+        FROM "StatusHistory" sh
+        WHERE sh.entity_type = 'order' AND sh.entity_id = o.order_id
+        ORDER BY sh.updated_at DESC
+        LIMIT 1
+      ) = 'cancelled'
+      ORDER BY o.order_date DESC;
+    `;
+
+    const result = await pool.query(query, [user_id]);
+    const orders = result.rows.map(order => ({
+      ...order,
+      order_id: `ORD-${String(order.order_id).padStart(6, '0')}`,
+      items: Array(parseInt(order.item_count, 10)).fill({}),
+    }));
+
+    res.json({ success: true, data: orders });
+  } catch (error) {
+    console.error('Error fetching cancelled orders:', error);
+    res.status(500).json({ success: false, message: 'Error fetching cancelled orders', error: error.message });
+  }
+};
+
+// Get order stats for a user
+export const getOrderStats = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    if (!user_id) {
+      return res.status(400).json({ success: false, message: 'User ID is required' });
+    }
+    // Total orders
+    const totalOrdersResult = await pool.query('SELECT COUNT(*) FROM "Order" WHERE user_id = $1', [user_id]);
+    const totalOrders = parseInt(totalOrdersResult.rows[0].count, 10);
+
+    // Delivered orders (latest status = delivered)
+    const deliveredOrdersResult = await pool.query(`
+      SELECT COUNT(*) FROM "Order" o
+      WHERE o.user_id = $1 AND (
+        SELECT sh.status FROM "StatusHistory" sh
+        WHERE sh.entity_type = 'order' AND sh.entity_id = o.order_id
+        ORDER BY sh.updated_at DESC LIMIT 1
+      ) = 'payment_received'
+    `, [user_id]);
+    const deliveredOrders = parseInt(deliveredOrdersResult.rows[0].count, 10);
+
+    // Active orders (latest status in confirmed, preparing, out_for_delivery)
+    const activeOrdersResult = await pool.query(`
+      SELECT COUNT(*) FROM "Order" o
+      WHERE o.user_id = $1 AND (
+        SELECT sh.status FROM "StatusHistory" sh
+        WHERE sh.entity_type = 'order' AND sh.entity_id = o.order_id
+        ORDER BY sh.updated_at DESC LIMIT 1
+      ) NOT IN ('payment_received', 'cancelled')
+    `, [user_id]);
+    const activeOrders = parseInt(activeOrdersResult.rows[0].count, 10);
+
+    // Total spent
+    const totalSpentResult = await pool.query('SELECT COALESCE(SUM(total_amount),0) as total FROM "Order" WHERE user_id = $1', [user_id]);
+    const totalSpent = Number(totalSpentResult.rows[0].total);
+    res.json({
+      success: true,
+      data: {
+        totalOrders,
+        deliveredOrders,
+        activeOrders,
+        totalSpent
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching order stats:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch order stats', error: error.message });
   }
 };
