@@ -23,19 +23,19 @@ import CustomerRatingModal from "./CustomerRatingModal.jsx";
 const getStatusColor = (status) => {
   switch (status) {
     case "assigned":
-      return "bg-blue-100 text-blue-800";
+      return "bg-gradient-to-r from-blue-500 to-blue-600 text-white";
     case "left_warehouse":
-      return "bg-indigo-100 text-indigo-800";
+      return "bg-gradient-to-r from-indigo-500 to-indigo-600 text-white";
     case "in_transit":
-      return "bg-purple-100 text-purple-800";
+      return "bg-gradient-to-r from-purple-500 to-purple-600 text-white";
     case "delivery_completed":
-      return "bg-green-100 text-green-800";
+      return "bg-gradient-to-r from-green-500 to-green-600 text-white";
     case "payment_received":
-      return "bg-green-100 text-green-800";
+      return "bg-gradient-to-r from-green-600 to-green-700 text-white";
     case "cancelled":
-      return "bg-red-100 text-red-800";
+      return "bg-gradient-to-r from-red-500 to-red-600 text-white";
     default:
-      return "bg-gray-100 text-gray-800";
+      return "bg-gradient-to-r from-gray-500 to-gray-600 text-white";
   }
 };
 
@@ -61,13 +61,13 @@ const getStatusDisplay = (status) => {
 const getPriorityColor = (priority) => {
   switch (priority) {
     case "high":
-      return "bg-red-100 text-red-800";
+      return "bg-gradient-to-r from-red-600 to-red-700 text-white";
     case "medium":
-      return "bg-orange-100 text-orange-800";
+      return "bg-gradient-to-r from-orange-500 to-orange-600 text-white";
     case "low":
-      return "bg-blue-100 text-blue-800";
+      return "bg-gradient-to-r from-blue-500 to-blue-600 text-white";
     default:
-      return "bg-gray-100 text-gray-800";
+      return "bg-gradient-to-r from-gray-500 to-gray-600 text-white";
   }
 };
 
@@ -160,7 +160,6 @@ export const AssignedDeliveries = () => {
       console.log("Products fetched response:", data);
 
       if (data.success) {
-        // Refresh the deliveries list to show updated status
         await fetchDeliveries(true);
         alert("Products marked as fetched successfully!");
       } else {
@@ -208,7 +207,6 @@ export const AssignedDeliveries = () => {
       console.log("Delivery completed response:", data);
 
       if (data.success) {
-        // Refresh the deliveries list to show updated status
         await fetchDeliveries(true);
         alert("Delivery marked as completed successfully!");
       } else {
@@ -270,12 +268,10 @@ export const AssignedDeliveries = () => {
       console.log("Rate customer response:", data);
 
       if (data.success) {
-        // Refresh the deliveries list
         await fetchDeliveries(true);
         setShowRatingModal(false);
         setSelectedDelivery(null);
 
-        // Show success message
         const customerName =
           selectedDelivery?.first_name && selectedDelivery?.last_name
             ? `${selectedDelivery.first_name} ${selectedDelivery.last_name}`
@@ -298,7 +294,6 @@ export const AssignedDeliveries = () => {
     const status = delivery.currentStatus || "assigned";
     const actions = [];
 
-    // Debug log to see what statuses we're getting
     console.log("Delivery status for action buttons:", {
       delivery_id: delivery.delivery_id,
       order_id: delivery.order_id,
@@ -315,7 +310,7 @@ export const AssignedDeliveries = () => {
           key: "products_fetched",
           label: "Products Fetched",
           icon: Package,
-          color: "bg-blue-600 hover:bg-blue-700",
+          color: "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800",
           handler: handleProductsFetched,
         });
         break;
@@ -326,13 +321,12 @@ export const AssignedDeliveries = () => {
           key: "delivery_completed",
           label: "Delivery Completed",
           icon: CheckCircle,
-          color: "bg-green-600 hover:bg-green-700",
+          color: "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800",
           handler: handleDeliveryCompleted,
         });
         break;
 
       case "delivery_completed":
-        // Show message that payment is being processed
         break;
 
       case "payment_received":
@@ -340,13 +334,12 @@ export const AssignedDeliveries = () => {
           key: "rate_customer",
           label: "Rate Customer",
           icon: User,
-          color: "bg-purple-600 hover:bg-purple-700",
+          color: "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800",
           handler: handleRateCustomer,
         });
         break;
 
       default:
-        // Log unknown statuses for debugging
         console.warn("Unknown delivery status, no actions available:", {
           status,
           delivery_id: delivery.delivery_id,
@@ -368,7 +361,6 @@ export const AssignedDeliveries = () => {
     if (user?.user_id) {
       fetchDeliveries();
 
-      // Auto-refresh every 5 minutes
       const interval = setInterval(() => fetchDeliveries(true), 5 * 60 * 1000);
       return () => clearInterval(interval);
     }
@@ -377,182 +369,174 @@ export const AssignedDeliveries = () => {
   // Loading state
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Today's Assigned Deliveries
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-2 text-gray-600">Loading deliveries...</span>
+      <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-200">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="bg-blue-100 rounded-full p-3">
+            <Calendar className="h-6 w-6 text-blue-600" />
           </div>
-        </CardContent>
-      </Card>
+          <h3 className="text-2xl font-bold text-gray-800">📦 Today's Assigned Deliveries</h3>
+        </div>
+        <div className="flex items-center justify-center h-32">
+          <div className="text-center">
+            <RefreshCw className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-4" />
+            <span className="text-gray-600 font-semibold">Loading deliveries...</span>
+          </div>
+        </div>
+      </div>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-red-500" />
-            Error Loading Deliveries
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <p className="text-red-600 mb-4">{error}</p>
-            <Button onClick={() => fetchDeliveries()} variant="outline">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Try Again
-            </Button>
+      <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-200">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="bg-red-100 rounded-full p-3">
+            <AlertTriangle className="h-6 w-6 text-red-600" />
           </div>
-        </CardContent>
-      </Card>
+          <h3 className="text-2xl font-bold text-gray-800">❌ Error Loading Deliveries</h3>
+        </div>
+        <div className="text-center py-8">
+          <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600 mb-4 font-semibold">{error}</p>
+          <Button 
+            onClick={() => fetchDeliveries()}
+            className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 font-bold"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try Again
+          </Button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Today's Assigned Deliveries
+    <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-200">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-r from-blue-100 to-purple-100 rounded-full p-3">
+            <Truck className="h-6 w-6 text-blue-600" />
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary">{deliveries.length} deliveries</Badge>
-            <Button
-              onClick={handleRefresh}
-              variant="outline"
-              size="sm"
-              disabled={refreshing}
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-              />
-            </Button>
+          <div>
+            <h3 className="text-2xl font-bold text-gray-800">📦 Today's Assigned Deliveries</h3>
+            <p className="text-gray-600">Manage your delivery tasks</p>
           </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-4 py-2 rounded-full font-bold text-lg">
+            {deliveries.length} deliveries
+          </Badge>
+          <Button 
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 font-bold flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="space-y-6">
         {deliveries.length === 0 ? (
-          <div className="text-center py-8">
-            <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-            <p className="text-gray-600 mb-2">
-              No deliveries assigned for today
-            </p>
-            <p className="text-sm text-gray-400">
-              Check back later for new assignments
-            </p>
+          <div className="text-center py-12 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl">
+            <CheckCircle className="w-20 h-20 text-green-500 mx-auto mb-6" />
+            <p className="text-gray-700 mb-2 text-xl font-semibold">🎉 No deliveries assigned for today</p>
+            <p className="text-gray-500 font-medium">Check back later for new assignments</p>
           </div>
         ) : (
           deliveries.map((delivery) => (
-            <div
-              key={delivery.id}
-              className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+            <div 
+              key={delivery.id} 
+              className="bg-white border-2 border-gray-200 rounded-xl p-6 hover:shadow-xl hover:border-blue-300 hover:scale-102 transition-all duration-300 cursor-pointer"
             >
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold text-gray-900">
-                      {delivery.id}
-                    </span>
-                    <Badge className={getPriorityColor(delivery.priority)}>
-                      {delivery.priority}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-xl font-bold text-gray-800">#{delivery.id}</span>
+                    <Badge className={`${getPriorityColor(delivery.priority)} px-3 py-1 rounded-full font-semibold`}>
+                      🔥 {delivery.priority}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                    <User className="h-4 w-4" />
-                    <span className="font-medium">{delivery.customerName}</span>
+                  <div className="flex items-center gap-2 text-gray-700 mb-2">
+                    <User className="h-5 w-5 text-blue-600" />
+                    <span className="font-semibold text-lg">{delivery.customerName}</span>
                   </div>
-
+                  
                   {/* Customer contact info */}
                   {delivery.customerPhone && (
-                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                      <Phone className="h-4 w-4" />
-                      <span>{delivery.customerPhone}</span>
+                    <div className="flex items-center gap-2 text-gray-600 mb-1">
+                      <Phone className="h-4 w-4 text-green-600" />
+                      <span className="font-medium">📞 {delivery.customerPhone}</span>
                     </div>
                   )}
-
+                  
                   {delivery.customerEmail && (
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <Mail className="h-4 w-4" />
-                      <span>{delivery.customerEmail}</span>
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Mail className="h-4 w-4 text-purple-600" />
+                      <span className="font-medium">📧 {delivery.customerEmail}</span>
                     </div>
                   )}
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  <Badge
-                    className={getStatusColor(
-                      delivery.currentStatus || "assigned"
-                    )}
-                  >
+                <div className="flex flex-col items-end gap-2">
+                  <Badge className={`${getStatusColor(delivery.currentStatus || "assigned")} px-4 py-2 rounded-full font-bold text-lg`}>
                     {getStatusDisplay(delivery.currentStatus || "assigned")}
                   </Badge>
-                  <Badge variant="outline" className="text-xs">
+                  <Badge className="bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold">
                     {delivery.status}
                   </Badge>
                 </div>
               </div>
-
-              <div className="space-y-2 mb-4">
-                <p className="text-sm text-gray-600">
-                  <strong>Address:</strong> {delivery.address}
+              
+              <div className="bg-gray-50 rounded-xl p-4 mb-4 space-y-3">
+                <p className="text-gray-700 font-medium">
+                  <strong className="text-gray-800">📍 Address:</strong> {delivery.address}
                 </p>
-                <p className="text-sm text-gray-500">
-                  <strong>Items:</strong>{" "}
-                  {delivery.items?.join(", ") || "No items listed"}
+                <p className="text-gray-600 font-medium">
+                  <strong className="text-gray-800">📦 Items:</strong> {delivery.items?.join(", ") || "No items listed"}
                 </p>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Clock className="h-4 w-4" />
-                  <span>
-                    <strong>ETA:</strong> {delivery.estimatedTime}
-                  </span>
+                <div className="flex items-center gap-2 text-gray-700 font-medium">
+                  <Clock className="h-5 w-5 text-orange-600" />
+                  <span><strong>⏰ ETA:</strong> {delivery.estimatedTime}</span>
                 </div>
                 {delivery.totalAmount && (
-                  <p className="text-sm text-gray-600">
-                    <strong>Total:</strong> ${delivery.totalAmount.toFixed(2)}
+                  <p className="text-gray-700 font-medium">
+                    <strong className="text-gray-800">💰 Total:</strong> ${delivery.totalAmount.toFixed(2)}
                   </p>
                 )}
                 {delivery.paymentStatus && (
-                  <p className="text-sm text-gray-600">
-                    <strong>Payment:</strong> {delivery.paymentStatus}
+                  <p className="text-gray-700 font-medium">
+                    <strong className="text-gray-800">💳 Payment:</strong> {delivery.paymentStatus}
                   </p>
                 )}
               </div>
 
               {/* Status message for delivery completed */}
               {delivery.currentStatus === "delivery_completed" && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-l-4 border-yellow-500 rounded-xl p-4 mb-4">
                   <div className="flex items-center gap-2 text-yellow-800">
-                    <Clock className="h-4 w-4" />
-                    <span className="text-sm font-medium">
-                      Waiting for payment confirmation...
-                    </span>
+                    <Clock className="h-5 w-5" />
+                    <span className="font-bold">⏳ Waiting for payment confirmation...</span>
                   </div>
                 </div>
               )}
-
-              <div className="flex gap-2">
+              
+              <div className="flex gap-4">
                 {getAvailableActions(delivery).map((action) => (
                   <Button
                     key={action.key}
-                    size="sm"
-                    className={`flex-1 ${action.color}`}
+                    className={`flex-1 ${action.color} text-white py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 font-bold`}
                     onClick={() => action.handler(delivery)}
                     disabled={processingDelivery === delivery.id}
                   >
                     {processingDelivery === delivery.id ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                     ) : (
-                      <action.icon className="h-4 w-4 mr-2" />
+                      <action.icon className="h-5 w-5 mr-2" />
                     )}
                     {action.label}
                   </Button>
@@ -561,7 +545,7 @@ export const AssignedDeliveries = () => {
             </div>
           ))
         )}
-      </CardContent>
+      </div>
 
       {/* Customer Rating Modal */}
       <CustomerRatingModal
@@ -573,6 +557,6 @@ export const AssignedDeliveries = () => {
         delivery={selectedDelivery}
         onSubmit={handleRatingSubmit}
       />
-    </Card>
+    </div>
   );
 };

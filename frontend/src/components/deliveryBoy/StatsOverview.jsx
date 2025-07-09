@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '../ui/card.jsx';
-import { FileText, Clock, CheckCircle, User, RefreshCw, AlertTriangle } from 'lucide-react';
+import { FileText, Clock, CheckCircle, User, RefreshCw, AlertTriangle, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 
 export const StatsOverview = () => {
@@ -179,21 +179,11 @@ export const StatsOverview = () => {
   // Loading state
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[...Array(4)].map((_, index) => (
-          <Card key={index} className="animate-pulse">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-24"></div>
-                  <div className="h-8 bg-gray-200 rounded w-16"></div>
-                  <div className="h-3 bg-gray-200 rounded w-20"></div>
-                </div>
-                <div className="h-12 w-12 bg-gray-200 rounded-full"></div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="min-h-screen bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-xl p-8 flex items-center">
+          <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+          <span className="ml-3 text-gray-800 font-semibold">Loading statistics...</span>
+        </div>
       </div>
     );
   }
@@ -201,71 +191,113 @@ export const StatsOverview = () => {
   // Error state
   if (error) {
     return (
-      <Card className="border-red-200">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <AlertTriangle className="h-8 w-8 text-red-500" />
-              <div>
-                <h3 className="font-semibold text-red-700">Failed to Load Statistics</h3>
-                <p className="text-sm text-red-600">{error}</p>
-              </div>
-            </div>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-              <span>{refreshing ? 'Retrying...' : 'Retry'}</span>
-            </button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="min-h-screen bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-red-700 mb-2">Failed to Load Statistics</h3>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-2 mx-auto"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            <span>{refreshing ? 'Retrying...' : 'Retry'}</span>
+          </button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header with refresh button */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-800">Performance Overview</h2>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="flex items-center space-x-2 px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
-        </button>
-      </div>
+    <div className="min-h-screen bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400 p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="bg-white rounded-2xl shadow-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-purple-800 mb-2">
+                📊 Performance Overview
+              </h1>
+              <p className="text-gray-600 text-lg">
+                Track your delivery performance and statistics
+              </p>
+            </div>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-2"
+            >
+              <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
+              <span className="font-semibold">{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
+          </div>
+        </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => {
-          const IconComponent = stat.icon;
-          return (
-            <Card key={index} className="hover:shadow-lg transition-shadow duration-200">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                    <p className="text-xs text-gray-500">{stat.change}</p>
-                  </div>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {stats.map((stat, index) => {
+            const IconComponent = stat.icon;
+            return (
+              <div key={index} className="bg-white rounded-2xl shadow-xl p-6 border-l-4 border-blue-500 hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+                <div className="flex items-center justify-between mb-4">
                   <div className={`p-3 rounded-full ${stat.bgColor}`}>
                     <IconComponent className={`h-6 w-6 ${stat.color}`} />
                   </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-gray-800">{stat.value}</div>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-gray-700">{stat.title}</p>
+                  <p className="text-xs text-gray-500 bg-gray-50 px-3 py-1 rounded-full inline-block">
+                    {stat.change}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
-      {/* Last updated info */}
-      <div className="text-xs text-gray-500 text-center">
-        Last updated: {new Date().toLocaleString()} • Auto-refreshes every 5 minutes
+        {/* Additional Info Card */}
+        <div className="bg-white rounded-2xl shadow-xl p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="bg-green-100 rounded-full p-3">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-800">System Status</h3>
+                <p className="text-sm text-gray-600">All systems operational</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500">Last updated: {new Date().toLocaleString()}</p>
+              <p className="text-xs text-gray-400">Auto-refreshes every 5 minutes</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Performance Tips */}
+        <div className="bg-white rounded-2xl shadow-xl p-6">
+          <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            💡 Performance Tips
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+              <h4 className="font-semibold text-blue-800 mb-2">Improve On-Time Rate</h4>
+              <p className="text-sm text-blue-600">Plan routes efficiently and start deliveries early</p>
+            </div>
+            <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+              <h4 className="font-semibold text-green-800 mb-2">Customer Satisfaction</h4>
+              <p className="text-sm text-green-600">Communicate proactively with customers</p>
+            </div>
+            <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
+              <h4 className="font-semibold text-purple-800 mb-2">Daily Goals</h4>
+              <p className="text-sm text-purple-600">Set and achieve daily delivery targets</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

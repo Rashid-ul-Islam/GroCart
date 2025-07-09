@@ -106,16 +106,15 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
       } else {
         console.error("Failed to fetch cart items, status:", response.status);
         setFetchError("Failed to load cart items");
-        // Don't clear cart items on error - keep existing state
       }
     } catch (error) {
       console.error("Error fetching cart items:", error);
       setFetchError("Network error while loading cart");
-      // Don't clear cart items on error - keep existing state
     } finally {
       setIsLoading(false);
     }
   };
+
   useImperativeHandle(ref, () => ({
     refreshCart: () => {
       if (isUserLoggedIn()) {
@@ -375,14 +374,14 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-800">
-                  Shopping Cart
+                  🛒 Shopping Cart
                 </h2>
-                <p className="text-sm text-gray-500">{itemCount} items</p>
+                <p className="text-sm text-gray-500 font-medium">{itemCount} items</p>
               </div>
             </div>
             <button
               onClick={toggleCart}
-              className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors duration-200 group"
+              className="p-2 rounded-xl bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 transition-all duration-200 group shadow-md"
             >
               <X className="w-5 h-5 text-gray-600 group-hover:text-gray-800" />
             </button>
@@ -394,7 +393,7 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-              <p className="text-gray-500">Loading cart items...</p>
+              <p className="text-gray-500 font-medium">Loading cart items...</p>
             </div>
           ) : fetchError ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -404,10 +403,10 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
               <h3 className="text-lg font-semibold text-gray-800 mb-2">
                 Error loading cart
               </h3>
-              <p className="text-gray-500 mb-4">{fetchError}</p>
+              <p className="text-gray-500 mb-4 font-medium">{fetchError}</p>
               <button
                 onClick={fetchCartItems}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-lg transform hover:scale-105 transition-all duration-300 font-bold"
               >
                 Retry
               </button>
@@ -420,12 +419,12 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
               <h3 className="text-lg font-semibold text-gray-800 mb-2">
                 Your cart is empty
               </h3>
-              <p className="text-gray-500 mb-6">
+              <p className="text-gray-500 mb-6 font-medium">
                 Add some products to get started!
               </p>
               <button
                 onClick={toggleCart}
-                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105"
+                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-bold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
               >
                 Continue Shopping
               </button>
@@ -434,7 +433,7 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
             cartItems.map((item, index) => (
               <div
                 key={item.id}
-                className="flex items-center space-x-4 p-4 bg-white/70 backdrop-blur-sm rounded-xl border border-gray-200/60 hover:shadow-lg transition-all duration-300 animate-slideInRight"
+                className="flex items-center space-x-4 p-4 bg-white border-2 border-gray-200 rounded-xl hover:shadow-lg hover:border-blue-300 transition-all duration-300 animate-slideInRight"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
@@ -446,14 +445,14 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-gray-800 truncate">
+                  <h4 className="font-bold text-gray-800 truncate">
                     {item.name}
                   </h4>
-                  <p className="text-sm text-gray-500 truncate">
+                  <p className="text-sm text-gray-500 truncate font-medium">
                     {item.variant}
                   </p>
                   <div className="flex items-center justify-between mt-2">
-                    <span className="font-bold text-blue-600">
+                    <span className="font-bold text-blue-600 text-lg">
                       ${item.price.toFixed(2)}
                     </span>
 
@@ -463,20 +462,20 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
                         onClick={() =>
                           updateQuantity(item.id, item.quantity - 1)
                         }
-                        className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors duration-200 group"
+                        className="w-6 h-6 rounded-lg bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white flex items-center justify-center transition-all duration-200 group shadow-md transform hover:scale-110"
                       >
-                        <Minus className="w-4 h-4 text-gray-600 group-hover:text-gray-800" />
+                        <Minus className="w-3 h-3" />
                       </button>
-                      <span className="w-10 text-center font-semibold text-gray-800">
+                      <span className="w-5 text-center font-bold text-gray-800 text-lg">
                         {item.quantity}
                       </span>
                       <button
                         onClick={() =>
                           updateQuantity(item.id, item.quantity + 1)
                         }
-                        className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors duration-200 group"
+                        className="w-6 h-6 rounded-lg bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white flex items-center justify-center transition-all duration-200 group shadow-md transform hover:scale-110"
                       >
-                        <Plus className="w-4 h-4 text-gray-600 group-hover:text-gray-800" />
+                        <Plus className="w-3 h-3" />
                       </button>
                     </div>
                   </div>
@@ -484,7 +483,7 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
 
                 <button
                   onClick={() => removeItem(item.id)}
-                  className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600 transition-all duration-200 flex-shrink-0 group"
+                  className="p-2 rounded-lg bg-gradient-to-r from-red-100 to-red-200 hover:from-red-200 hover:to-red-300 text-red-600 hover:text-red-700 transition-all duration-200 flex-shrink-0 group shadow-md transform hover:scale-110"
                 >
                   <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
                 </button>
@@ -503,11 +502,11 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
                   <input
                     type="text"
                     placeholder="Enter promo code"
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 pl-10"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 bg-white text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 pl-10 font-semibold"
                   />
                   <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 </div>
-                <button className="px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl font-semibold transition-colors duration-200">
+                <button className="px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white rounded-xl font-bold transition-all duration-200 shadow-lg transform hover:scale-105">
                   Apply
                 </button>
               </div>
@@ -515,22 +514,22 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
 
             {/* Totals */}
             <div className="space-y-2 mb-6">
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-gray-600 font-medium">
                 <span>Subtotal</span>
                 <span>${subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-gray-600 font-medium">
                 <span>Tax</span>
                 <span>${tax.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-gray-600 font-medium">
                 <span>Shipping</span>
                 <span>
                   {shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}
                 </span>
               </div>
               <div className="border-t border-gray-200 pt-2">
-                <div className="flex justify-between font-bold text-lg text-gray-800">
+                <div className="flex justify-between font-bold text-xl text-gray-800">
                   <span>Total</span>
                   <span>${total.toFixed(2)}</span>
                 </div>
@@ -549,13 +548,14 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
             {/* Continue Shopping */}
             <button
               onClick={toggleCart}
-              className="w-full mt-3 text-gray-600 hover:text-gray-800 py-2 font-semibold transition-colors duration-200"
+              className="w-full mt-3 text-gray-600 hover:text-gray-800 py-2 font-bold transition-colors duration-200"
             >
               Continue Shopping
             </button>
           </div>
         )}
       </div>
+
       {/* Login Modal */}
       <LoginModal
         isOpen={isLoginModalOpen}
@@ -563,6 +563,7 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
         onLoginSuccess={handleLoginSuccess}
         currentPath="/cart"
       />
+
       <style jsx>{`
         @keyframes slideInRight {
           from {
