@@ -306,7 +306,6 @@ export const getUserOrders = async (req, res) => {
   try {
     const { user_id } = req.params;
 
-    // Validate user_id
     if (!user_id || isNaN(user_id)) {
       return res.status(400).json({
         success: false,
@@ -319,33 +318,35 @@ export const getUserOrders = async (req, res) => {
         o.order_id,
         o.order_date,
         o.total_amount,
-        o.payment_method,
-        o.payment_status,
-        a.address,
-        COUNT(oi.order_item_id) as item_count,
-        STRING_AGG(p.name, ', ') as product_names,
-        COALESCE(latest_status.status, 'pending') as current_status
+        d.address_id,
+        a.address as delivery_address,
+        (SELECT COUNT(*) FROM "OrderItem" oi WHERE oi.order_id = o.order_id) as item_count,
+        (
+          SELECT sh.status
+          FROM "StatusHistory" sh
+          WHERE sh.entity_type = 'order' AND sh.entity_id = o.order_id
+          ORDER BY sh.updated_at DESC
+          LIMIT 1
+        ) as status
       FROM "Order" o
       LEFT JOIN "Delivery" d ON o.order_id = d.order_id
       LEFT JOIN "Address" a ON d.address_id = a.address_id
-      LEFT JOIN "OrderItem" oi ON o.order_id = oi.order_id
-      LEFT JOIN "Product" p ON oi.product_id = p.product_id
-      LEFT JOIN (
-        SELECT DISTINCT ON (entity_id) entity_id as order_id, status
-        FROM "StatusHistory"
-        WHERE entity_type = 'order'
-        ORDER BY entity_id, updated_at DESC
-      ) latest_status ON o.order_id = latest_status.order_id
       WHERE o.user_id = $1
-      GROUP BY o.order_id, o.order_date, o.total_amount, o.payment_method, o.payment_status, a.address, latest_status.status
       ORDER BY o.order_date DESC;
     `;
 
     const result = await pool.query(query, [user_id]);
 
+    const orders = result.rows.map(order => ({
+      ...order,
+      order_id: `ORD-${String(order.order_id).padStart(6, '0')}`,
+      items: Array(parseInt(order.item_count, 10)).fill({}), // Create a dummy array for length
+    }));
+
+
     res.json({
       success: true,
-      data: result.rows
+      data: orders
     });
   } catch (error) {
     console.error('Error fetching orders:', error);
@@ -360,9 +361,10 @@ export const getUserOrders = async (req, res) => {
 // Get order details
 export const getOrderDetails = async (req, res) => {
   try {
-    const { order_id } = req.params;
+    const { order_id: orderIdStr } = req.params;
+    const order_id = parseInt(orderIdStr.replace('ORD-', ''), 10);
 
-    // Validate order_id
+
     if (!order_id || isNaN(order_id)) {
       return res.status(400).json({
         success: false,
@@ -373,72 +375,57 @@ export const getOrderDetails = async (req, res) => {
     const orderQuery = `
       SELECT 
         o.*,
-        a.address,
-        u.first_name,
-        u.last_name,
-        u.email,
-        u.phone_number,
+        a.address as delivery_address,
         d.delivery_id,
         d.delivery_boy_id,
-        d.estimated_arrival,
-        d.actual_arrival,
-        d.is_aborted,
-        db.availability_status as delivery_boy_status,
-        COALESCE(latest_status.status, 'pending') as current_status
+        d.estimated_arrival as estimated_delivery,
+        db_user.first_name as db_first_name,
+        db_user.last_name as db_last_name,
+        db_user.phone_number as db_phone,
+        db_user.email as db_email,
+        (SELECT AVG(rating) FROM "DeliveryReview" WHERE delivery_boy_id = d.delivery_boy_id) as db_rating,
+        (SELECT COUNT(*) FROM "Delivery" WHERE delivery_boy_id = d.delivery_boy_id AND actual_arrival IS NOT NULL) as db_total_deliveries,
+        (
+          SELECT sh.status
+          FROM "StatusHistory" sh
+          WHERE sh.entity_type = 'order' AND sh.entity_id = o.order_id
+          ORDER BY sh.updated_at DESC
+          LIMIT 1
+        ) as status
       FROM "Order" o
       LEFT JOIN "Delivery" d ON o.order_id = d.order_id
       LEFT JOIN "Address" a ON d.address_id = a.address_id
-      LEFT JOIN "User" u ON o.user_id = u.user_id
       LEFT JOIN "DeliveryBoy" db ON d.delivery_boy_id = db.user_id
-      LEFT JOIN (
-        SELECT DISTINCT ON (entity_id) entity_id as order_id, status
-        FROM "StatusHistory"
-        WHERE entity_type = 'order'
-        ORDER BY entity_id, updated_at DESC
-      ) latest_status ON o.order_id = latest_status.order_id
+      LEFT JOIN "User" db_user ON db.user_id = db_user.user_id
       WHERE o.order_id = $1;
     `;
 
     const itemsQuery = `
       SELECT 
-        oi.*,
+        oi.product_id,
+        oi.quantity,
+        oi.price,
         p.name,
-        p.description,
-        p.origin,
-        p.unit_measure,
-        pi.image_url
+        cat.name as category,
+        pi.image_url as image
       FROM "OrderItem" oi
       JOIN "Product" p ON oi.product_id = p.product_id
+      LEFT JOIN "Category" cat ON p.category_id = cat.category_id
       LEFT JOIN "ProductImage" pi ON p.product_id = pi.product_id AND pi.is_primary = true
       WHERE oi.order_id = $1;
     `;
 
     const statusHistoryQuery = `
-      SELECT 
-        sh.*,
-        u.first_name,
-        u.last_name
-      FROM "StatusHistory" sh
-      LEFT JOIN "User" u ON sh.updated_by = u.user_id
-      WHERE sh.entity_type = 'order' AND sh.entity_id = $1
-      ORDER BY sh.updated_at DESC;
+      SELECT status, updated_at
+      FROM "StatusHistory"
+      WHERE entity_type = 'order' AND entity_id = $1
+      ORDER BY updated_at ASC;
     `;
 
-    const couponQuery = `
-      SELECT 
-        oc.*,
-        c.code,
-        c.description
-      FROM "OrderCoupon" oc
-      JOIN "Coupon" c ON oc.coupon_id = c.coupon_id
-      WHERE oc.order_id = $1;
-    `;
-
-    const [orderResult, itemsResult, statusHistoryResult, couponResult] = await Promise.all([
+    const [orderResult, itemsResult, statusHistoryResult] = await Promise.all([
       pool.query(orderQuery, [order_id]),
       pool.query(itemsQuery, [order_id]),
       pool.query(statusHistoryQuery, [order_id]),
-      pool.query(couponQuery, [order_id])
     ]);
 
     if (orderResult.rows.length === 0) {
@@ -449,18 +436,58 @@ export const getOrderDetails = async (req, res) => {
     }
 
     const order = orderResult.rows[0];
-    const items = itemsResult.rows;
+    const items = itemsResult.rows.map(item => ({ ...item, image: item.image || '/api/placeholder/80/80' }));
     const statusHistory = statusHistoryResult.rows;
-    const coupons = couponResult.rows;
+
+    // Process status history into the format the frontend expects
+    const tracking_info = {
+      ordered_at: null,
+      confirmed_at: null,
+      preparing_at: null,
+      out_for_delivery_at: null,
+      delivered_at: null,
+    };
+    statusHistory.forEach(s => {
+      const key = `${s.status}_at`;
+      if (key in tracking_info) {
+        tracking_info[key] = s.updated_at;
+      }
+    });
+    if (!tracking_info.ordered_at) {
+      const createdStatus = statusHistory.find(s => s.status === 'pending' || s.status === 'created');
+      if (createdStatus) {
+        tracking_info.ordered_at = createdStatus.updated_at;
+      } else {
+        tracking_info.ordered_at = order.order_date;
+      }
+    }
+
+
+    // Determine if reviews can be left
+    const can_review_products = order.status === 'delivered';
+    const can_review_delivery = order.status === 'delivered' && order.delivery_boy_id;
+
+    const delivery_boy = order.delivery_boy_id ? {
+      name: `${order.db_first_name || ''} ${order.db_last_name || ''}`.trim(),
+      phone: order.db_phone,
+      email: order.db_email,
+      rating: parseFloat(order.db_rating).toFixed(1),
+      total_deliveries: parseInt(order.db_total_deliveries, 10),
+    } : null;
+
+    const responseData = {
+      ...order,
+      order_id: `ORD-${String(order.order_id).padStart(6, '0')}`,
+      items,
+      tracking_info,
+      delivery_boy,
+      can_review_products,
+      can_review_delivery,
+    };
 
     res.json({
       success: true,
-      data: {
-        ...order,
-        items,
-        status_history: statusHistory,
-        coupons
-      }
+      data: responseData
     });
   } catch (error) {
     console.error('Error fetching order details:', error);

@@ -22,6 +22,7 @@ import OrderDetails from "./pages/OrderDetails.jsx";
 import ProductDetails from "./pages/ProductDetail.jsx";
 import ProductEdit from "./components/admin/ProductEdit.jsx";
 import UserProfile from "./pages/UserProfile.jsx";
+import MyOrders from "./pages/MyOrders.jsx";
 
 export default function App() {
   return (
@@ -54,6 +55,7 @@ export default function App() {
             element={<ProductEdit />}
           />
           <Route path="/profile" element={<UserProfile />} />
+          <Route path="/orders" element={<MyOrders />} />
           {/* Add more routes as needed */}
         </Routes>
       </Router>
