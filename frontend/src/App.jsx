@@ -23,6 +23,7 @@ import ProductDetails from "./pages/ProductDetail.jsx";
 import ProductEdit from "./components/admin/ProductEdit.jsx";
 import UserProfile from "./pages/UserProfile.jsx";
 import MyOrders from "./pages/MyOrders.jsx";
+import SearchResults from "./pages/SearchResults.jsx";
 
 export default function App() {
   return (
@@ -37,7 +38,7 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/address-management" element={<AddressManagement />} />
           <Route path="/products/category" element={<ProductsByCategory />} />
-          <Route path="/search" element={<EnhancedSearchResults />} />
+          <Route path="/search" element={<SearchResults />} />
           <Route path="/search-basic" element={<SearchResultsPage />} />
           <Route path="/manage-inventory" element={<ManageInventory />} />
           <Route

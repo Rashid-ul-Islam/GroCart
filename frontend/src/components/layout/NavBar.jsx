@@ -1,6 +1,6 @@
 // src/components/layout/NavBar.jsx
-import { useState, useEffect } from "react";
-import { Search, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Search, X, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { ShoppingCart, Heart, User, PackageSearch, Shield } from "lucide-react";
 import { Button } from "../ui/button.jsx";
@@ -16,6 +16,10 @@ export default function NavBar() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [cartItemCount, setCartItemCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [showResults, setShowResults] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchRef = useRef(null);
   const navigate = useNavigate();
   const isAdmin = user?.role_id === "admin";
   const isDeliveryBoy = user?.role_id === "delivery_boy";
@@ -42,6 +46,74 @@ export default function NavBar() {
       console.error("Error fetching cart count:", error);
     }
   };
+  const fetchQuickSearch = async (query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setShowResults(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/search/quickSearch?q=${encodeURIComponent(
+          query
+        )}`
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setSearchResults(data.suggestions);
+          setShowResults(true);
+        }
+      }
+    } catch (error) {
+      console.error("Quick search error:", error);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleSearchInput = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+
+    // Debounce search
+    clearTimeout(window.searchTimeout);
+    window.searchTimeout = setTimeout(() => {
+      fetchQuickSearch(value);
+    }, 300);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      setShowResults(false);
+      navigate(`/search?q=${encodeURIComponent(searchTerm)}`);
+    }
+  };
+
+  const handleProductClick = (productId) => {
+    setShowResults(false);
+    setSearchTerm("");
+    navigate(`/product/${productId}`);
+  };
+
+  // Handle click outside to close results
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowResults(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchTerm.trim()) return;
@@ -115,8 +187,90 @@ export default function NavBar() {
             </span>
           </Link>
           {/* Enhanced Search bar */}
-          <div className="flex-1 max-w-2xl mx-8">
-            <EnhancedSearchBar />
+          <div className="flex-1 max-w-2xl mx-8 relative" ref={searchRef}>
+            <form onSubmit={handleSearchSubmit} className="relative">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Search for products, categories..."
+                  value={searchTerm}
+                  onChange={handleSearchInput}
+                  className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setSearchResults([]);
+                      setShowResults(false);
+                    }}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+            </form>
+
+            {/* Search Results Dropdown */}
+            {showResults && (
+              <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-96 overflow-y-auto">
+                {searchLoading ? (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-green-600" />
+                    <span className="ml-2 text-gray-600">Searching...</span>
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  <>
+                    {searchResults.map((product) => (
+                      <div
+                        key={product.id}
+                        className="flex items-center p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                        onClick={() => handleProductClick(product.id)}
+                      >
+                        <img
+                          src={product.image_url || "/default-product.png"}
+                          alt={product.name}
+                          className="w-12 h-12 object-cover rounded-lg mr-3"
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900 text-sm">
+                            {product.name}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {product.category_name || "Uncategorized"}
+                          </div>
+                          <div className="text-sm font-semibold text-green-600">
+                            ${parseFloat(product.price)?.toFixed(2) || "N/A"}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {searchTerm && (
+                      <div
+                        className="p-3 text-center text-green-600 hover:bg-gray-50 cursor-pointer border-t border-gray-100"
+                        onClick={() => {
+                          setShowResults(false);
+                          navigate(
+                            `/search?q=${encodeURIComponent(searchTerm)}`
+                          );
+                        }}
+                      >
+                        View all results for "{searchTerm}"
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  searchTerm && (
+                    <div className="p-4 text-center text-gray-500">
+                      No products found for "{searchTerm}"
+                    </div>
+                  )
+                )}
+              </div>
+            )}
           </div>
 
           {/* Right-side controls */}

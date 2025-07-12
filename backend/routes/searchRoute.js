@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   searchProducts as basicSearch,
+  quickSearch,
   saveSearchHistory as basicSaveHistory,
   getUserSearchHistory
 } from '../controllers/searchController.js';
@@ -24,5 +25,6 @@ router.post('/save-search', enhancedSaveHistory);
 router.get('/searchProducts', basicSearch);
 router.post('/saveSearchHistory', basicSaveHistory);
 router.get('/getUserSearchHistory/:userId', getUserSearchHistory);
+router.get('/quickSearch', quickSearch);
 
 export default router;

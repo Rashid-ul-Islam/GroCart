@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/layout/SideBar.jsx';
 import { Search, Filter } from 'lucide-react';
+import {useAuth} from '../context/AuthContext.jsx';
 
 function SearchResultsPage() {
   const [searchParams] = useSearchParams();
