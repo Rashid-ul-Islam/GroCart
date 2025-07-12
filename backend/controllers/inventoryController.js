@@ -2,16 +2,16 @@ import pool from '../db.js';
 
 export const getInventory = async (req, res) => {
   try {
-    const { 
-      warehouse_id = '', 
-      product_id = '', 
+    const {
+      warehouse_id = '',
+      product_id = '',
       low_stock = false,
-      page = 1, 
-      limit = 10 
+      page = 1,
+      limit = 10
     } = req.query;
-    
+
     const offset = (page - 1) * limit;
-    
+
     let query = `
       SELECT 
         i.inventory_id,
@@ -29,42 +29,42 @@ export const getInventory = async (req, res) => {
       JOIN "Product" p ON i.product_id = p.product_id
       JOIN "Warehouse" w ON i.warehouse_id = w.warehouse_id
     `;
-    
+
     let whereConditions = [];
     let queryParams = [];
     let paramCount = 0;
-    
+
     if (warehouse_id) {
       paramCount++;
       whereConditions.push(`i.warehouse_id = $${paramCount}`);
       queryParams.push(warehouse_id);
     }
-    
+
     if (product_id) {
       paramCount++;
       whereConditions.push(`i.product_id = $${paramCount}`);
       queryParams.push(product_id);
     }
-    
+
     if (low_stock === 'true') {
       whereConditions.push(`i.quantity_in_stock <= i.reorder_level`);
     }
-    
+
     if (whereConditions.length > 0) {
       query += ` WHERE ${whereConditions.join(' AND ')}`;
     }
-    
+
     query += ` ORDER BY i.last_restock_date DESC NULLS LAST`;
-    
+
     // Add pagination
     paramCount++;
     query += ` LIMIT $${paramCount}`;
     queryParams.push(limit);
-    
+
     paramCount++;
     query += ` OFFSET $${paramCount}`;
     queryParams.push(offset);
-    
+
     // Count query
     let countQuery = `
       SELECT COUNT(*) as total
@@ -72,19 +72,19 @@ export const getInventory = async (req, res) => {
       JOIN "Product" p ON i.product_id = p.product_id
       JOIN "Warehouse" w ON i.warehouse_id = w.warehouse_id
     `;
-    
+
     if (whereConditions.length > 0) {
       countQuery += ` WHERE ${whereConditions.join(' AND ')}`;
     }
-    
+
     const [inventoryResult, countResult] = await Promise.all([
       pool.query(query, queryParams),
       pool.query(countQuery, queryParams.slice(0, -2)) // Remove limit and offset for count
     ]);
-    
+
     const total = parseInt(countResult.rows[0].total);
     const totalPages = Math.ceil(total / limit);
-    
+
     res.status(200).json({
       success: true,
       inventory: inventoryResult.rows,
@@ -108,20 +108,23 @@ export const getInventoryStats = async (req, res) => {
   try {
     const query = `
       SELECT
-  (SELECT COUNT(*) FROM "Product") AS totalProducts,
-  (SELECT COUNT(*) FROM "Warehouse") AS totalWarehouses,
-  (SELECT COUNT(*) FROM "Inventory" i 
-     WHERE i.quantity_in_stock <= i.reorder_level) AS lowStockProducts,
-  (SELECT COALESCE(SUM(p.price * i.quantity_in_stock), 0)
-     FROM "Inventory" i
-     JOIN "Product" p ON i.product_id = p.product_id) AS totalValue;
-
+        (SELECT COUNT(*) FROM "Product") AS totalProducts,
+        (SELECT COUNT(*) FROM "Warehouse") AS totalWarehouses,
+        (SELECT COUNT(*) FROM "Inventory" i
+         WHERE i.quantity_in_stock <= i.reorder_level) AS lowStockCount,
+        (SELECT COUNT(*) FROM "Inventory") AS totalInventoryCount,
+        (SELECT COALESCE(SUM(p.price * i.quantity_in_stock), 0)
+         FROM "Inventory" i
+         JOIN "Product" p ON i.product_id = p.product_id) AS totalValue;
     `;
+
     const result = await pool.query(query);
+
     res.status(200).json({
       success: true,
       stats: result.rows[0]
     });
+
   } catch (error) {
     console.error('Error fetching inventory stats:', error);
     res.status(500).json({
@@ -131,17 +134,24 @@ export const getInventoryStats = async (req, res) => {
   }
 };
 
+
 export const getProductInventory = async (req, res) => {
   try {
-    const { product_id } = req.params; // This now matches the route
-    
+    const { product_id } = req.params;
+
     const query = `
       SELECT
-        i.*,
+        i.inventory_id,
+        i.product_id,
+        i.warehouse_id,
+        i.quantity_in_stock,
+        i.reorder_level,
+        i.last_restock_date,
         w.name as warehouse_name,
         w.location as warehouse_location,
         p.name as product_name,
-        p.unit_measure
+        p.unit_measure,
+        p.quantity as product_unit_quantity
       FROM "Inventory" i
       JOIN "Warehouse" w ON i.warehouse_id = w.warehouse_id
       JOIN "Product" p ON i.product_id = p.product_id
@@ -151,10 +161,26 @@ export const getProductInventory = async (req, res) => {
 
     const result = await pool.query(query, [product_id]);
 
+    // Add color coding for quantity_in_stock (actual stock levels)
+    const inventory = result.rows.map(row => {
+      let quantityColor = 'green';
+      if (row.quantity_in_stock < 20) {
+        quantityColor = 'red';
+      } else if (row.quantity_in_stock < 100) {
+        quantityColor = 'yellow';
+      }
+
+      return {
+        ...row,
+        quantityColor
+      };
+    });
+
     res.status(200).json({
       success: true,
-      inventory: result.rows
+      inventory
     });
+
   } catch (error) {
     console.error('Error fetching product inventory:', error);
     res.status(500).json({
@@ -162,7 +188,111 @@ export const getProductInventory = async (req, res) => {
       message: 'Failed to fetch product inventory'
     });
   }
-}
+};
+
+export const getInventoryTransferLogs = async (req, res) => {
+  try {
+    const { 
+      page = 1, 
+      limit = 10, 
+      order_id = '', 
+      product_id = '', 
+      warehouse_id = '' 
+    } = req.query;
+    
+    const offset = (page - 1) * limit;
+    
+    let whereConditions = [];
+    let queryParams = [limit, offset];
+    let paramCount = 2;
+    
+    // Add filters if provided
+    if (order_id) {
+      paramCount++;
+      whereConditions.push(`itl.order_id = $${paramCount}`);
+      queryParams.push(order_id);
+    }
+    
+    if (product_id) {
+      paramCount++;
+      whereConditions.push(`itl.product_id = $${paramCount}`);
+      queryParams.push(product_id);
+    }
+    
+    if (warehouse_id) {
+      paramCount++;
+      whereConditions.push(`(itl.source_warehouse_id = $${paramCount} OR itl.target_warehouse_id = $${paramCount})`);
+      queryParams.push(warehouse_id);
+    }
+    
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+    
+    const query = `
+      SELECT
+        itl.transfer_id,
+        itl.order_id,
+        itl.order_item_id,
+        itl.product_id,
+        p.name as product_name,
+        p.unit_measure,
+        itl.source_warehouse_id,
+        sw.name as source_warehouse_name,
+        itl.target_warehouse_id,
+        tw.name as target_warehouse_name,
+        itl.quantity_transferred,
+        itl.source_stock_before,
+        itl.source_stock_after,
+        itl.target_stock_before,
+        itl.target_stock_after,
+        itl.transfer_reason,
+        itl.transfer_date,
+        itl.distance_km,
+        itl.created_at
+      FROM "InventoryTransferLog" itl
+      JOIN "Product" p ON itl.product_id = p.product_id
+      JOIN "Warehouse" sw ON itl.source_warehouse_id = sw.warehouse_id
+      JOIN "Warehouse" tw ON itl.target_warehouse_id = tw.warehouse_id
+      ${whereClause}
+      ORDER BY itl.transfer_date DESC
+      LIMIT $1 OFFSET $2
+    `;
+
+    const countQuery = `
+      SELECT COUNT(*) as total 
+      FROM "InventoryTransferLog" itl
+      JOIN "Product" p ON itl.product_id = p.product_id
+      JOIN "Warehouse" sw ON itl.source_warehouse_id = sw.warehouse_id
+      JOIN "Warehouse" tw ON itl.target_warehouse_id = tw.warehouse_id
+      ${whereClause}
+    `;
+
+    const [logsResult, countResult] = await Promise.all([
+      pool.query(query, queryParams),
+      pool.query(countQuery, queryParams.slice(2)) // Remove limit and offset for count
+    ]);
+
+    const total = parseInt(countResult.rows[0].total);
+    const totalPages = Math.ceil(total / limit);
+
+    res.status(200).json({
+      success: true,
+      logs: logsResult.rows,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalItems: total,
+        itemsPerPage: parseInt(limit),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching inventory transfer logs:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch inventory transfer logs',
+    });
+  }
+};
+
 
 export const getWarehouseInventory = async (req, res) => {
   try {
@@ -263,14 +393,14 @@ export const updateReorderLevel = async (req, res) => {
 export const upsertInventory = async (req, res) => {
   try {
     const { product_id, warehouse_id, quantity_in_stock, reorder_level } = req.body;
-    
+
     if (!product_id || !warehouse_id || quantity_in_stock === undefined) {
       return res.status(400).json({
         success: false,
         message: 'Product ID, warehouse ID, and quantity are required'
       });
     }
-    
+
     const query = `
       INSERT INTO "Inventory" (product_id, warehouse_id, quantity_in_stock, reorder_level, last_restock_date)
       VALUES ($1, $2, $3, $4, NOW())
@@ -281,11 +411,11 @@ export const upsertInventory = async (req, res) => {
         last_restock_date = NOW()
       RETURNING *
     `;
-    
+
     const values = [product_id, warehouse_id, quantity_in_stock, reorder_level || 0];
-    
+
     const result = await pool.query(query, values);
-    
+
     res.status(200).json({
       success: true,
       inventory: result.rows[0],
@@ -368,7 +498,7 @@ export const restockInventory = async (req, res) => {
 export const deleteInventoryItem = async (req, res) => {
   try {
     const { inventory_id } = req.params; // This now matches the route
-    
+
     const query = 'DELETE FROM "Inventory" WHERE inventory_id = $1 RETURNING *';
     const result = await pool.query(query, [inventory_id]);
 

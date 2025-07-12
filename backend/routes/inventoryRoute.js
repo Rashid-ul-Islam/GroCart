@@ -1,6 +1,7 @@
 import  express from 'express';
 import { getInventory, getInventoryStats, getProductInventory, getWarehouseInventory,
-    upsertInventory,updateReorderLevel,restockInventory,deleteInventoryItem, getAllProducts
+    upsertInventory,updateReorderLevel,restockInventory,deleteInventoryItem, getAllProducts,
+    getInventoryTransferLogs
  } from '../controllers/inventoryController.js';
 
 const router = express.Router();
@@ -16,6 +17,8 @@ router.post('/restock/:inventory_id', restockInventory);
 router.delete('/inv/:inventory_id', deleteInventoryItem);
 router.get('/getProducts', getAllProducts);
 router.put('/upInventory', upsertInventory);
+router.get('/transferLog', getInventoryTransferLogs);
+
 
 
 export default router;

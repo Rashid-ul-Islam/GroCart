@@ -63,7 +63,7 @@ const InventoryManagement = () => {
   const [showEditProduct, setShowEditProduct] = useState(false);
   const [editingWarehouse, setEditingWarehouse] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  
+
   // Edit stock modal states
   const [showEditStockModal, setShowEditStockModal] = useState(false);
   const [editStockProduct, setEditStockProduct] = useState(null);
@@ -87,6 +87,20 @@ const InventoryManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [itemsPerPage] = useState(10);
+  // Add these to your existing state declarations
+  const [transferLogs, setTransferLogs] = useState([]);
+  const [transferLogsLoading, setTransferLogsLoading] = useState(false);
+  const [transferLogsPagination, setTransferLogsPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 10,
+  });
+  const [transferLogsFilters, setTransferLogsFilters] = useState({
+    order_id: "",
+    product_id: "",
+    warehouse_id: "",
+  });
 
   // API Functions
   const API_BASE_URL = "http://localhost:3000/api";
@@ -131,6 +145,15 @@ const InventoryManagement = () => {
       setError("Failed to fetch categories");
     }
   };
+  const fetchProductInventory = async (productId) => {
+    try {
+      const data = await apiCall(`/inventory/product/${productId}`);
+      return data.inventory || [];
+    } catch (error) {
+      console.error("Failed to fetch product inventory:", error);
+      return [];
+    }
+  };
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -158,12 +181,14 @@ const InventoryManagement = () => {
     try {
       const data = await apiCall("/inventory/stats");
       console.log("API Response:", data);
-      const statsData = data.stats || data.data || data || {
-        totalProducts: 0,
-        totalWarehouses: 0,
-        lowStockProducts: 0,
-        totalValue: 0,
-      };
+      const statsData = data.stats ||
+        data.data ||
+        data || {
+          totalProducts: 0,
+          totalWarehouses: 0,
+          lowStockProducts: 0,
+          totalValue: 0,
+        };
       console.log("Processed stats:", statsData);
       setStats(statsData);
     } catch (error) {
@@ -189,7 +214,18 @@ const InventoryManagement = () => {
     };
 
     initializeData();
-  }, [currentPage, searchTerm, selectedCategory, priceRange.min, priceRange.max]);
+  }, [
+    currentPage,
+    searchTerm,
+    selectedCategory,
+    priceRange.min,
+    priceRange.max,
+  ]);
+  useEffect(() => {
+    if (activeTab === "inventory") {
+      fetchTransferLogs();
+    }
+  }, [activeTab, transferLogsPagination.currentPage]);
 
   // Search functionality
   const handleSearch = async (e) => {
@@ -329,8 +365,20 @@ const InventoryManagement = () => {
   };
 
   // Product operations
-  const handleViewProduct = (product) => {
-    setSelectedProduct(product);
+  const handleViewProduct = async (product) => {
+    const detailedInventory = await fetchProductInventory(product.product_id);
+
+    // Get the product_unit_quantity from the first inventory item (they should all be the same)
+    const productUnitQuantity =
+      detailedInventory.length > 0
+        ? detailedInventory[0].product_unit_quantity
+        : null;
+
+    setSelectedProduct({
+      ...product,
+      inventory: detailedInventory,
+      product_unit_quantity: productUnitQuantity,
+    });
     setShowEditProduct(true);
   };
 
@@ -404,6 +452,26 @@ const InventoryManagement = () => {
       await fetchInventoryStats();
     } catch (error) {
       setError("Failed to restock product");
+    }
+  };
+
+  const fetchTransferLogs = async (page = 1) => {
+    setTransferLogsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: page,
+        limit: transferLogsPagination.itemsPerPage,
+        ...transferLogsFilters,
+      });
+
+      const data = await apiCall(`/inventory/transferLog?${params}`);
+      setTransferLogs(data.logs || []);
+      setTransferLogsPagination(data.pagination || {});
+    } catch (error) {
+      setError("Failed to fetch transfer logs");
+      console.error("Transfer logs fetch error:", error);
+    } finally {
+      setTransferLogsLoading(false);
     }
   };
 
@@ -526,7 +594,9 @@ const InventoryManagement = () => {
             <div className="flex items-center">
               <Package className="text-blue-500 mr-3" size={24} />
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Products</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Total Products
+                </p>
                 <p className="text-2xl font-bold text-gray-900">
                   {stats?.totalproducts ?? 0}
                 </p>
@@ -547,13 +617,15 @@ const InventoryManagement = () => {
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <AlertTriangle className="text-red-500 mr-3" size={24} />
+            <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Low Stock</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {stats?.lowstockproducts || 0}
+                <p className="text-2xl font-bold text-red-600">
+                  {stats?.lowstockcount || 0}/{stats?.totalinventorycount || 0}
                 </p>
+              </div>
+              <div className="p-3 bg-red-100 rounded-full">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
               </div>
             </div>
           </div>
@@ -684,7 +756,10 @@ const InventoryManagement = () => {
                     <div className="flex-1">
                       <form onSubmit={handleSearch} className="flex gap-2">
                         <div className="relative flex-1">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                          <Search
+                            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                            size={20}
+                          />
                           <input
                             type="text"
                             placeholder="Search products..."
@@ -707,7 +782,11 @@ const InventoryManagement = () => {
                           disabled={isSearching}
                           className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
                         >
-                          {isSearching ? <Loader className="animate-spin" size={16} /> : "Search"}
+                          {isSearching ? (
+                            <Loader className="animate-spin" size={16} />
+                          ) : (
+                            "Search"
+                          )}
                         </button>
                       </form>
                     </div>
@@ -719,7 +798,11 @@ const InventoryManagement = () => {
                     >
                       <Filter size={16} />
                       Filters
-                      {showFilters ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                      {showFilters ? (
+                        <ChevronDown size={16} />
+                      ) : (
+                        <ChevronRight size={16} />
+                      )}
                     </button>
                   </div>
 
@@ -734,12 +817,17 @@ const InventoryManagement = () => {
                           </label>
                           <select
                             value={selectedCategory}
-                            onChange={(e) => setSelectedCategory(e.target.value)}
+                            onChange={(e) =>
+                              setSelectedCategory(e.target.value)
+                            }
                             className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                           >
                             <option value="">All Categories</option>
                             {leafCategories.map((category) => (
-                              <option key={category.category_id} value={category.category_id}>
+                              <option
+                                key={category.category_id}
+                                value={category.category_id}
+                              >
                                 {category.name}
                               </option>
                             ))}
@@ -753,12 +841,17 @@ const InventoryManagement = () => {
                           </label>
                           <select
                             value={selectedWarehouse}
-                            onChange={(e) => setSelectedWarehouse(e.target.value)}
+                            onChange={(e) =>
+                              setSelectedWarehouse(e.target.value)
+                            }
                             className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                           >
                             <option value="">All Warehouses</option>
                             {warehouses.map((warehouse) => (
-                              <option key={warehouse.warehouse_id} value={warehouse.warehouse_id}>
+                              <option
+                                key={warehouse.warehouse_id}
+                                value={warehouse.warehouse_id}
+                              >
                                 {warehouse.name}
                               </option>
                             ))}
@@ -792,14 +885,24 @@ const InventoryManagement = () => {
                               type="number"
                               placeholder="Min"
                               value={priceRange.min}
-                              onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
+                              onChange={(e) =>
+                                setPriceRange({
+                                  ...priceRange,
+                                  min: e.target.value,
+                                })
+                              }
                               className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                             />
                             <input
                               type="number"
                               placeholder="Max"
                               value={priceRange.max}
-                              onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
+                              onChange={(e) =>
+                                setPriceRange({
+                                  ...priceRange,
+                                  max: e.target.value,
+                                })
+                              }
                               className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                             />
                           </div>
@@ -832,14 +935,22 @@ const InventoryManagement = () => {
                           key={product.product_id}
                           className="bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
                         >
-                          <h4 className="font-medium text-gray-900">{product.name}</h4>
-                          <p className="text-sm text-gray-600">${product.price}</p>
+                          <h4 className="font-medium text-gray-900">
+                            {product.name}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            ${product.price}
+                          </p>
                           <p className="text-sm text-gray-600">
                             Stock: {product.quantity} {product.unit_measure}
                           </p>
-                          <p className="text-sm text-gray-600">{product.category_name}</p>
+                          <p className="text-sm text-gray-600">
+                            {product.category_name}
+                          </p>
                           {product.origin && (
-                            <p className="text-sm text-gray-600">Origin: {product.origin}</p>
+                            <p className="text-sm text-gray-600">
+                              Origin: {product.origin}
+                            </p>
                           )}
                         </div>
                       ))}
@@ -873,9 +984,9 @@ const InventoryManagement = () => {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Total Stock
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Warehouse Distribution
-                        </th>
+                        </th> */}
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Status
                         </th>
@@ -894,8 +1005,13 @@ const InventoryManagement = () => {
                         </tr>
                       ) : products.length === 0 ? (
                         <tr>
-                          <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
-                            {searchTerm ? `No products found matching "${searchTerm}"` : "No products found"}
+                          <td
+                            colSpan="7"
+                            className="px-6 py-4 text-center text-gray-500"
+                          >
+                            {searchTerm
+                              ? `No products found matching "${searchTerm}"`
+                              : "No products found"}
                           </td>
                         </tr>
                       ) : (
@@ -906,7 +1022,10 @@ const InventoryManagement = () => {
                           );
 
                           return (
-                            <tr key={product.product_id} className="hover:bg-gray-50">
+                            <tr
+                              key={product.product_id}
+                              className="hover:bg-gray-50"
+                            >
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div>
                                   <div className="text-sm font-medium text-gray-900">
@@ -935,16 +1054,20 @@ const InventoryManagement = () => {
                                   )}
                                 </div>
                               </td>
-                              <td className="px-6 py-4">
+                              {/* <td className="px-6 py-4">
                                 <div className="text-sm">
                                   {product.inventory?.map((inv) => (
-                                    <div key={inv.warehouse_id} className="mb-1">
-                                      {inv.warehouse_name}: {inv.quantity_in_stock}{" "}
+                                    <div
+                                      key={inv.warehouse_id}
+                                      className="mb-1"
+                                    >
+                                      {inv.warehouse_name}:{" "}
+                                      {inv.quantity_in_stock}{" "}
                                       {product.unit_measure}
                                     </div>
                                   ))}
                                 </div>
-                              </td>
+                              </td> */}
                               <td className="px-6 py-4 whitespace-nowrap">
                                 {product.is_available ? (
                                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -1011,8 +1134,9 @@ const InventoryManagement = () => {
                     <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                       <div>
                         <p className="text-sm text-gray-700">
-                          Page <span className="font-medium">{currentPage}</span>{" "}
-                          of <span className="font-medium">{totalPages}</span>
+                          Page{" "}
+                          <span className="font-medium">{currentPage}</span> of{" "}
+                          <span className="font-medium">{totalPages}</span>
                         </p>
                       </div>
                       <div>
@@ -1040,17 +1164,298 @@ const InventoryManagement = () => {
             )}
 
             {/* Inventory Tab */}
+            {/* Replace the empty inventory tab content with this */}
             {activeTab === "inventory" && (
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">
-                  Inventory Overview
-                </h2>
-                {/* Add inventory overview content here */}
-                <div className="text-center py-8">
-                  <BarChart3 className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">
-                    Inventory overview coming soon
-                  </h3>
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    Inventory Transfer Logs
+                  </h2>
+                  <button
+                    onClick={() => fetchTransferLogs(1)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Refresh
+                  </button>
+                </div>
+
+                {/* Filters */}
+                <div className="bg-white p-4 rounded-lg shadow-sm border">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Order ID
+                      </label>
+                      <input
+                        type="text"
+                        value={transferLogsFilters.order_id}
+                        onChange={(e) =>
+                          setTransferLogsFilters({
+                            ...transferLogsFilters,
+                            order_id: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Filter by Order ID"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Warehouse
+                      </label>
+                      <select
+                        value={transferLogsFilters.warehouse_id}
+                        onChange={(e) =>
+                          setTransferLogsFilters({
+                            ...transferLogsFilters,
+                            warehouse_id: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">All Warehouses</option>
+                        {warehouses.map((warehouse) => (
+                          <option
+                            key={warehouse.warehouse_id}
+                            value={warehouse.warehouse_id}
+                          >
+                            {warehouse.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-end">
+                      <button
+                        onClick={() => fetchTransferLogs(1)}
+                        className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 mr-2"
+                      >
+                        Apply Filters
+                      </button>
+                      <button
+                        onClick={() => {
+                          setTransferLogsFilters({
+                            order_id: "",
+                            product_id: "",
+                            warehouse_id: "",
+                          });
+                          fetchTransferLogs(1);
+                        }}
+                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Transfer Logs Table */}
+                <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+                  {transferLogsLoading ? (
+                    <div className="flex items-center justify-center p-8">
+                      <Loader className="w-6 h-6 animate-spin text-blue-600" />
+                      <span className="ml-2 text-gray-600">
+                        Loading transfer logs...
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Transfer ID
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Order ID
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Product
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Transfer Details
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Quantity
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Stock Changes
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Date
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {transferLogs.length === 0 ? (
+                            <tr>
+                              <td
+                                colSpan="7"
+                                className="px-6 py-8 text-center text-gray-500"
+                              >
+                                No transfer logs found
+                              </td>
+                            </tr>
+                          ) : (
+                            transferLogs.map((log) => (
+                              <tr
+                                key={log.transfer_id}
+                                className="hover:bg-gray-50"
+                              >
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                  #{log.transfer_id}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  #{log.order_id}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {log.product_name}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    ID: {log.product_id}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-900">
+                                    <div className="flex items-center">
+                                      <span className="text-red-600 font-medium">
+                                        {log.source_warehouse_name}
+                                      </span>
+                                      <span className="mx-2">→</span>
+                                      <span className="text-green-600 font-medium">
+                                        {log.target_warehouse_name}
+                                      </span>
+                                    </div>
+                                    {log.distance_km && (
+                                      <div className="text-xs text-gray-500 mt-1">
+                                        Distance: {log.distance_km.toFixed(2)}{" "}
+                                        km
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  <span className="font-medium">
+                                    {log.quantity_transferred}
+                                  </span>{" "}
+                                  {log.unit_measure}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                  <div className="space-y-1">
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">
+                                        Source:
+                                      </span>
+                                      <span>
+                                        {log.source_stock_before} →{" "}
+                                        {log.source_stock_after}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">
+                                        Target:
+                                      </span>
+                                      <span>
+                                        {log.target_stock_before} →{" "}
+                                        {log.target_stock_after}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  <div>{formatDate(log.transfer_date)}</div>
+                                  <div className="text-xs text-gray-500">
+                                    {log.transfer_reason}
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* Pagination */}
+                  {transferLogsPagination.totalPages > 1 && (
+                    <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 flex justify-between sm:hidden">
+                          <button
+                            onClick={() =>
+                              fetchTransferLogs(
+                                transferLogsPagination.currentPage - 1
+                              )
+                            }
+                            disabled={transferLogsPagination.currentPage === 1}
+                            className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                          >
+                            Previous
+                          </button>
+                          <button
+                            onClick={() =>
+                              fetchTransferLogs(
+                                transferLogsPagination.currentPage + 1
+                              )
+                            }
+                            disabled={
+                              transferLogsPagination.currentPage ===
+                              transferLogsPagination.totalPages
+                            }
+                            className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                          >
+                            Next
+                          </button>
+                        </div>
+                        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm text-gray-700">
+                              Showing page{" "}
+                              <span className="font-medium">
+                                {transferLogsPagination.currentPage}
+                              </span>{" "}
+                              of{" "}
+                              <span className="font-medium">
+                                {transferLogsPagination.totalPages}
+                              </span>
+                            </p>
+                          </div>
+                          <div>
+                            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                              <button
+                                onClick={() =>
+                                  fetchTransferLogs(
+                                    transferLogsPagination.currentPage - 1
+                                  )
+                                }
+                                disabled={
+                                  transferLogsPagination.currentPage === 1
+                                }
+                                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                              >
+                                Previous
+                              </button>
+                              <button
+                                onClick={() =>
+                                  fetchTransferLogs(
+                                    transferLogsPagination.currentPage + 1
+                                  )
+                                }
+                                disabled={
+                                  transferLogsPagination.currentPage ===
+                                  transferLogsPagination.totalPages
+                                }
+                                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                              >
+                                Next
+                              </button>
+                            </nav>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1126,7 +1531,10 @@ const InventoryManagement = () => {
                       type="text"
                       value={newWarehouse.name}
                       onChange={(e) =>
-                        setNewWarehouse({ ...newWarehouse, name: e.target.value })
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          name: e.target.value,
+                        })
                       }
                       className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       required
@@ -1140,7 +1548,10 @@ const InventoryManagement = () => {
                       type="text"
                       value={newWarehouse.location}
                       onChange={(e) =>
-                        setNewWarehouse({ ...newWarehouse, location: e.target.value })
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          location: e.target.value,
+                        })
                       }
                       className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       required
@@ -1154,7 +1565,10 @@ const InventoryManagement = () => {
                       type="text"
                       value={newWarehouse.contact_info}
                       onChange={(e) =>
-                        setNewWarehouse({ ...newWarehouse, contact_info: e.target.value })
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          contact_info: e.target.value,
+                        })
                       }
                       className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
@@ -1169,7 +1583,10 @@ const InventoryManagement = () => {
                         step="any"
                         value={newWarehouse.latitude}
                         onChange={(e) =>
-                          setNewWarehouse({ ...newWarehouse, latitude: e.target.value })
+                          setNewWarehouse({
+                            ...newWarehouse,
+                            latitude: e.target.value,
+                          })
                         }
                         className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
@@ -1183,7 +1600,10 @@ const InventoryManagement = () => {
                         step="any"
                         value={newWarehouse.longitude}
                         onChange={(e) =>
-                          setNewWarehouse({ ...newWarehouse, longitude: e.target.value })
+                          setNewWarehouse({
+                            ...newWarehouse,
+                            longitude: e.target.value,
+                          })
                         }
                         className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
@@ -1227,7 +1647,10 @@ const InventoryManagement = () => {
                       type="text"
                       value={editingWarehouse.name}
                       onChange={(e) =>
-                        setEditingWarehouse({ ...editingWarehouse, name: e.target.value })
+                        setEditingWarehouse({
+                          ...editingWarehouse,
+                          name: e.target.value,
+                        })
                       }
                       className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       required
@@ -1241,7 +1664,10 @@ const InventoryManagement = () => {
                       type="text"
                       value={editingWarehouse.location}
                       onChange={(e) =>
-                        setEditingWarehouse({ ...editingWarehouse, location: e.target.value })
+                        setEditingWarehouse({
+                          ...editingWarehouse,
+                          location: e.target.value,
+                        })
                       }
                       className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       required
@@ -1255,7 +1681,10 @@ const InventoryManagement = () => {
                       type="text"
                       value={editingWarehouse.contact_info || ""}
                       onChange={(e) =>
-                        setEditingWarehouse({ ...editingWarehouse, contact_info: e.target.value })
+                        setEditingWarehouse({
+                          ...editingWarehouse,
+                          contact_info: e.target.value,
+                        })
                       }
                       className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
@@ -1270,7 +1699,10 @@ const InventoryManagement = () => {
                         step="any"
                         value={editingWarehouse.latitude || ""}
                         onChange={(e) =>
-                          setEditingWarehouse({ ...editingWarehouse, latitude: e.target.value })
+                          setEditingWarehouse({
+                            ...editingWarehouse,
+                            latitude: e.target.value,
+                          })
                         }
                         className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
@@ -1284,7 +1716,10 @@ const InventoryManagement = () => {
                         step="any"
                         value={editingWarehouse.longitude || ""}
                         onChange={(e) =>
-                          setEditingWarehouse({ ...editingWarehouse, longitude: e.target.value })
+                          setEditingWarehouse({
+                            ...editingWarehouse,
+                            longitude: e.target.value,
+                          })
                         }
                         className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
@@ -1370,7 +1805,10 @@ const InventoryManagement = () => {
                               defaultValue={inv.reorder_level}
                               className="flex-1 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                               onBlur={(e) => {
-                                if (e.target.value !== inv.reorder_level.toString()) {
+                                if (
+                                  e.target.value !==
+                                  inv.reorder_level.toString()
+                                ) {
                                   handleUpdateReorderLevel(
                                     inv.inventory_id,
                                     parseInt(e.target.value)
@@ -1458,7 +1896,8 @@ const InventoryManagement = () => {
                         Price: {formatCurrency(selectedProduct.price)}
                       </p>
                       <p className="text-sm text-gray-600">
-                        Unit: {selectedProduct.unit_measure}
+                        quantity: {selectedProduct.product_unit_quantity}{" "}
+                        {selectedProduct.unit_measure}
                       </p>
                       {selectedProduct.origin && (
                         <p className="text-sm text-gray-600">
@@ -1487,31 +1926,31 @@ const InventoryManagement = () => {
                     <div className="space-y-3">
                       {selectedProduct.inventory?.map((inv) => (
                         <div
-                          key={inv.inventory_id}
-                          className="border border-gray-200 rounded p-3"
+                          key={inv.warehouse_id}
+                          className="flex justify-between items-center p-2 border-b"
                         >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-medium text-gray-900">
-                                {inv.warehouse_name}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                Reorder Level: {inv.reorder_level}{" "}
-                                {selectedProduct.unit_measure}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-lg font-semibold text-gray-900">
-                                {inv.quantity_in_stock}{" "}
-                                {selectedProduct.unit_measure}
-                                {inv.quantity_in_stock <= inv.reorder_level && (
-                                  <span className="ml-2 text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
-                                    Low Stock
-                                  </span>
-                                )}
-                              </p>
+                          <span className="font-medium">
+                            {inv.warehouse_name}:
+                          </span>
+                          <div className="text-right">
+                            <span
+                              style={{
+                                color: inv.quantityColor,
+                                fontWeight: "bold",
+                              }}
+                            >
+                              {inv.quantity_in_stock} units
+                            </span>
+                            <div className="text-sm text-gray-600">
+                              ({inv.product_unit_quantity}{" "}
+                              {selectedProduct.unit_measure} each)
                             </div>
                           </div>
+                          {inv.quantity_in_stock <= inv.reorder_level && (
+                            <span className="text-red-500 text-sm ml-2">
+                              ⚠️ Low Stock
+                            </span>
+                          )}
                         </div>
                       ))}
                     </div>

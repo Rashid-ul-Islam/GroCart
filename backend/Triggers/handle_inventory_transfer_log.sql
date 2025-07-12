@@ -9,6 +9,11 @@ DECLARE
     available_quantity INT;
     transfer_quantity INT;
     source_warehouse_record RECORD;
+    source_stock_before INT;
+    source_stock_after INT;
+    target_stock_before INT;
+    target_stock_after INT;
+    calculated_distance DECIMAL(10,2);
 BEGIN
     -- Get the target warehouse for this order
     SELECT w.warehouse_id
@@ -45,6 +50,9 @@ BEGIN
     IF current_stock < needed_quantity THEN
         shortage_quantity := needed_quantity - current_stock;
         
+        -- Store initial target stock for logging
+        target_stock_before := current_stock;
+        
         -- Find nearest warehouses with the required product, ordered by distance
         FOR source_warehouse_record IN
             SELECT 
@@ -66,9 +74,13 @@ BEGIN
                 AND i.quantity_in_stock > 0
             ORDER BY distance ASC
         LOOP
+            -- Store source stock before transfer for logging
+            source_stock_before := source_warehouse_record.quantity_in_stock;
+            
             -- Calculate how much we can transfer from this warehouse
             available_quantity := source_warehouse_record.quantity_in_stock;
             transfer_quantity := LEAST(available_quantity, shortage_quantity);
+            calculated_distance := source_warehouse_record.distance * 111.32; -- Convert to approximate km
             
             -- Update source warehouse inventory (decrease)
             UPDATE "Inventory"
@@ -76,11 +88,49 @@ BEGIN
             WHERE product_id = NEW.product_id 
                 AND warehouse_id = source_warehouse_record.warehouse_id;
             
+            -- Calculate source stock after transfer
+            source_stock_after := source_stock_before - transfer_quantity;
+            
             -- Update target warehouse inventory (increase)
             UPDATE "Inventory"
             SET quantity_in_stock = quantity_in_stock + transfer_quantity
             WHERE product_id = NEW.product_id 
                 AND warehouse_id = target_warehouse_id;
+            
+            -- Calculate target stock after transfer
+            target_stock_after := target_stock_before + transfer_quantity;
+            
+            -- Log the transfer
+            INSERT INTO "InventoryTransferLog" (
+                order_id,
+                order_item_id,
+                product_id,
+                source_warehouse_id,
+                target_warehouse_id,
+                quantity_transferred,
+                source_stock_before,
+                source_stock_after,
+                target_stock_before,
+                target_stock_after,
+                transfer_reason,
+                distance_km
+            ) VALUES (
+                NEW.order_id,
+                NEW.order_item_id,
+                NEW.product_id,
+                source_warehouse_record.warehouse_id,
+                target_warehouse_id,
+                transfer_quantity,
+                source_stock_before,
+                source_stock_after,
+                target_stock_before,
+                target_stock_after,
+                'ORDER_FULFILLMENT',
+                calculated_distance
+            );
+            
+            -- Update target stock before for next iteration
+            target_stock_before := target_stock_after;
             
             -- Reduce shortage quantity
             shortage_quantity := shortage_quantity - transfer_quantity;
