@@ -163,12 +163,19 @@ const InventoryManagement = () => {
         limit: itemsPerPage,
         ...(searchTerm && { search: searchTerm }),
         ...(selectedCategory && { category_id: selectedCategory }),
+        ...(selectedWarehouse && { warehouse_id: selectedWarehouse }),
+        ...(stockFilter && { stock_filter: stockFilter }),
         ...(priceRange.min && { min_price: priceRange.min }),
         ...(priceRange.max && { max_price: priceRange.max }),
       });
       const data = await apiCall(`/inventory/getProducts?${params}`);
       setProducts(data.products || []);
       setTotalPages(data.totalPages || 1);
+
+      // If we have a search term, also update search results
+      if (searchTerm) {
+        setSearchResults(data.products || []);
+      }
     } catch (error) {
       setError("Failed to fetch products");
       console.error("Fetch products error:", error);
@@ -218,6 +225,8 @@ const InventoryManagement = () => {
     currentPage,
     searchTerm,
     selectedCategory,
+    selectedWarehouse,
+    stockFilter,
     priceRange.min,
     priceRange.max,
   ]);
@@ -232,15 +241,28 @@ const InventoryManagement = () => {
     e.preventDefault();
     if (!searchTerm.trim()) {
       setSearchResults([]);
+      // Reset to show all products when search is cleared
+      fetchProducts();
       return;
     }
 
     setIsSearching(true);
     try {
-      const data = await apiCall(
-        `/adminDashboard/search?search=${encodeURIComponent(searchTerm)}`
-      );
+      const params = new URLSearchParams({
+        page: currentPage,
+        limit: itemsPerPage,
+        search: searchTerm,
+        ...(selectedCategory && { category_id: selectedCategory }),
+        ...(selectedWarehouse && { warehouse_id: selectedWarehouse }),
+        ...(stockFilter && { stock_filter: stockFilter }),
+        ...(priceRange.min && { min_price: priceRange.min }),
+        ...(priceRange.max && { max_price: priceRange.max }),
+      });
+
+      const data = await apiCall(`/inventory/getProducts?${params}`);
+      setProducts(data.products || []);
       setSearchResults(data.products || []);
+      setTotalPages(data.totalPages || 1);
     } catch (error) {
       setError("Search failed");
       setSearchResults([]);
@@ -271,6 +293,9 @@ const InventoryManagement = () => {
     setSearchTerm("");
     setSearchResults([]);
     setIsSearching(false);
+    // Reset to page 1 and fetch all products
+    setCurrentPage(1);
+    fetchProducts();
   };
 
   // Category selection functions
@@ -366,6 +391,24 @@ const InventoryManagement = () => {
 
   // Product operations
   const handleViewProduct = async (product) => {
+    const detailedInventory = await fetchProductInventory(product.product_id);
+
+    // Get the product_unit_quantity from the first inventory item (they should all be the same)
+    const productUnitQuantity =
+      detailedInventory.length > 0
+        ? detailedInventory[0].product_unit_quantity
+        : null;
+
+    setSelectedProduct({
+      ...product,
+      inventory: detailedInventory,
+      product_unit_quantity: productUnitQuantity,
+    });
+    setShowEditProduct(true);
+  };
+
+  // Edit product function with the same functionality as view
+  const handleEditProduct = async (product) => {
     const detailedInventory = await fetchProductInventory(product.product_id);
 
     // Get the product_unit_quantity from the first inventory item (they should all be the same)
@@ -765,7 +808,7 @@ const InventoryManagement = () => {
                             placeholder="Search products..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full pl-10 pr-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
                           />
                           {searchTerm && (
                             <button
@@ -794,7 +837,7 @@ const InventoryManagement = () => {
                     {/* Filter Toggle */}
                     <button
                       onClick={() => setShowFilters(!showFilters)}
-                      className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+                      className="px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-2"
                     >
                       <Filter size={16} />
                       Filters
@@ -820,7 +863,7 @@ const InventoryManagement = () => {
                             onChange={(e) =>
                               setSelectedCategory(e.target.value)
                             }
-                            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                           >
                             <option value="">All Categories</option>
                             {leafCategories.map((category) => (
@@ -844,7 +887,7 @@ const InventoryManagement = () => {
                             onChange={(e) =>
                               setSelectedWarehouse(e.target.value)
                             }
-                            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                           >
                             <option value="">All Warehouses</option>
                             {warehouses.map((warehouse) => (
@@ -866,7 +909,7 @@ const InventoryManagement = () => {
                           <select
                             value={stockFilter}
                             onChange={(e) => setStockFilter(e.target.value)}
-                            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                           >
                             <option value="">All Levels</option>
                             <option value="low">Low Stock</option>
@@ -891,7 +934,7 @@ const InventoryManagement = () => {
                                   min: e.target.value,
                                 })
                               }
-                              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                              className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
                             />
                             <input
                               type="number"
@@ -903,7 +946,7 @@ const InventoryManagement = () => {
                                   max: e.target.value,
                                 })
                               }
-                              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                              className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
                             />
                           </div>
                         </div>
@@ -923,51 +966,7 @@ const InventoryManagement = () => {
                   )}
                 </div>
 
-                {/* Search Results */}
-                {searchTerm && searchResults.length > 0 && (
-                  <div className="mb-6">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">
-                      Search Results for "{searchTerm}"
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {searchResults.map((product) => (
-                        <div
-                          key={product.product_id}
-                          className="bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
-                        >
-                          <h4 className="font-medium text-gray-900">
-                            {product.name}
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            ${product.price}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            Stock: {product.quantity} {product.unit_measure}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            {product.category_name}
-                          </p>
-                          {product.origin && (
-                            <p className="text-sm text-gray-600">
-                              Origin: {product.origin}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {searchTerm && searchResults.length === 0 && !isSearching && (
-                  <div className="text-center py-8">
-                    <Package className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">
-                      No products found matching "{searchTerm}"
-                    </h3>
-                  </div>
-                )}
-
-                {/* Products Table */}
+                {/* Main Products Table */}
                 <div className="overflow-x-auto">
                   <table className="min-w-full bg-white border border-gray-200">
                     <thead className="bg-gray-50">
@@ -998,7 +997,7 @@ const InventoryManagement = () => {
                     <tbody className="bg-white divide-y divide-gray-200">
                       {loading ? (
                         <tr>
-                          <td colSpan="7" className="px-6 py-4 text-center">
+                          <td colSpan="6" className="px-6 py-4 text-center">
                             <Loader className="animate-spin mx-auto" />
                             Loading products...
                           </td>
@@ -1006,7 +1005,7 @@ const InventoryManagement = () => {
                       ) : products.length === 0 ? (
                         <tr>
                           <td
-                            colSpan="7"
+                            colSpan="6"
                             className="px-6 py-4 text-center text-gray-500"
                           >
                             {searchTerm
@@ -1088,20 +1087,20 @@ const InventoryManagement = () => {
                                   >
                                     <Eye size={16} />
                                   </button>
+                                  {/* <button
+                                    onClick={() => handleEditProduct(product)}
+                                    className="text-green-600 hover:text-green-900"
+                                    title="Edit Product"
+                                  >
+                                    <Edit3 size={16} />
+                                  </button> */}
                                   <button
                                     onClick={() => handleEditStock(product)}
                                     className="text-blue-600 hover:text-blue-900"
                                     title="Edit Stock"
                                   >
-                                    <Edit3 size={16} />
-                                  </button>
-                                  {/* <button
-                                    onClick={() => handleEditReorderLevels(product)}
-                                    className="text-green-600 hover:text-green-900"
-                                    title="Manage Stock"
-                                  >
                                     <Package size={16} />
-                                  </button> */}
+                                  </button>
                                 </div>
                               </td>
                             </tr>
@@ -1196,7 +1195,7 @@ const InventoryManagement = () => {
                             order_id: e.target.value,
                           })
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
                         placeholder="Filter by Order ID"
                       />
                     </div>
@@ -1212,7 +1211,7 @@ const InventoryManagement = () => {
                             warehouse_id: e.target.value,
                           })
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">All Warehouses</option>
                         {warehouses.map((warehouse) => (
@@ -1476,7 +1475,7 @@ const InventoryManagement = () => {
                       <div key={wh.warehouse_id}>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           {wh.name}:
-                        </label>
+                        </label>{" "}
                         <input
                           type="number"
                           min="0"
@@ -1488,7 +1487,7 @@ const InventoryManagement = () => {
                             })
                           }
                           placeholder="Leave blank to skip"
-                          className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
                         />
                       </div>
                     ))}
@@ -1536,7 +1535,7 @@ const InventoryManagement = () => {
                           name: e.target.value,
                         })
                       }
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       required
                     />
                   </div>
@@ -1553,7 +1552,7 @@ const InventoryManagement = () => {
                           location: e.target.value,
                         })
                       }
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       required
                     />
                   </div>
@@ -1570,7 +1569,7 @@ const InventoryManagement = () => {
                           contact_info: e.target.value,
                         })
                       }
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -1588,7 +1587,7 @@ const InventoryManagement = () => {
                             latitude: e.target.value,
                           })
                         }
-                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                     <div>
@@ -1605,7 +1604,7 @@ const InventoryManagement = () => {
                             longitude: e.target.value,
                           })
                         }
-                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>
@@ -1652,7 +1651,7 @@ const InventoryManagement = () => {
                           name: e.target.value,
                         })
                       }
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       required
                     />
                   </div>
@@ -1669,7 +1668,7 @@ const InventoryManagement = () => {
                           location: e.target.value,
                         })
                       }
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       required
                     />
                   </div>
@@ -1686,7 +1685,7 @@ const InventoryManagement = () => {
                           contact_info: e.target.value,
                         })
                       }
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -1704,7 +1703,7 @@ const InventoryManagement = () => {
                             latitude: e.target.value,
                           })
                         }
-                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                     <div>
@@ -1721,7 +1720,7 @@ const InventoryManagement = () => {
                             longitude: e.target.value,
                           })
                         }
-                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>
