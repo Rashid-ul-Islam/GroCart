@@ -62,7 +62,7 @@ export const StatsOverview = () => {
         `http://localhost:3000/api/delivery/deliveryBoyStats/${user.user_id}`,
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
           }
         }
       );
@@ -76,7 +76,7 @@ export const StatsOverview = () => {
 
       if (data.success && data.data) {
         const apiStats = data.data;
-        
+        console.log('Parsed API stats:', apiStats);
         // Update stats with real data
         setStats([
           {

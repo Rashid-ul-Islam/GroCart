@@ -83,43 +83,7 @@ export const getAllDeliveryBoys = async (req, res) => {
 };
 
 // Get delivery boys statistics
-export const getDeliveryBoyStats = async (req, res) => {
-  try {
-    const query = `
-      SELECT 
-        COUNT(CASE WHEN availability_status = 'available' THEN 1 END) as available_count,
-        COUNT(CASE WHEN availability_status = 'busy' THEN 1 END) as busy_count,
-        COUNT(CASE WHEN availability_status = 'offline' THEN 1 END) as offline_count,
-        ROUND(AVG(
-          COALESCE((
-            SELECT AVG(dp.customer_rating)
-            FROM "DeliveryPerformance" dp
-            WHERE dp.delivery_boy_id = db.user_id
-          ), 0)
-        ), 1) as avg_rating
-      FROM "DeliveryBoy" db;
-    `;
 
-    const result = await pool.query(query);
-    
-    res.json({
-      success: true,
-      data: {
-        availableCount: parseInt(result.rows[0].available_count),
-        busyCount: parseInt(result.rows[0].busy_count),
-        offlineCount: parseInt(result.rows[0].offline_count),
-        avgRating: parseFloat(result.rows[0].avg_rating)
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching delivery boy stats:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching delivery boy statistics',
-      error: error.message
-    });
-  }
-};
 
 // Get specific delivery boy details
 export const getDeliveryBoyById = async (req, res) => {

@@ -411,92 +411,44 @@ export const getDeliveryBoyProfile = async (req, res) => {
 
 // Get delivery boy statistics
 export const getDeliveryBoyStats = async (req, res) => {
-  const client = await pool.connect();
-
   try {
-    const { delivery_boy_id } = req.params;
-
-    // Get total deliveries
-    const totalDeliveriesQuery = `
-      SELECT COUNT(*) as total_deliveries
+    const { user_id } = req.params; // Get delivery boy ID from params
+    
+    const query = `
+      SELECT
+        COUNT(d.delivery_id) AS total_deliveries,
+        ROUND(100.0 * SUM(CASE WHEN d.actual_arrival <= d.estimated_arrival THEN 1 ELSE 0 END) / NULLIF(COUNT(d.delivery_id), 0), 1) AS on_time_rate,
+        SUM(CASE WHEN d.actual_arrival::date = CURRENT_DATE THEN 1 ELSE 0 END) AS completed_today,
+        ROUND(AVG(dp.customer_rating), 1) AS customer_rating
       FROM "Delivery" d
+      LEFT JOIN "DeliveryPerformance" dp ON d.delivery_id = dp.delivery_id
       WHERE d.delivery_boy_id = $1 
         AND d.actual_arrival IS NOT NULL;
     `;
 
-    // Get on-time delivery rate
-    const onTimeRateQuery = `
-      SELECT 
-        COUNT(*) as total_completed,
-        SUM(CASE WHEN dp.delivered_on_time = true THEN 1 ELSE 0 END) as on_time_count
-      FROM "DeliveryPerformance" dp
-      WHERE dp.delivery_boy_id = $1;
-    `;
+    const result = await pool.query(query, [user_id]);
 
-    // Get completed today
-    const completedTodayQuery = `
-      SELECT COUNT(*) as completed_today
-      FROM "Delivery" d
-      WHERE d.delivery_boy_id = $1 
-        AND d.actual_arrival IS NOT NULL
-        AND DATE(d.actual_arrival) = CURRENT_DATE;
-    `;
-
-    // Get average customer rating
-    const customerRatingQuery = `
-      SELECT 
-        AVG(dp.customer_rating) as average_rating,
-        COUNT(dp.customer_rating) as total_ratings
-      FROM "DeliveryPerformance" dp
-      WHERE dp.delivery_boy_id = $1 
-        AND dp.customer_rating IS NOT NULL;
-    `;
-
-    // Execute all queries
-    const [totalResult, onTimeResult, todayResult, ratingResult] = await Promise.all([
-      client.query(totalDeliveriesQuery, [delivery_boy_id]),
-      client.query(onTimeRateQuery, [delivery_boy_id]),
-      client.query(completedTodayQuery, [delivery_boy_id]),
-      client.query(customerRatingQuery, [delivery_boy_id])
-    ]);
-
-    const totalDeliveries = parseInt(totalResult.rows[0].total_deliveries) || 0;
-    const onTimeData = onTimeResult.rows[0];
-    const completedToday = parseInt(todayResult.rows[0].completed_today) || 0;
-    const ratingData = ratingResult.rows[0];
-
-    // Calculate on-time rate percentage
-    const onTimeRate = onTimeData.total_completed > 0
-      ? ((parseInt(onTimeData.on_time_count) / parseInt(onTimeData.total_completed)) * 100).toFixed(1)
-      : 0;
-
-    // Format average rating
-    const averageRating = ratingData.average_rating
-      ? parseFloat(ratingData.average_rating).toFixed(1)
-      : 0;
-
+    const stats = result.rows[0];
+    console.log('Parsed stats:', stats);
     res.status(200).json({
       success: true,
       data: {
-        totalDeliveries,
-        onTimeRate: parseFloat(onTimeRate),
-        completedToday,
-        customerRating: parseFloat(averageRating),
-        totalRatings: parseInt(ratingData.total_ratings) || 0
+        totalDeliveries: parseInt(stats.total_deliveries) || 0,
+        onTimeRate: parseFloat(stats.on_time_rate) || 0.0,
+        completedToday: parseInt(stats.completed_today) || 0,
+        customerRating: parseFloat(stats.customer_rating) || 0.0,
       }
     });
-
   } catch (error) {
-    console.error('Error fetching delivery boy stats:', error);
+    console.error('Error fetching delivery stats:', error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching delivery statistics',
+      message: 'Failed to fetch delivery statistics',
       error: error.message
     });
-  } finally {
-    client.release();
   }
 };
+
 
 // Get detailed delivery performance metrics
 export const getDeliveryPerformanceMetrics = async (req, res) => {

@@ -1,7 +1,6 @@
 import express from "express";
 import {
     getAllDeliveryBoys,
-    getDeliveryBoyStats,
     getDeliveryBoyById,
     updateDeliveryBoyStatus,
     assignDeliveryBoyRole,
@@ -13,7 +12,6 @@ const router = express.Router();
 
 // Delivery
 router.get("/allDeliveryBoys", getAllDeliveryBoys);
-router.get("/deliveryBoyStats", getDeliveryBoyStats);
 router.get("/deliveryBoy/:id", getDeliveryBoyById);
 router.put("/updateDeliveryBoyStatus/:id", updateDeliveryBoyStatus);
 router.post("/assignDeliveryBoyRole", assignDeliveryBoyRole);

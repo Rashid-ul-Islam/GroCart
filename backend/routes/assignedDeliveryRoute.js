@@ -41,7 +41,7 @@ router.post("/rateCustomer/:delivery_id", rateCustomer);
 router.put("/markDeliveryCompleted/:deliveryId", markDeliveryCompleted);
 router.post("/reportDeliveryIssue/:deliveryId", reportDeliveryIssue);
 router.get("/deliveryBoyProfile/:deliveryBoyId", getDeliveryBoyProfile);
-router.get("/deliveryBoyStats/:deliveryBoyId", getDeliveryBoyStats);
+router.get("/deliveryBoyStats/:user_id", getDeliveryBoyStats);
 router.get("/deliveryPerformanceMetrics/:deliveryBoyId", getDeliveryPerformanceMetrics);
 router.get("/deliveryReviews/:deliveryBoyId", getDeliveryReviews);
 router.get("/deliveryBoyEarnings/:deliveryBoyId", getDeliveryBoyEarnings);

@@ -245,9 +245,8 @@ export const rateCustomer = async (req, res) => {
       JOIN "Order" o ON d.order_id = o.order_id
       WHERE d.delivery_id = $1 AND d.delivery_boy_id = $2
     `;
-
         const deliveryResult = await client.query(deliveryQuery, [delivery_id, delivery_boy_id]);
-
+        console.log('Delivery result:', deliveryResult.rows);
         if (deliveryResult.rows.length === 0) {
             await client.query('ROLLBACK');
             return res.status(404).json({
