@@ -8,7 +8,8 @@ import {
     searchProducts,
     deleteProduct,
     getProductById,
-    updateProduct
+    updateProduct,
+    getProductImages
 } from "../controllers/adminPanelController.js";
 
 const router = express.Router();
@@ -20,6 +21,7 @@ router.get("/getDashboardStats", getDashboardStats);
 router.get('/products', getProducts);
 router.get('/products/:id', getProductById);
 router.put('/products/:id', updateProduct);
+router.get('/products/:id/images', getProductImages);
 router.get('/categories', getCategories);
 router.get('/search', searchProducts);
 router.delete('/products/:id', deleteProduct);

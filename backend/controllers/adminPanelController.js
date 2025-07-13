@@ -305,66 +305,102 @@ export const getProductById = async (req, res) => {
 };
 
 export const updateProduct = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const updateData = req.body;
-
-        // Build dynamic query based on provided fields
-        const updateFields = [];
-        const values = [];
-        let valueIndex = 1;
-
-        // Define allowed fields for update
-        const allowedFields = [
-            'name', 'category_id', 'price', 'quantity', 'unit_measure',
-            'origin', 'description', 'is_refundable', 'is_available'
-        ];
-
-        // Only include fields that are provided in the request
-        Object.keys(updateData).forEach(field => {
-            if (allowedFields.includes(field) && updateData[field] !== undefined && updateData[field] !== '') {
-                updateFields.push(`"${field}" = $${valueIndex}`);
-                values.push(updateData[field]);
-                valueIndex++;
-            }
-        });
-
-        if (updateFields.length === 0) {
-            return res.status(400).json({ message: "No valid fields provided for update" });
-        }
-
-        // Add updated_at field
-        updateFields.push(`"updated_at" = NOW()`);
-
-        // Add product ID as the last parameter
-        values.push(id);
-
-        const query = `
-            UPDATE "Product" 
-            SET ${updateFields.join(', ')}
-            WHERE product_id = $${valueIndex}
-            RETURNING *
-        `;
-
-        console.log("Update query:", query);
-        console.log("Values:", values);
-
-        const result = await pool.query(query, values);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: "Product not found" });
-        }
-
-        res.status(200).json({
-            message: "Product updated successfully",
-            product: result.rows[0]
-        });
-
-    } catch (error) {
-        console.error("Error updating product:", error);
-        res.status(500).json({
-            message: "Failed to update product",
-            error: error.message
-        });
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    const { id } = req.params;
+    const { images, ...updateData } = req.body;
+    
+    // Update product data (existing logic)
+    const updateFields = [];
+    const values = [];
+    let valueIndex = 1;
+    
+    const allowedFields = [
+      'name', 'category_id', 'price', 'quantity', 'unit_measure',
+      'origin', 'description', 'is_refundable'
+    ];
+    
+    Object.keys(updateData).forEach(field => {
+      if (allowedFields.includes(field) && updateData[field] !== undefined && updateData[field] !== '') {
+        updateFields.push(`"${field}" = $${valueIndex}`);
+        values.push(updateData[field]);
+        valueIndex++;
+      }
+    });
+    
+    if (updateFields.length > 0) {
+      updateFields.push(`"updated_at" = NOW()`);
+      values.push(id);
+      
+      const query = `
+        UPDATE "Product" 
+        SET ${updateFields.join(', ')}
+        WHERE product_id = $${valueIndex}
+        RETURNING *
+      `;
+      
+      await client.query(query, values);
     }
+    
+    // Handle images if provided
+    if (images && Array.isArray(images)) {
+      // Delete existing images
+      await client.query('DELETE FROM "ProductImage" WHERE product_id = $1', [id]);
+      
+      // Insert new images
+      for (let i = 0; i < images.length; i++) {
+        const image = images[i];
+        await client.query(
+          `INSERT INTO "ProductImage" (product_id, image_url, is_primary, display_order)
+           VALUES ($1, $2, $3, $4)`,
+          [id, image.image_url, image.is_primary || false, i + 1]
+        );
+      }
+    }
+    
+    await client.query('COMMIT');
+    
+    res.status(200).json({
+      message: "Product updated successfully"
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error("Error updating product:", error);
+    res.status(500).json({
+      message: "Failed to update product",
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+};
+
+export const getProductImages = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const query = `
+      SELECT image_id, image_url, is_primary, display_order, created_at
+      FROM "ProductImage"
+      WHERE product_id = $1
+      ORDER BY display_order ASC, created_at ASC
+    `;
+    
+    const result = await pool.query(query, [id]);
+    
+    res.status(200).json({
+      success: true,
+      images: result.rows
+    });
+  } catch (error) {
+    console.error("Error fetching product images:", error);
+    res.status(500).json({
+      message: "Failed to fetch product images",
+      error: error.message
+    });
+  }
 };

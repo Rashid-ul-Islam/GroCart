@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { 
-  Package, 
-  Save, 
-  X, 
-  ArrowLeft, 
-  AlertCircle, 
+import {
+  Package,
+  Save,
+  X,
+  ArrowLeft,
+  AlertCircle,
   Edit3,
   CheckCircle,
   Info,
@@ -16,14 +16,15 @@ import {
   Tag,
   Shield,
   Eye,
-  EyeOff
+  EyeOff,
 } from "lucide-react";
 import { Button } from "../ui/button.jsx";
 
 export default function ProductEdit() {
   const { productId } = useParams();
   const navigate = useNavigate();
-
+  const [images, setImages] = useState([]);
+  const [newImageUrl, setNewImageUrl] = useState("");
   const [product, setProduct] = useState(null);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +42,6 @@ export default function ProductEdit() {
     origin: "",
     description: "",
     is_refundable: false,
-    is_available: true,
   });
 
   // Validation errors
@@ -72,11 +72,15 @@ export default function ProductEdit() {
           origin: productData.origin || "",
           description: productData.description || "",
           is_refundable: productData.is_refundable || false,
-          is_available:
-            productData.is_available !== undefined
-              ? productData.is_available
-              : true,
         });
+        // Fetch existing product images
+        const imageResponse = await fetch(
+          `http://localhost:3000/api/adminDashboard/products/${productId}/images`
+        );
+        if (imageResponse.ok) {
+          const imageData = await imageResponse.json();
+          setImages(imageData.images || []);
+        }
       } else {
         throw new Error("Failed to fetch product details");
       }
@@ -86,6 +90,35 @@ export default function ProductEdit() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAddImage = () => {
+    if (newImageUrl.trim()) {
+      const newImage = {
+        image_url: newImageUrl.trim(),
+        is_primary: images.length === 0,
+        display_order: images.length + 1,
+        isNew: true,
+      };
+      setImages([...images, newImage]);
+      setNewImageUrl("");
+    }
+  };
+
+  const handleRemoveImage = (index) => {
+    const updatedImages = images.filter((_, i) => i !== index);
+    if (updatedImages.length > 0 && images[index].is_primary) {
+      updatedImages[0].is_primary = true;
+    }
+    setImages(updatedImages);
+  };
+
+  const handleSetPrimary = (index) => {
+    const updatedImages = images.map((img, i) => ({
+      ...img,
+      is_primary: i === index,
+    }));
+    setImages(updatedImages);
   };
 
   const fetchCategories = async () => {
@@ -156,7 +189,6 @@ export default function ProductEdit() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!validateForm()) {
       return;
     }
@@ -165,17 +197,16 @@ export default function ProductEdit() {
     setError(null);
 
     try {
-      // Only send fields that have values (optional updates)
       const updateData = {};
-
       Object.keys(formData).forEach((key) => {
         const value = formData[key];
-
-        // Include field if it has a value or is a boolean
         if (value !== "" && value !== null && value !== undefined) {
           updateData[key] = value;
         }
       });
+
+      // Include images in update data
+      updateData.images = images;
 
       const response = await fetch(
         `http://localhost:3000/api/adminDashboard/products/${productId}`,
@@ -189,10 +220,7 @@ export default function ProductEdit() {
       );
 
       if (response.ok) {
-        const updatedProduct = await response.json();
         setSuccess(true);
-
-        // Show success message and redirect after delay
         setTimeout(() => {
           navigate("/admin");
         }, 2000);
@@ -220,8 +248,12 @@ export default function ProductEdit() {
             <Package className="w-20 h-20 text-purple-600 animate-spin mx-auto mb-6" />
             <div className="absolute inset-0 bg-purple-400/20 rounded-full blur-xl animate-pulse"></div>
           </div>
-          <p className="text-gray-800 text-xl font-bold mb-2">Loading Product Details</p>
-          <p className="text-gray-600">Please wait while we fetch the information...</p>
+          <p className="text-gray-800 text-xl font-bold mb-2">
+            Loading Product Details
+          </p>
+          <p className="text-gray-600">
+            Please wait while we fetch the information...
+          </p>
         </div>
       </div>
     );
@@ -256,10 +288,13 @@ export default function ProductEdit() {
                 <div className="p-2 bg-white rounded-lg shadow-lg">
                   <Edit3 className="w-8 h-8 text-purple-600" />
                 </div>
-                <h1 className="text-4xl font-bold text-black">✏️ Edit Product</h1>
+                <h1 className="text-4xl font-bold text-black">
+                  ✏️ Edit Product
+                </h1>
               </div>
               <p className="text-xl text-black max-w-2xl font-medium">
-                Update product information with ease. All fields are optional - modify only what needs to be changed.
+                Update product information with ease. All fields are optional -
+                modify only what needs to be changed.
               </p>
             </div>
             <Button
@@ -293,7 +328,9 @@ export default function ProductEdit() {
             <div className="flex items-center gap-4">
               <AlertCircle className="w-8 h-8 text-red-500" />
               <div>
-                <p className="text-red-700 font-bold text-lg">❌ Error Occurred</p>
+                <p className="text-red-700 font-bold text-lg">
+                  ❌ Error Occurred
+                </p>
                 <p className="text-red-600">{error}</p>
               </div>
             </div>
@@ -307,22 +344,107 @@ export default function ProductEdit() {
               <div className="bg-white rounded-2xl shadow-xl p-6 sticky top-8">
                 <div className="flex items-center gap-3 mb-6">
                   <Info className="w-6 h-6 text-blue-600" />
-                  <h3 className="font-bold text-gray-800 text-xl">📋 Current Information</h3>
+                  <h3 className="font-bold text-gray-800 text-xl">
+                    📋 Current Information
+                  </h3>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                     <div className="flex items-center gap-2 mb-2">
                       <Package className="w-4 h-4 text-gray-600" />
-                      <span className="text-gray-600 text-sm font-medium">Product Name</span>
+                      <span className="text-gray-600 text-sm font-medium">
+                        Product Name
+                      </span>
                     </div>
                     <p className="text-gray-800 font-bold">{product.name}</p>
                   </div>
+                  {/* Product Images Section */}
+                  <div className="space-y-4">
+                    <label className="block text-sm font-medium text-gray-700">
+                      <Package className="inline w-4 h-4 mr-2" />
+                      Product Images
+                    </label>
 
+                    {/* Add New Image */}
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        value={newImageUrl}
+                        onChange={(e) => setNewImageUrl(e.target.value)}
+                        placeholder="Enter image URL"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleAddImage}
+                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                      >
+                        Add Image
+                      </Button>
+                    </div>
+
+                    {/* Existing Images */}
+                    {images.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm text-gray-600">Current Images:</p>
+                        {images.map((image, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-3 p-3 bg-gray-50 rounded-md"
+                          >
+                            <img
+                              src={image.image_url}
+                              alt={`Product ${index + 1}`}
+                              className="w-16 h-16 object-cover rounded"
+                              onError={(e) => {
+                                e.target.src = "/default-product.png";
+                              }}
+                            />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium truncate">
+                                {image.image_url}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                {image.is_primary && (
+                                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                                    Primary
+                                  </span>
+                                )}
+                                <span className="text-xs text-gray-500">
+                                  Order: {image.display_order || index + 1}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              {!image.is_primary && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetPrimary(index)}
+                                  className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                                >
+                                  Set Primary
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveImage(index)}
+                                className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                     <div className="flex items-center gap-2 mb-2">
                       <DollarSign className="w-4 h-4 text-gray-600" />
-                      <span className="text-gray-600 text-sm font-medium">Price</span>
+                      <span className="text-gray-600 text-sm font-medium">
+                        Price
+                      </span>
                     </div>
                     <p className="text-gray-800 font-bold">${product.price}</p>
                   </div>
@@ -330,7 +452,9 @@ export default function ProductEdit() {
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                     <div className="flex items-center gap-2 mb-2">
                       <Hash className="w-4 h-4 text-gray-600" />
-                      <span className="text-gray-600 text-sm font-medium">Quantity</span>
+                      <span className="text-gray-600 text-sm font-medium">
+                        Quantity
+                      </span>
                     </div>
                     <p className="text-gray-800 font-bold">
                       {product.quantity} {product.unit_measure}
@@ -340,7 +464,9 @@ export default function ProductEdit() {
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                     <div className="flex items-center gap-2 mb-2">
                       <MapPin className="w-4 h-4 text-gray-600" />
-                      <span className="text-gray-600 text-sm font-medium">Origin</span>
+                      <span className="text-gray-600 text-sm font-medium">
+                        Origin
+                      </span>
                     </div>
                     <p className="text-gray-800 font-bold">
                       {product.origin || "Not specified"}
@@ -350,7 +476,9 @@ export default function ProductEdit() {
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                     <div className="flex items-center gap-2 mb-2">
                       <Shield className="w-4 h-4 text-gray-600" />
-                      <span className="text-gray-600 text-sm font-medium">Status</span>
+                      <span className="text-gray-600 text-sm font-medium">
+                        Status
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       {product.is_available ? (
@@ -358,8 +486,14 @@ export default function ProductEdit() {
                       ) : (
                         <EyeOff className="w-4 h-4 text-red-500" />
                       )}
-                      <span className={`font-bold ${product.is_available ? 'text-green-600' : 'text-red-600'}`}>
-                        {product.is_available ? 'Available' : 'Unavailable'}
+                      <span
+                        className={`font-bold ${
+                          product.is_available
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {product.is_available ? "Available" : "Unavailable"}
                       </span>
                     </div>
                   </div>
@@ -378,7 +512,7 @@ export default function ProductEdit() {
                     <Package className="w-6 h-6 text-blue-600" />
                     📦 Basic Information
                   </h4>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="block text-sm font-bold text-gray-700">
@@ -391,8 +525,8 @@ export default function ProductEdit() {
                         onChange={handleInputChange}
                         placeholder="Enter new product name"
                         className={`w-full px-4 py-3 bg-white border-2 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-gray-900 placeholder-gray-500 font-medium ${
-                          validationErrors.name 
-                            ? "border-red-500 bg-red-50" 
+                          validationErrors.name
+                            ? "border-red-500 bg-red-50"
                             : "border-gray-600 hover:border-gray-700"
                         }`}
                       />
@@ -414,7 +548,9 @@ export default function ProductEdit() {
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 bg-white border-2 border-gray-600 hover:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-gray-900 font-medium"
                       >
-                        <option value="" className="bg-white">Keep current category</option>
+                        <option value="" className="bg-white">
+                          Keep current category
+                        </option>
                         {Array.isArray(categories) &&
                           categories.map((category) => (
                             <option
@@ -436,7 +572,7 @@ export default function ProductEdit() {
                     <DollarSign className="w-6 h-6 text-green-600" />
                     💰 Pricing & Inventory
                   </h4>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-2">
                       <label className="block text-sm font-bold text-gray-700">
@@ -511,7 +647,7 @@ export default function ProductEdit() {
                     <FileText className="w-6 h-6 text-purple-600" />
                     📝 Additional Details
                   </h4>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="block text-sm font-bold text-gray-700">
@@ -549,7 +685,7 @@ export default function ProductEdit() {
                     <Tag className="w-6 h-6 text-orange-600" />
                     ⚙️ Product Settings
                   </h4>
-                  
+
                   <div className="flex flex-wrap gap-6">
                     <label className="flex items-center bg-gray-50 p-4 rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors cursor-pointer group">
                       <input
@@ -561,19 +697,6 @@ export default function ProductEdit() {
                       />
                       <span className="ml-3 text-gray-800 font-bold group-hover:text-blue-600 transition-colors">
                         🔄 Refundable Product
-                      </span>
-                    </label>
-
-                    <label className="flex items-center bg-gray-50 p-4 rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        name="is_available"
-                        checked={formData.is_available}
-                        onChange={handleInputChange}
-                        className="h-5 w-5 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                      />
-                      <span className="ml-3 text-gray-800 font-bold group-hover:text-green-600 transition-colors">
-                        ✅ Available for Sale
                       </span>
                     </label>
                   </div>
