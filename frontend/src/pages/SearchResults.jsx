@@ -34,7 +34,7 @@ const SearchResults = () => {
     const [isLiked, setIsLiked] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [likesLoading, setLikesLoading] = useState(false);
-
+    console.log("ProductCard rendered for:", product);
     useEffect(() => {
       if (isLoggedIn && user && user.user_id && product && product.id) {
         checkIfLiked();
@@ -232,7 +232,7 @@ const SearchResults = () => {
                 )}
               </div>
               <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                {product.quantity || "each"} {product.unit || "each"}
+                {product.quantity || "each"} {product.unit_measure || "each"}
               </span>
             </div>
 
@@ -376,11 +376,9 @@ const SearchResults = () => {
 
   const transformProduct = (apiProduct) => ({
     id: apiProduct.id,
-    product_name: apiProduct.name,
-    name: apiProduct.name,
+    product_name: apiProduct.product_name,
     price: `৳${parseFloat(apiProduct.price || 0).toFixed(2)}`,
-    quantity: apiProduct.unit_measure || "",
-    unit: "each",
+    quantity: apiProduct.quantity || "",
     unit_measure: apiProduct.unit_measure || "each",
     origin: apiProduct.origin,
     description: apiProduct.description,
