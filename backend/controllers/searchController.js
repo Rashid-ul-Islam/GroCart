@@ -22,7 +22,7 @@ export const searchProducts = async (req, res) => {
     console.log("Search term with wildcards:", searchTermWithWildcards);
     console.log("Limit:", limitNum, "Offset:", offsetNum);
 
-    // Enhanced search query with category hierarchy traversal
+    // Enhanced search query with complete product information including reviews
     const query = `
       WITH RECURSIVE category_hierarchy AS (
         -- Base case: all categories
@@ -61,142 +61,193 @@ export const searchProducts = async (req, res) => {
           LOWER(name) LIKE $2 OR 
           LOWER(COALESCE(description, '')) LIKE $2 OR
           LOWER(category_path) LIKE $2
-      )
+      ),
       
-      SELECT DISTINCT
-        p.product_id AS id,
-        p.name,
-        p.price,
-        p.unit_measure,
-        p.description,
-        p.origin,
-        p.is_available,
-        
-        -- Get the most specific category for display
-        COALESCE(
-          direct_cat.category_id,
-          pc_cat.category_id
-        ) AS category_id,
-        
-        COALESCE(
-          direct_cat.name,
-          pc_cat.name
-        ) AS category_name,
-        
-        COALESCE(
-          direct_cat.description,
-          pc_cat.description
-        ) AS category_description,
-        
-        -- Get category hierarchy path for display
-        COALESCE(
-          direct_hierarchy.category_path,
-          pc_hierarchy.category_path
-        ) AS category_path,
-        
-        pi.image_url,
-        
-        -- Enhanced relevance scoring
-        CASE 
-          -- Exact product name match gets highest score
-          WHEN LOWER(p.name) = $1 THEN 100
-          -- Product name starts with search term
-          WHEN LOWER(p.name) LIKE $1 || '%' THEN 90
-          -- Product name contains search term
-          WHEN LOWER(p.name) LIKE $2 THEN 80
+      -- Get matching products with their scores (one row per product)
+      matching_products AS (
+        SELECT 
+          p.product_id,
+          p.name,
+          p.price,
+          p.quantity,
+          p.unit_measure,
+          p.description,
+          p.origin,
+          p.is_available,
+          p.is_refundable,
+          p.created_at,
           
-          -- Direct category exact match
-          WHEN LOWER(COALESCE(direct_cat.name, '')) = $1 THEN 75
-          -- Direct category starts with search term
-          WHEN LOWER(COALESCE(direct_cat.name, '')) LIKE $1 || '%' THEN 70
-          -- Direct category contains search term
-          WHEN LOWER(COALESCE(direct_cat.name, '')) LIKE $2 THEN 65
+          -- Get the most specific category for display (priority: direct > many-to-many)
+          COALESCE(
+            p.category_id,
+            (
+              SELECT pc.category_id 
+              FROM "ProductCategory" pc 
+              WHERE pc.product_id = p.product_id 
+              LIMIT 1
+            )
+          ) AS display_category_id,
           
-          -- Many-to-many category exact match
-          WHEN LOWER(COALESCE(pc_cat.name, '')) = $1 THEN 60
-          -- Many-to-many category starts with search term
-          WHEN LOWER(COALESCE(pc_cat.name, '')) LIKE $1 || '%' THEN 55
-          -- Many-to-many category contains search term
-          WHEN LOWER(COALESCE(pc_cat.name, '')) LIKE $2 THEN 50
+          -- Enhanced relevance scoring
+          GREATEST(
+            -- Product name matches
+            CASE 
+              WHEN LOWER(p.name) = $1 THEN 100
+              WHEN LOWER(p.name) LIKE $1 || '%' THEN 90
+              WHEN LOWER(p.name) LIKE $2 THEN 80
+              ELSE 0
+            END,
+            
+            -- Direct category matches
+            CASE 
+              WHEN EXISTS (
+                SELECT 1 FROM "Category" c 
+                WHERE c.category_id = p.category_id 
+                AND (
+                  LOWER(c.name) = $1 OR
+                  LOWER(c.name) LIKE $1 || '%' OR
+                  LOWER(c.name) LIKE $2
+                )
+              ) THEN 75
+              ELSE 0
+            END,
+            
+            -- Many-to-many category matches (get the highest scoring category)
+            COALESCE((
+              SELECT MAX(
+                CASE 
+                  WHEN LOWER(c.name) = $1 THEN 60
+                  WHEN LOWER(c.name) LIKE $1 || '%' THEN 55
+                  WHEN LOWER(c.name) LIKE $2 THEN 50
+                  ELSE 0
+                END
+              )
+              FROM "ProductCategory" pc
+              JOIN "Category" c ON pc.category_id = c.category_id
+              WHERE pc.product_id = p.product_id
+            ), 0),
+            
+            -- Parent category matches (through hierarchy)
+            CASE 
+              WHEN EXISTS (
+                SELECT 1 FROM matching_categories mc 
+                WHERE mc.category_id = p.category_id
+              ) OR EXISTS (
+                SELECT 1 FROM matching_categories mc 
+                JOIN "ProductCategory" pc ON mc.category_id = pc.category_id
+                WHERE pc.product_id = p.product_id
+              ) THEN 45
+              ELSE 0
+            END,
+            
+            -- Product description matches
+            CASE 
+              WHEN LOWER(COALESCE(p.description, '')) = $1 THEN 42
+              WHEN LOWER(COALESCE(p.description, '')) LIKE $1 || '%' THEN 40
+              WHEN LOWER(COALESCE(p.description, '')) LIKE $2 THEN 35
+              WHEN LOWER(COALESCE(p.description, '')) ~* ('\\m' || $1 || '\\M') THEN 30
+              ELSE 0
+            END,
+            
+            -- Origin matches
+            CASE 
+              WHEN LOWER(COALESCE(p.origin, '')) LIKE $2 THEN 20
+              ELSE 0
+            END,
+            
+            -- Default minimum score
+            10
+          ) AS relevance_score
+        FROM "Product" p
+        WHERE p.is_available = true AND (
+          -- Product name/description matches
+          LOWER(p.name) LIKE $2 OR
+          LOWER(COALESCE(p.description, '')) LIKE $2 OR
+          LOWER(COALESCE(p.origin, '')) LIKE $2 OR
+          LOWER(COALESCE(p.unit_measure, '')) LIKE $2 OR
           
-          -- Parent category matches (through hierarchy)
-          WHEN EXISTS (
+          -- Exact term matching for descriptions
+          LOWER(COALESCE(p.description, '')) = $1 OR
+          LOWER(COALESCE(p.description, '')) LIKE $1 || '%' OR
+          
+          -- Word boundary matching for descriptions
+          LOWER(COALESCE(p.description, '')) ~* ('\\m' || $1 || '\\M') OR
+          
+          -- Direct category matches
+          EXISTS (
+            SELECT 1 FROM "Category" c 
+            WHERE c.category_id = p.category_id 
+            AND (
+              LOWER(c.name) LIKE $2 OR
+              LOWER(COALESCE(c.description, '')) LIKE $2
+            )
+          ) OR
+          
+          -- Many-to-many category matches
+          EXISTS (
+            SELECT 1 FROM "ProductCategory" pc
+            JOIN "Category" c ON pc.category_id = c.category_id
+            WHERE pc.product_id = p.product_id 
+            AND (
+              LOWER(c.name) LIKE $2 OR
+              LOWER(COALESCE(c.description, '')) LIKE $2
+            )
+          ) OR
+          
+          -- Category hierarchy matches (including parent categories)
+          EXISTS (
             SELECT 1 FROM matching_categories mc 
-            WHERE mc.category_id = COALESCE(p.category_id, pc.category_id)
-          ) THEN 45
-          
-          -- Product description matches with multiple patterns
-          -- Exact match in description
-          WHEN LOWER(COALESCE(p.description, '')) = $1 THEN 42
-          -- Description starts with search term
-          WHEN LOWER(COALESCE(p.description, '')) LIKE $1 || '%' THEN 40
-          -- Description contains search term (general)
-          WHEN LOWER(COALESCE(p.description, '')) LIKE $2 THEN 35
-          -- Word boundary matching for descriptions (PostgreSQL format)
-          WHEN LOWER(COALESCE(p.description, '')) ~* ('\\m' || $1 || '\\M') THEN 30
-          
-          -- Category description matches
-          WHEN LOWER(COALESCE(direct_cat.description, '')) LIKE $2 THEN 30
-          WHEN LOWER(COALESCE(pc_cat.description, '')) LIKE $2 THEN 25
-          
-          -- Origin matches
-          WHEN LOWER(COALESCE(p.origin, '')) LIKE $2 THEN 20
-          
-          ELSE 10
-        END AS relevance_score
-        
-      FROM "Product" p
-      
-      -- Direct category relationship
-      LEFT JOIN "Category" direct_cat ON p.category_id = direct_cat.category_id
-      LEFT JOIN category_hierarchy direct_hierarchy ON direct_cat.category_id = direct_hierarchy.category_id
-      
-      -- Many-to-many category relationship
-      LEFT JOIN "ProductCategory" pc ON p.product_id = pc.product_id
-      LEFT JOIN "Category" pc_cat ON pc.category_id = pc_cat.category_id
-      LEFT JOIN category_hierarchy pc_hierarchy ON pc_cat.category_id = pc_hierarchy.category_id
-      
-      -- Primary image
-      LEFT JOIN "ProductImage" pi ON p.product_id = pi.product_id AND pi.is_primary = true
-      
-      WHERE p.is_available = true AND (
-        -- Product name/description matches
-        LOWER(p.name) LIKE $2 OR
-        LOWER(COALESCE(p.description, '')) LIKE $2 OR
-        LOWER(COALESCE(p.origin, '')) LIKE $2 OR
-        LOWER(COALESCE(p.unit_measure, '')) LIKE $2 OR
-        
-        -- Exact term matching for descriptions
-        LOWER(COALESCE(p.description, '')) = $1 OR
-        LOWER(COALESCE(p.description, '')) LIKE $1 || '%' OR
-        
-        -- Word boundary matching for descriptions
-        LOWER(COALESCE(p.description, '')) ~* ('\\m' || $1 || '\\M') OR
-        
-        -- Direct category matches
-        LOWER(COALESCE(direct_cat.name, '')) LIKE $2 OR
-        LOWER(COALESCE(direct_cat.description, '')) LIKE $2 OR
-        
-        -- Many-to-many category matches
-        LOWER(COALESCE(pc_cat.name, '')) LIKE $2 OR
-        LOWER(COALESCE(pc_cat.description, '')) LIKE $2 OR
-        
-        -- Hierarchy path matches
-        LOWER(COALESCE(direct_hierarchy.category_path, '')) LIKE $2 OR
-        LOWER(COALESCE(pc_hierarchy.category_path, '')) LIKE $2 OR
-        
-        -- Category hierarchy matches (including parent categories)
-        EXISTS (
-          SELECT 1 FROM matching_categories mc 
-          WHERE mc.category_id = COALESCE(p.category_id, pc.category_id)
+            WHERE mc.category_id = p.category_id
+          ) OR
+          EXISTS (
+            SELECT 1 FROM matching_categories mc 
+            JOIN "ProductCategory" pc ON mc.category_id = pc.category_id
+            WHERE pc.product_id = p.product_id
+          )
         )
       )
       
-      ORDER BY relevance_score DESC, p.name ASC
+      SELECT DISTINCT ON (mp.product_id)
+        mp.product_id AS id,
+        mp.name AS product_name,
+        mp.price,
+        mp.quantity,
+        mp.unit_measure,
+        mp.description,
+        mp.origin,
+        mp.is_available,
+        mp.is_refundable,
+        mp.created_at,
+        
+        mp.display_category_id AS category_id,
+        c.name AS category_name,
+        c.description AS category_description,
+        ch.category_path,
+        
+        pi.image_url,
+        mp.relevance_score,
+        
+        -- Review information
+        COALESCE(AVG(r.rating), 4.0) AS avg_rating,
+        COALESCE(COUNT(r.review_id), 0) AS review_count
+        
+      FROM matching_products mp
+      LEFT JOIN "Category" c ON mp.display_category_id = c.category_id
+      LEFT JOIN category_hierarchy ch ON c.category_id = ch.category_id
+      LEFT JOIN "ProductImage" pi ON mp.product_id = pi.product_id AND pi.is_primary = true
+      LEFT JOIN "Review" r ON mp.product_id = r.product_id AND r.review_status = 'approved'
+      
+      GROUP BY 
+        mp.product_id, mp.name, mp.price,mp.quantity, mp.unit_measure, mp.description, 
+        mp.origin, mp.is_available, mp.is_refundable, mp.created_at,
+        mp.display_category_id, c.name, c.description, ch.category_path,
+        pi.image_url, mp.relevance_score
+      
+      ORDER BY mp.product_id, mp.relevance_score DESC, mp.name ASC
       LIMIT $3 OFFSET $4
     `;
 
-    // Enhanced count query
+    // Enhanced count query (also fixed for duplicates)
     const countQuery = `
       WITH RECURSIVE category_hierarchy AS (
         SELECT 
@@ -237,10 +288,6 @@ export const searchProducts = async (req, res) => {
       SELECT COUNT(DISTINCT p.product_id) as total
       FROM "Product" p
       LEFT JOIN "Category" direct_cat ON p.category_id = direct_cat.category_id
-      LEFT JOIN category_hierarchy direct_hierarchy ON direct_cat.category_id = direct_hierarchy.category_id
-      LEFT JOIN "ProductCategory" pc ON p.product_id = pc.product_id
-      LEFT JOIN "Category" pc_cat ON pc.category_id = pc_cat.category_id
-      LEFT JOIN category_hierarchy pc_hierarchy ON pc_cat.category_id = pc_hierarchy.category_id
       
       WHERE p.is_available = true AND (
         -- Product fields
@@ -261,17 +308,25 @@ export const searchProducts = async (req, res) => {
         LOWER(COALESCE(direct_cat.description, '')) LIKE $2 OR
         
         -- Many-to-many category matches
-        LOWER(COALESCE(pc_cat.name, '')) LIKE $2 OR
-        LOWER(COALESCE(pc_cat.description, '')) LIKE $2 OR
-        
-        -- Hierarchy path matches
-        LOWER(COALESCE(direct_hierarchy.category_path, '')) LIKE $2 OR
-        LOWER(COALESCE(pc_hierarchy.category_path, '')) LIKE $2 OR
+        EXISTS (
+          SELECT 1 FROM "ProductCategory" pc
+          JOIN "Category" c ON pc.category_id = c.category_id
+          WHERE pc.product_id = p.product_id 
+          AND (
+            LOWER(c.name) LIKE $2 OR
+            LOWER(COALESCE(c.description, '')) LIKE $2
+          )
+        ) OR
         
         -- Category hierarchy matches (including parent categories)
         EXISTS (
           SELECT 1 FROM matching_categories mc 
-          WHERE mc.category_id = COALESCE(p.category_id, pc.category_id)
+          WHERE mc.category_id = p.category_id
+        ) OR
+        EXISTS (
+          SELECT 1 FROM matching_categories mc 
+          JOIN "ProductCategory" pc ON mc.category_id = pc.category_id
+          WHERE pc.product_id = p.product_id
         )
       )
     `;
@@ -293,12 +348,28 @@ export const searchProducts = async (req, res) => {
     console.log("Results found:", products.length);
     console.log("Total matches:", total);
     
+    // Debug: Check for duplicate product IDs
+    const productIds = products.map(p => p.id);
+    const uniqueProductIds = [...new Set(productIds)];
+    console.log(`Unique products: ${uniqueProductIds.length}/${products.length}`);
+    
+    if (uniqueProductIds.length !== products.length) {
+      console.warn("WARNING: Duplicate product IDs found!");
+      const duplicates = productIds.filter((id, index) => productIds.indexOf(id) !== index);
+      console.log("Duplicate IDs:", duplicates);
+    }
+    
     if (products.length > 0) {
       console.log("Sample result:", {
-        name: products[0].name,
+        name: products[0].product_name,
         category: products[0].category_name,
         category_path: products[0].category_path,
         relevance_score: products[0].relevance_score,
+        avg_rating: products[0].avg_rating,
+        review_count: products[0].review_count,
+        quantity: products[0].quantity,
+        unit_measure: products[0].unit_measure,
+        is_refundable: products[0].is_refundable,
         description: products[0].description?.substring(0, 100)
       });
       
@@ -346,7 +417,8 @@ export const searchProducts = async (req, res) => {
         searchPattern: searchTermWithWildcards,
         descriptionMatches: products.filter(p => 
           p.description && p.description.toLowerCase().includes(rawSearchTerm)
-        ).length
+        ).length,
+        uniqueProducts: uniqueProductIds.length
       }
     });
 
@@ -361,7 +433,7 @@ export const searchProducts = async (req, res) => {
   }
 };
 
-// Rest of the functions remain the same...
+// Enhanced quick search with complete product information
 export const quickSearch = async (req, res) => {
   try {
     const { q } = req.query;
@@ -379,10 +451,20 @@ export const quickSearch = async (req, res) => {
     const query = `
       SELECT DISTINCT
         p.product_id as id,
-        p.name,
+        p.name AS product_name,
         p.price,
+        p.quantity,
+        p.unit_measure,
+        p.origin,
+        p.description,
+        p.is_available,
+        p.is_refundable,
+        p.created_at,
         c.name AS category_name,
+        c.category_id,
         pi.image_url,
+        COALESCE(AVG(r.rating), 4.0) AS avg_rating,
+        COALESCE(COUNT(r.review_id), 0) AS review_count,
         CASE 
           WHEN LOWER(p.name) = LOWER($2) THEN 1
           WHEN LOWER(p.name) LIKE LOWER($2) || '%' THEN 2
@@ -391,6 +473,7 @@ export const quickSearch = async (req, res) => {
       FROM "Product" p
       LEFT JOIN "Category" c ON p.category_id = c.category_id
       LEFT JOIN "ProductImage" pi ON p.product_id = pi.product_id AND pi.is_primary = true
+      LEFT JOIN "Review" r ON p.product_id = r.product_id AND r.review_status = 'approved'
       WHERE
         p.is_available = true AND
         (
@@ -398,6 +481,10 @@ export const quickSearch = async (req, res) => {
           COALESCE(c.name, '') ILIKE $1 OR
           COALESCE(p.description, '') ILIKE $1
         )
+      GROUP BY 
+        p.product_id, p.name, p.price, p.quantity, p.unit_measure, p.origin, 
+        p.description, p.is_available, p.is_refundable, p.created_at,
+        c.name, c.category_id, pi.image_url
       ORDER BY 
         sort_priority,
         p.name ASC
@@ -408,7 +495,13 @@ export const quickSearch = async (req, res) => {
 
     console.log(`Quick search found ${rows.length} results`);
     if (rows.length > 0) {
-      console.log("Sample result:", rows[0].name);
+      console.log("Sample result:", {
+        name: rows[0].product_name,
+        avg_rating: rows[0].avg_rating,
+        review_count: rows[0].review_count,
+        quantity: rows[0].quantity,
+        unit_measure: rows[0].unit_measure
+      });
     }
 
     res.status(200).json({
