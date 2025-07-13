@@ -260,7 +260,7 @@ export const StatsOverview = () => {
         </div>
 
         {/* Additional Info Card */}
-        <div className="bg-white rounded-2xl shadow-xl p-6">
+        {/* <div className="bg-white rounded-2xl shadow-xl p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="bg-green-100 rounded-full p-3">
@@ -276,7 +276,7 @@ export const StatsOverview = () => {
               <p className="text-xs text-gray-400">Auto-refreshes every 5 minutes</p>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Performance Tips */}
         <div className="bg-white rounded-2xl shadow-xl p-6">

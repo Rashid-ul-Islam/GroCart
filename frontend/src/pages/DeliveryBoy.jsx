@@ -16,17 +16,14 @@ import {
 import { Badge } from "../components/ui/badge.jsx";
 import { Button } from "../components/ui/button.jsx";
 import {
-  FileText,
-  Clock,
-  User,
+  Rocket,
   Calendar,
   Search,
   Filter,
   Bell,
-  Menu,
+  User,
   TrendingUp,
   Truck,
-  Users,
   Package,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -34,38 +31,33 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { StatsOverview } from "../components/deliveryBoy/StatsOverview.jsx";
 import { AssignedDeliveries } from "../components/deliveryBoy/AssignedDeliveries.jsx";
 import { PerformanceChart } from "../components/deliveryBoy/PerformanceChart.jsx";
-import { DeliveryBoyDashboard } from "../components/deliveryBoy/DeliveryBoyDashboard.jsx";
 
 const DeliveryBoy = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterRegion, setFilterRegion] = useState("all");
   const { user, isLoggedIn } = useAuth();
-
   const deliveryBoyId = user?.user_id;
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400">
       {/* Header */}
-      <header className="bg-white rounded-b-2xl shadow-xl border-b border-gray-200 mx-4 mt-4">
+      <header className="bg-white rounded-b-2xl shadow-xl border-b border-gray-200 mx-4 mt-4 max-w-7xl mx-auto">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg">
-                  <FileText className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <Rocket className="w-6 h-6 text-white" />
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-purple-800">
-                    🚚 DeliveryPro Dashboard
+                    🚀 GroCart Delivery Dashboard
                   </h1>
                   <p className="text-gray-600 font-medium">
-                    Welcome back, {user?.name || 'John Driver'}
+                    Welcome back, {user?.name || "John Driver"}
                   </p>
                 </div>
               </div>
             </div>
-
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3 bg-green-50 px-4 py-2 rounded-full border border-green-200">
                 <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
@@ -73,60 +65,15 @@ const DeliveryBoy = () => {
                   Available
                 </Badge>
               </div>
-
               <Button className="relative bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white p-3 rounded-xl shadow-lg transform hover:scale-105 transition duration-300">
                 <Bell className="h-5 w-5" />
                 <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center shadow-lg">
                   <span className="text-xs text-white font-bold">3</span>
                 </div>
               </Button>
-
               <Button className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white p-3 rounded-xl shadow-lg transform hover:scale-105 transition duration-300">
                 <User className="h-5 w-5" />
               </Button>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between mt-6">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-800">
-                All-in-One Dashboard
-              </h2>
-              <p className="text-gray-600 text-lg">
-                Monitor deliveries, performance, schedule and more
-              </p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="relative w-full max-w-sm">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-5 w-5 pointer-events-none" />
-                <Input
-                  placeholder="Search orders, deliveries..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-12 pr-4 py-3 w-full h-12 bg-white text-gray-900 border-2 border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 font-semibold"
-                />
-              </div>
-
-              <Select value={filterRegion} onValueChange={setFilterRegion}>
-                <SelectTrigger className="w-48 h-12 bg-white text-gray-900 border-2 border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 font-semibold">
-                  <Filter className="h-5 w-5 mr-2 text-purple-600" />
-                  <SelectValue placeholder="Filter" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-2 border-gray-300 rounded-lg">
-                  <SelectItem value="all" className="hover:bg-gray-100 font-medium">
-                    All Orders
-                  </SelectItem>
-                  <SelectItem value="pending" className="hover:bg-gray-100 font-medium">
-                    Pending
-                  </SelectItem>
-                  <SelectItem value="in-progress" className="hover:bg-gray-100 font-medium">
-                    In Progress
-                  </SelectItem>
-                  <SelectItem value="completed" className="hover:bg-gray-100 font-medium">
-                    Completed
-                  </SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
         </div>
@@ -181,10 +128,6 @@ const DeliveryBoy = () => {
             <TabsContent value="deliveries" className="space-y-8">
               <div className="grid grid-cols-1 gap-8">
                 <AssignedDeliveries />
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <StatsOverview />
-                  <PerformanceChart deliveryBoyId={deliveryBoyId || "1"} />
-                </div>
               </div>
             </TabsContent>
 
