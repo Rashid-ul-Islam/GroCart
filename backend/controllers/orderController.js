@@ -37,7 +37,6 @@ export const createOrder = async (req, res) => {
       WHERE a.address_id = $1 AND a.user_id = $2;
     `;
     const addressResult = await client.query(addressQuery, [address_id, user_id]);
-
     if (addressResult.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(400).json({
@@ -45,9 +44,6 @@ export const createOrder = async (req, res) => {
         message: 'Invalid address or address does not belong to user'
       });
     }
-
-    const addressData = addressResult.rows[0];
-    const delivery_region_id = addressData.delivery_region_id;
 
     // Check stock availability and validate items
     const productIds = items.map(item => item.product_id);
@@ -57,7 +53,7 @@ export const createOrder = async (req, res) => {
       WHERE product_id = ANY($1);
     `;
     const stockResult = await client.query(stockQuery, [productIds]);
-
+    
     if (stockResult.rows.length !== items.length) {
       await client.query('ROLLBACK');
       return res.status(400).json({
@@ -66,32 +62,21 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // Create a map for quick lookup
+    // Create product map and validate items
     const productMap = new Map();
     stockResult.rows.forEach(product => {
       productMap.set(product.product_id, product);
     });
 
-    // Validate each item
     for (const item of items) {
       const product = productMap.get(item.product_id);
-
-      if (!product) {
+      if (!product || !product.is_available) {
         await client.query('ROLLBACK');
         return res.status(400).json({
           success: false,
-          message: `Product with ID ${item.product_id} not found`
+          message: `Product "${product?.name || 'Unknown'}" is not available`
         });
       }
-
-      if (!product.is_available) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({
-          success: false,
-          message: `Product "${product.name}" is not available`
-        });
-      }
-
       if (product.quantity < item.quantity) {
         await client.query('ROLLBACK');
         return res.status(400).json({
@@ -99,8 +84,6 @@ export const createOrder = async (req, res) => {
           message: `Insufficient stock for product "${product.name}". Available: ${product.quantity}, Requested: ${item.quantity}`
         });
       }
-
-      // Validate item quantity is positive
       if (item.quantity <= 0) {
         await client.query('ROLLBACK');
         return res.status(400).json({
@@ -113,15 +96,14 @@ export const createOrder = async (req, res) => {
     // Validate coupon if provided
     if (coupon_id) {
       const couponQuery = `
-        SELECT coupon_id, code, discount_type, discount_value, min_purchase, max_discount, 
+        SELECT coupon_id, code, discount_type, discount_value, min_purchase, max_discount,
                start_date, end_date, is_active, usage_limit, usage_count
         FROM "Coupon"
-        WHERE coupon_id = $1 AND is_active = true 
-          AND start_date <= CURRENT_TIMESTAMP 
+        WHERE coupon_id = $1 AND is_active = true
+          AND start_date <= CURRENT_TIMESTAMP
           AND end_date >= CURRENT_TIMESTAMP;
       `;
       const couponResult = await client.query(couponQuery, [coupon_id]);
-
       if (couponResult.rows.length === 0) {
         await client.query('ROLLBACK');
         return res.status(400).json({
@@ -131,8 +113,6 @@ export const createOrder = async (req, res) => {
       }
 
       const coupon = couponResult.rows[0];
-
-      // Check usage limit
       if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
         await client.query('ROLLBACK');
         return res.status(400).json({
@@ -140,8 +120,6 @@ export const createOrder = async (req, res) => {
           message: 'Coupon usage limit exceeded'
         });
       }
-
-      // Check minimum purchase requirement
       if (coupon.min_purchase && product_total < coupon.min_purchase) {
         await client.query('ROLLBACK');
         return res.status(400).json({
@@ -151,39 +129,80 @@ export const createOrder = async (req, res) => {
       }
     }
 
-    // Create order
+    // Get delivery information using the existing SQL function
+    const deliveryInfoQuery = `SELECT * FROM find_delivery_region_for_user($1);`;
+    const deliveryInfoResult = await client.query(deliveryInfoQuery, [user_id]);
+    
+    // REJECT ORDER if no delivery region found
+    if (deliveryInfoResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'No delivery service available in your area. Please try a different address.'
+      });
+    }
+
+    const deliveryInfo = deliveryInfoResult.rows[0];
+    
+    // REJECT ORDER if no delivery boys available
+    if (deliveryInfo.available_delivery_boys === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'No delivery boys available in your area at the moment. Please try again later.'
+      });
+    }
+
+    // Try to assign delivery boy BEFORE creating order
+    const assignDeliveryBoyQuery = `
+      SELECT assign_delivery_boy($1, $2) as delivery_boy_id;
+    `;
+    const assignResult = await client.query(assignDeliveryBoyQuery, [
+      deliveryInfo.delivery_region_id,
+      user_id
+    ]);
+    
+    const delivery_boy_id = assignResult.rows[0].delivery_boy_id;
+    
+    // REJECT ORDER if delivery boy assignment fails
+    if (!delivery_boy_id) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'Unable to assign delivery boy. Please try again in a few minutes.'
+      });
+    }
+
+    const calculatedShippingCost = parseFloat(deliveryInfo.shipping_cost);
+    const estimatedDeliveryDays = deliveryInfo.delivery_days;
+
+    // NOW create the order (only after ensuring delivery boy is available)
     const orderQuery = `
       INSERT INTO "Order" (
-        user_id, order_date, total_amount, product_total, tax_total, 
-        shipping_total, discount_total, payment_method, payment_status, 
+        user_id, order_date, total_amount, product_total, tax_total,
+        shipping_total, discount_total, payment_method, payment_status,
         created_at, updated_at
       )
       VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4, $5, $6, $7, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING order_id;
     `;
-
     const orderResult = await client.query(orderQuery, [
       user_id, total_amount, product_total || 0, tax_total || 0,
-      shipping_total || 0, discount_total || 0, payment_method
+      shipping_total || calculatedShippingCost, discount_total || 0, payment_method
     ]);
-
     const order_id = orderResult.rows[0].order_id;
 
     // Create order items and update product quantities
     for (const item of items) {
       const product = productMap.get(item.product_id);
-
-      // Use the price from the product if not provided in the item
       const itemPrice = item.price || product.price;
 
-      // Insert order item
       const orderItemQuery = `
         INSERT INTO "OrderItem" (order_id, product_id, quantity, price)
         VALUES ($1, $2, $3, $4);
       `;
       await client.query(orderItemQuery, [order_id, item.product_id, item.quantity, itemPrice]);
 
-      // Update product quantity
       const updateProductQuery = `
         UPDATE "Product"
         SET quantity = quantity - $1, updated_at = CURRENT_TIMESTAMP
@@ -200,7 +219,6 @@ export const createOrder = async (req, res) => {
       `;
       await client.query(orderCouponQuery, [order_id, coupon_id, discount_total]);
 
-      // Update coupon usage count
       const updateCouponQuery = `
         UPDATE "Coupon"
         SET usage_count = usage_count + 1
@@ -209,11 +227,10 @@ export const createOrder = async (req, res) => {
       await client.query(updateCouponQuery, [coupon_id]);
     }
 
-    // Create order status history using consolidated approach
+    // Create initial order status
     await updateOrderStatus(order_id, 'pending', user_id, 'Order created', client);
 
     // Clear user's cart
-    // Clear user's cart by setting now_in_cart to false
     const clearCartQuery = `
       UPDATE "ShoppingCart"
       SET now_in_cart = false, added_at = CURRENT_TIMESTAMP
@@ -221,76 +238,52 @@ export const createOrder = async (req, res) => {
     `;
     await client.query(clearCartQuery, [user_id]);
 
-
-    // Find an available delivery boy in the region
-    let delivery_id = null;
-
-    if (delivery_region_id) {
-      const deliveryBoyQuery = `
-        SELECT user_id
-        FROM "DeliveryBoy"
-        WHERE delivery_region_id = $1 AND availability_status = 'available'
-        ORDER BY current_load ASC, user_id ASC
-        LIMIT 1;
-      `;
-      const deliveryBoyResult = await client.query(deliveryBoyQuery, [delivery_region_id]);
-
-      if (deliveryBoyResult.rows.length > 0) {
-        const delivery_boy_id = deliveryBoyResult.rows[0].user_id;
-
-        // Create delivery record
-        const deliveryQuery = `
-          INSERT INTO "Delivery" (order_id, address_id, delivery_boy_id, estimated_arrival, created_at, updated_at)
-          VALUES ($1, $2, $3, CURRENT_TIMESTAMP + INTERVAL '1 day', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-          RETURNING delivery_id;
-        `;
-        const deliveryResult = await client.query(deliveryQuery, [order_id, address_id, delivery_boy_id]);
-        delivery_id = deliveryResult.rows[0].delivery_id;
-
-        // Update order status to 'assigned' when delivery boy is assigned
-        await updateOrderStatus(order_id, 'assigned', delivery_boy_id, 'Order assigned to delivery boy', client);
-
-        // Update delivery boy's current load
-        const updateDeliveryBoyQuery = `
-          UPDATE "DeliveryBoy"
-          SET current_load = current_load + 1
-          WHERE user_id = $1;
-        `;
-        await client.query(updateDeliveryBoyQuery, [delivery_boy_id]);
-      } else {
-        // No delivery boy available, create delivery record without assignment
-        const deliveryQuery = `
-          INSERT INTO "Delivery" (order_id, address_id, delivery_boy_id, created_at, estimated_arrival, updated_at)
-          VALUES ($1, $2, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '1 day', CURRENT_TIMESTAMP)
-          RETURNING delivery_id;
-        `;
-        const deliveryResult = await client.query(deliveryQuery, [order_id, address_id]);
-        delivery_id = deliveryResult.rows[0].delivery_id;
-      }
-    } else {
-      // No delivery region found, create delivery record without assignment
-      const deliveryQuery = `
-        INSERT INTO "Delivery" (order_id, address_id, delivery_boy_id, created_at, estimated_arrival, updated_at)
-        VALUES ($1, $2, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '1 day', CURRENT_TIMESTAMP)
-        RETURNING delivery_id;
-      `;
-      const deliveryResult = await client.query(deliveryQuery, [order_id, address_id]);
-      delivery_id = deliveryResult.rows[0].delivery_id;
-    }
+    // Create delivery record with GUARANTEED delivery boy assignment
+    const estimatedDelivery = new Date();
+    estimatedDelivery.setDate(estimatedDelivery.getDate() + estimatedDeliveryDays);
+    
+    const deliveryQuery = `
+      INSERT INTO "Delivery" (
+        order_id, address_id, delivery_boy_id, estimated_arrival, created_at, updated_at
+      )
+      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      RETURNING delivery_id;
+    `;
+    const deliveryResult = await client.query(deliveryQuery, [
+      order_id, address_id, delivery_boy_id, estimatedDelivery
+    ]);
+    const delivery_id = deliveryResult.rows[0].delivery_id;
+    
+    // Update delivery boy's current load
+    const updateLoadQuery = `
+      UPDATE "DeliveryBoy"
+      SET current_load = current_load + 1
+      WHERE user_id = $1;
+    `;
+    await client.query(updateLoadQuery, [delivery_boy_id]);
+    
+    // Update order status to assigned
+    await updateOrderStatus(order_id, 'assigned', delivery_boy_id, 'Order assigned to delivery boy', client);
 
     await client.query('COMMIT');
 
+    // Success response
     res.status(201).json({
       success: true,
-      message: 'Order created successfully',
+      message: 'Order created and delivery boy assigned successfully',
       data: {
         order_id,
         delivery_id,
+        delivery_boy_id,
         total_amount,
         payment_method,
-        status: 'pending'
+        status: 'assigned',
+        shipping_cost: calculatedShippingCost,
+        estimated_delivery_days: estimatedDeliveryDays,
+        delivery_region_id: deliveryInfo.delivery_region_id
       }
     });
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error creating order:', error);
@@ -303,6 +296,7 @@ export const createOrder = async (req, res) => {
     client.release();
   }
 };
+
 
 // Calculate shipping cost and estimated delivery
 export const calculateShippingAndDelivery = async (req, res) => {
