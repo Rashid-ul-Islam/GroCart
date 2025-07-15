@@ -1,4 +1,4 @@
-import pool from '../db.js';
+import db from '../db.js';
 
 // Utility function to update order status in StatusHistory
 const updateOrderStatusHistory = async (client, orderId, status, updatedBy = null) => {
@@ -17,7 +17,7 @@ const updateOrderStatusHistory = async (client, orderId, status, updatedBy = nul
 
 // Action 1: Products Fetched (Delivery boy has collected products from warehouse)
 export const markProductsFetched = async (req, res) => {
-    const client = await pool.connect();
+    const client = await db.connect();
 
     try {
         await client.query('BEGIN');
@@ -47,7 +47,7 @@ export const markProductsFetched = async (req, res) => {
     `;
 
         const deliveryResult = await client.query(deliveryQuery, [delivery_id, delivery_boy_id]);
-
+        console.log('Delivery result:', deliveryResult.rows);
         if (deliveryResult.rows.length === 0) {
             await client.query('ROLLBACK');
             return res.status(404).json({
@@ -95,7 +95,7 @@ export const markProductsFetched = async (req, res) => {
         `;
 
         const insufficientResult = await client.query(insufficientInventoryQuery, [orderId]);
-
+        console.log('Insufficient inventory check:', insufficientResult.rows);
         if (insufficientResult.rows.length > 0) {
             await client.query('ROLLBACK');
             const insufficientProducts = insufficientResult.rows.map(row =>
@@ -130,7 +130,7 @@ export const markProductsFetched = async (req, res) => {
 
 // Action 2: Delivery Completed (Customer received products)
 export const markDeliveryCompletedNew = async (req, res) => {
-    const client = await pool.connect();
+    const client = await db.connect();
 
     try {
         await client.query('BEGIN');
@@ -221,7 +221,7 @@ export const markDeliveryCompletedNew = async (req, res) => {
 
 // Action 3: Rate Customer (Available after payment received)
 export const rateCustomer = async (req, res) => {
-    const client = await pool.connect();
+    const client = await db.connect();
 
     try {
         await client.query('BEGIN');
@@ -334,7 +334,7 @@ export const rateCustomer = async (req, res) => {
 
 // Utility function to fix deliveries without proper status history
 export const fixDeliveryStatusHistory = async (req, res) => {
-    const client = await pool.connect();
+    const client = await db.connect();
 
     try {
         await client.query('BEGIN');
@@ -401,7 +401,7 @@ export const fixDeliveryStatusHistory = async (req, res) => {
 
 // Debug function to check all deliveries in the system
 export const debugDeliveries = async (req, res) => {
-    const client = await pool.connect();
+    const client = await db.connect();
 
     try {
         // Get all deliveries
@@ -448,7 +448,7 @@ export const debugDeliveries = async (req, res) => {
 
 // Fix specific delivery status from pending to assigned
 export const updatePendingDeliveriesToAssigned = async (req, res) => {
-    const client = await pool.connect();
+    const client = await db.connect();
 
     try {
         await client.query('BEGIN');
@@ -516,7 +516,7 @@ export const updatePendingDeliveriesToAssigned = async (req, res) => {
 
 // Manually update a specific delivery to assigned status
 export const updateDeliveryToAssigned = async (req, res) => {
-    const client = await pool.connect();
+    const client = await db.connect();
 
     try {
         await client.query('BEGIN');
