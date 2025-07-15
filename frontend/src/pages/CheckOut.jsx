@@ -25,7 +25,14 @@ import {
 const CheckoutPage = () => {
   // State Management
   const [currentStep, setCurrentStep] = useState(1);
-  const [orderData, setOrderData] = useState(null);
+  const [orderData, setOrderData] = useState({
+    items: [],
+    subtotal: 0,
+    tax: 0,
+    shipping: 0,
+    discount: 0,
+    estimatedArrival: null, // Add estimated arrival state
+  });
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("card");
@@ -56,6 +63,38 @@ const CheckoutPage = () => {
 
   const isUserLoggedIn = () => {
     return sessionStorage.getItem("token") && sessionStorage.getItem("user");
+  };
+  // Fetch shipping cost and estimated delivery
+  const fetchShippingAndDelivery = async () => {
+    try {
+      const user = getCurrentUser();
+      if (!user || !user.user_id)
+        return { shipping: 50, estimatedArrival: null };
+
+      const response = await fetch(
+        `http://localhost:3000/api/order/calculate-shipping/${user.user_id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          return {
+            shipping: data.data.shipping_cost,
+            estimatedArrival: data.data.estimated_delivery_date,
+          };
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching shipping and delivery:", error);
+    }
+
+    // Fallback to default shipping cost if API fails
+    return { shipping: 50, estimatedArrival: null };
   };
 
   // Data Fetching
@@ -95,20 +134,26 @@ const CheckoutPage = () => {
       );
       const addressData = await addressResponse.json();
 
+      // Fetch shipping and delivery information only if there are items
+      const hasItems = cartData.data && cartData.data.length > 0;
+      const shippingData = hasItems
+        ? await fetchShippingAndDelivery()
+        : { shipping: 0, estimatedArrival: null };
+
       const subtotal =
         cartData.data?.reduce(
           (sum, item) => sum + item.price * item.quantity,
           0
         ) || 0;
-      const tax = subtotal * 0.08;
-      const shipping = subtotal > 100 ? 0 : 50;
+      const tax = subtotal * 0;
 
       setOrderData({
         items: cartData.data || [],
         subtotal,
         tax,
-        shipping,
+        shipping: hasItems ? shippingData.shipping : 0,
         discount: 0,
+        estimatedArrival: hasItems ? shippingData.estimatedArrival : null,
       });
 
       setAddresses(addressData.data || []);
@@ -172,7 +217,7 @@ const CheckoutPage = () => {
     try {
       const user = getCurrentUser();
       const response = await fetch(
-        `http://localhost:3000/api/address/addAddresse`,
+        `http://localhost:3000/api/address/addAddress`,
         {
           method: "POST",
           headers: {
@@ -200,7 +245,8 @@ const CheckoutPage = () => {
 
   // Order Functions
   const calculateTotal = () => {
-    if (!orderData) return 0;
+    if (!orderData || !orderData.items || orderData.items.length === 0)
+      return 0;
     const { subtotal, tax, shipping, discount } = orderData;
     return Math.max(0, subtotal + tax + shipping - discount);
   };
@@ -222,11 +268,24 @@ const CheckoutPage = () => {
       );
 
       if (response.ok) {
+        const updatedItems = orderData.items.map((item) =>
+          item.id === itemId ? { ...item, quantity: newQuantity } : item
+        );
+
+        // Recalculate subtotal after updating quantity
+        const newSubtotal = updatedItems.reduce(
+          (sum, item) => sum + item.price * item.quantity,
+          0
+        );
+
         setOrderData((prev) => ({
           ...prev,
-          items: prev.items.map((item) =>
-            item.id === itemId ? { ...item, quantity: newQuantity } : item
-          ),
+          items: updatedItems,
+          subtotal: newSubtotal,
+          // Reset shipping and estimated arrival if no items
+          shipping: updatedItems.length === 0 ? 0 : prev.shipping,
+          estimatedArrival:
+            updatedItems.length === 0 ? null : prev.estimatedArrival,
         }));
       }
     } catch (error) {
@@ -247,10 +306,31 @@ const CheckoutPage = () => {
       );
 
       if (response.ok) {
+        // Remove item from state
+        const updatedItems = orderData.items.filter(
+          (item) => item.id !== itemId
+        );
+
+        // Recalculate subtotal after removing item
+        const newSubtotal = updatedItems.reduce(
+          (sum, item) => sum + item.price * item.quantity,
+          0
+        );
+
         setOrderData((prev) => ({
           ...prev,
-          items: prev.items.filter((item) => item.id !== itemId),
+          items: updatedItems,
+          subtotal: newSubtotal,
+          // Reset shipping and estimated arrival if no items
+          shipping: updatedItems.length === 0 ? 0 : prev.shipping,
+          estimatedArrival:
+            updatedItems.length === 0 ? null : prev.estimatedArrival,
         }));
+
+        // If no items left, refresh the entire checkout data to ensure consistency
+        if (updatedItems.length === 0) {
+          await fetchCheckoutData();
+        }
       }
     } catch (error) {
       console.error("Error removing item:", error);
@@ -334,65 +414,95 @@ const CheckoutPage = () => {
       </h2>
 
       <div className="space-y-4">
-        {orderData?.items?.map((item) => (
-          <motion.div
-            key={item.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center space-x-4 p-4 border border-gray-200 rounded-xl hover:shadow-md transition-shadow"
-          >
-            <img
-              src={item.image_url || "/placeholder-product.jpg"}
-              alt={item.name}
-              className="w-16 h-16 object-cover rounded-lg"
-            />
-            <div className="flex-1">
-              <h3 className="font-semibold text-gray-900">{item.name}</h3>
-              <p className="text-sm text-gray-600">{item.description}</p>
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-lg font-bold text-blue-600">
-                  ${item.price}
-                </span>
-                <div className="flex items-center space-x-2">
-                  <motion.button
-                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                    className="p-1 rounded-full hover:bg-gray-100"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <Minus className="w-4 h-4" />
-                  </motion.button>
-                  <span className="w-8 text-center font-medium">
-                    {item.quantity}
+        {orderData?.items?.length > 0 ? (
+          orderData.items.map((item) => (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center space-x-4 p-4 border border-gray-200 rounded-xl hover:shadow-md transition-shadow"
+            >
+              {/* ...existing item content... */}
+              <img
+                src={item.image_url || "/placeholder-product.jpg"}
+                alt={item.name}
+                className="w-16 h-16 object-cover rounded-lg"
+              />
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                <p className="text-sm text-gray-600">{item.description}</p>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-lg font-bold text-blue-600">
+                    ${item.price}
                   </span>
-                  <motion.button
-                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                    className="p-1 rounded-full hover:bg-gray-100"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <Plus className="w-4 h-4" />
-                  </motion.button>
-                  <motion.button
-                    onClick={() => removeItem(item.id)}
-                    className="p-1 rounded-full hover:bg-red-100 text-red-600 ml-2"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </motion.button>
+                  <div className="flex items-center space-x-2">
+                    <motion.button
+                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                      className="p-1 rounded-full hover:bg-gray-100"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <Minus className="w-4 h-4" />
+                    </motion.button>
+                    <span className="w-8 text-center font-medium">
+                      {item.quantity}
+                    </span>
+                    <motion.button
+                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      className="p-1 rounded-full hover:bg-gray-100"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </motion.button>
+                    <motion.button
+                      onClick={() => removeItem(item.id)}
+                      className="p-1 rounded-full hover:bg-red-100 text-red-600 ml-2"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </motion.button>
+                  </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
+          ))
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-12"
+          >
+            <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">
+              Your cart is empty
+            </h3>
+            <p className="text-gray-500 mb-6">
+              Add some items to your cart to continue with checkout
+            </p>
+            <motion.button
+              onClick={() => navigate("/")}
+              className="bg-blue-600 text-white py-2 px-6 rounded-xl font-semibold hover:bg-blue-700 transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Continue Shopping
+            </motion.button>
           </motion.div>
-        ))}
+        )}
       </div>
 
       <motion.button
         onClick={() => setCurrentStep(2)}
-        className="w-full mt-6 bg-blue-600 text-white py-3 px-6 rounded-xl font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+        disabled={!orderData?.items?.length}
+        className={`w-full mt-6 py-3 px-6 rounded-xl font-semibold transition-colors flex items-center justify-center space-x-2 ${
+          orderData?.items?.length > 0
+            ? "bg-blue-600 text-white hover:bg-blue-700"
+            : "bg-gray-300 text-gray-500 cursor-not-allowed"
+        }`}
+        whileHover={orderData?.items?.length > 0 ? { scale: 1.02 } : {}}
+        whileTap={orderData?.items?.length > 0 ? { scale: 0.98 } : {}}
       >
         <span>Continue to Shipping</span>
         <ArrowRight className="w-5 h-5" />
@@ -729,7 +839,7 @@ const CheckoutPage = () => {
       </div>
 
       <motion.button
-        onClick={() => (viewOrderDetails())}
+        onClick={() => viewOrderDetails()}
         className="bg-blue-600 text-white py-3 px-8 rounded-xl font-semibold hover:bg-blue-700 transition-colors"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -750,28 +860,34 @@ const CheckoutPage = () => {
 
       {/* Order Items */}
       <div className="space-y-3 mb-6">
-        {orderData?.items?.map((item) => (
-          <div key={item.id} className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <img
-                src={item.image_url || "/placeholder-product.jpg"}
-                alt={item.name}
-                className="w-12 h-12 object-cover rounded-lg"
-              />
-              <div>
-                <p className="font-medium text-gray-900">{item.name}</p>
-                <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
+        {orderData?.items?.length > 0 ? (
+          orderData.items.map((item) => (
+            <div key={item.id} className="flex justify-between items-center">
+              <div className="flex items-center space-x-3">
+                <img
+                  src={item.image_url || "/placeholder-product.jpg"}
+                  alt={item.name}
+                  className="w-12 h-12 object-cover rounded-lg"
+                />
+                <div>
+                  <p className="font-medium text-gray-900">{item.name}</p>
+                  <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
+                </div>
               </div>
+              <span className="font-semibold text-gray-900">
+                ${(item.price * item.quantity).toFixed(2)}
+              </span>
             </div>
-            <span className="font-semibold text-gray-900">
-              ${(item.price * item.quantity).toFixed(2)}
-            </span>
+          ))
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-gray-500 text-sm">No items in cart</p>
           </div>
-        ))}
+        )}
       </div>
 
       {/* Coupon Code */}
-      {currentStep < 4 && (
+      {currentStep < 4 && orderData?.items?.length > 0 && (
         <div className="mb-6">
           <div className="flex space-x-2">
             <input
@@ -813,20 +929,44 @@ const CheckoutPage = () => {
       {/* Price Breakdown */}
       <div className="space-y-2 mb-6 pb-6 border-b border-gray-200">
         <div className="flex justify-between">
-          <span className="text-gray-600">Subtotal</span>
-          <span className="font-medium">
+          <span className=" text-green-600">Subtotal</span>
+          <span className="font-medium  text-green-600">
             ${orderData?.subtotal?.toFixed(2) || "0.00"}
           </span>
         </div>
         <div className="flex justify-between">
-          <span className="text-gray-600">Shipping</span>
-          <span className="font-medium">
-            ${orderData?.shipping?.toFixed(2) || "0.00"}
+          <span className=" text-green-600">Shipping</span>
+          <span className="font-medium  text-green-600">
+            {orderData?.items?.length > 0
+              ? `$${orderData?.shipping?.toFixed(2) || "0.00"}`
+              : "Free"}
           </span>
         </div>
+        {orderData?.estimatedArrival && orderData?.items?.length > 0 && (
+          <div className="flex justify-between text-sm text-green-600 font-medium">
+            <span>Estimated Arrival</span>
+            <span>
+              {new Date(orderData.estimatedArrival).toLocaleDateString(
+                "en-US",
+                {
+                  weekday: "short",
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                }
+              )}
+            </span>
+          </div>
+        )}
+        {orderData?.items?.length === 0 && (
+          <div className="flex justify-between text-sm text-gray-500">
+            <span>Estimated Arrival</span>
+            <span>Not available</span>
+          </div>
+        )}
         <div className="flex justify-between">
-          <span className="text-gray-600">Tax</span>
-          <span className="font-medium">
+          <span className=" text-green-600">Tax</span>
+          <span className="font-medium  text-green-600">
             ${orderData?.tax?.toFixed(2) || "0.00"}
           </span>
         </div>
@@ -845,11 +985,13 @@ const CheckoutPage = () => {
         <span>${calculateTotal().toFixed(2)}</span>
       </div>
 
-      {/* Security Badge */}
-      <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
-        <Lock className="w-4 h-4" />
-        <span>Secure 256-bit SSL encryption</span>
-      </div>
+      {/* Security Badge - only show when there are items */}
+      {orderData?.items?.length > 0 && (
+        <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
+          <Lock className="w-4 h-4" />
+          <span>Secure 256-bit SSL encryption</span>
+        </div>
+      )}
     </motion.div>
   );
 

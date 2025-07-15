@@ -167,6 +167,18 @@ const OrderDetailsPage = () => {
     );
   }
 
+  // If orderData is not loaded yet, show loading state
+  if (!orderData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading order details...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -182,21 +194,21 @@ const OrderDetailsPage = () => {
               </button>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
-                  Order #{orderData.order_id}
+                  Order #{orderData?.order_id || "N/A"}
                 </h1>
                 <p className="text-sm text-gray-500">
-                  Placed on {formatDate(orderData.order_date)}
+                  Placed on {formatDate(orderData?.order_date)}
                 </p>
               </div>
             </div>
             <div
               className={`px-4 py-2 rounded-full border flex items-center space-x-2 ${getStatusColor(
-                orderData.current_status
+                orderData?.current_status || "pending"
               )}`}
             >
-              {getStatusIcon(orderData.current_status)}
+              {getStatusIcon(orderData?.current_status || "pending")}
               <span className="font-medium capitalize">
-                {orderData.current_status}
+                {orderData?.current_status || "pending"}
               </span>
             </div>
           </div>
@@ -216,40 +228,49 @@ const OrderDetailsPage = () => {
                 </h2>
               </div>
               <div className="space-y-4">
-                {orderData.items.map((item) => (
-                  <div
-                    key={item.order_item_id}
-                    className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg"
-                  >
-                    <img
-                      src={item.image_url}
-                      alt={item.name}
-                      className="w-16 h-16 object-cover rounded-lg"
-                    />
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{item.name}</h3>
-                      <p className="text-sm text-gray-600">
-                        {item.description}
-                      </p>
-                      <div className="flex items-center space-x-4 mt-1">
-                        <span className="text-sm text-gray-500">
-                          Origin: {item.origin}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          Unit: {item.unit_measure}
-                        </span>
+                {orderData?.items?.length > 0 ? (
+                  orderData.items.map((item) => (
+                    <div
+                      key={item.order_item_id}
+                      className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg"
+                    >
+                      <img
+                        src={item.image_url || "/placeholder-product.jpg"}
+                        alt={item.name || "Product"}
+                        className="w-16 h-16 object-cover rounded-lg"
+                      />
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900">
+                          {item.name || "Unknown Product"}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          {item.description || "No description"}
+                        </p>
+                        <div className="flex items-center space-x-4 mt-1">
+                          <span className="text-sm text-gray-500">
+                            Origin: {item.origin || "N/A"}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            Unit: {item.unit_measure || "N/A"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium text-gray-900">
+                          {formatCurrency(item.price)}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Qty: {item.quantity || 0}
+                        </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-medium text-gray-900">
-                        {formatCurrency(item.price)}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Qty: {item.quantity}
-                      </p>
-                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Package className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p>No items found in this order</p>
                   </div>
-                ))}
+                )}
               </div>
             </div>
 
@@ -262,32 +283,40 @@ const OrderDetailsPage = () => {
                 </h2>
               </div>
               <div className="space-y-4">
-                {orderData.status_history.map((status, index) => (
-                  <div key={index} className="flex items-start space-x-4">
-                    <div
-                      className={`p-2 rounded-full ${getStatusColor(
-                        status.status
-                      )}`}
-                    >
-                      {getStatusIcon(status.status)}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-gray-900 capitalize">
-                          {status.status}
-                        </h3>
-                        <span className="text-sm text-gray-500">
-                          {formatDate(status.updated_at)}
-                        </span>
+                {orderData?.status_history?.length > 0 ? (
+                  orderData.status_history.map((status, index) => (
+                    <div key={index} className="flex items-start space-x-4">
+                      <div
+                        className={`p-2 rounded-full ${getStatusColor(
+                          status.status || "pending"
+                        )}`}
+                      >
+                        {getStatusIcon(status.status || "pending")}
                       </div>
-                      {status.first_name && (
-                        <p className="text-sm text-gray-600">
-                          Updated by {status.first_name} {status.last_name}
-                        </p>
-                      )}
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium text-gray-900 capitalize">
+                            {status.status || "unknown"}
+                          </h3>
+                          <span className="text-sm text-gray-500">
+                            {formatDate(status.updated_at)}
+                          </span>
+                        </div>
+                        {status.first_name && (
+                          <p className="text-sm text-gray-600">
+                            Updated by {status.first_name}{" "}
+                            {status.last_name || ""}
+                          </p>
+                        )}
+                      </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p>No status history available</p>
                   </div>
-                ))}
+                )}
               </div>
             </div>
 
@@ -481,7 +510,7 @@ const OrderDetailsPage = () => {
                   </h2>
                 </div>
                 <div className="space-y-3">
-                  {orderData.coupons.map((coupon, index) => (
+                  {orderData?.coupons?.map((coupon, index) => (
                     <div
                       key={index}
                       className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200"

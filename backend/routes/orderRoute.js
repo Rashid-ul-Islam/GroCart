@@ -6,7 +6,8 @@ import {
     getActiveOrders,
     getCompletedOrders,
     getCancelledOrders,
-    getOrderStats
+    getOrderStats,
+    calculateShippingAndDelivery
 } from '../controllers/orderController.js';
 
 import express from 'express';
@@ -27,4 +28,6 @@ router.get('/stats/:user_id', getOrderStats);
 router.get('/:order_id', getOrderDetails);
 // Update order status
 router.put('/update/:order_id', updateOrderStatusHandler);
+// Calculate shipping and delivery
+router.get('/calculate-shipping/:user_id', calculateShippingAndDelivery);
 export default router;
