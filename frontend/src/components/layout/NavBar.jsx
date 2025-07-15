@@ -196,7 +196,7 @@ export default function NavBar() {
                   placeholder="Search for products, categories..."
                   value={searchTerm}
                   onChange={handleSearchInput}
-                  className="w-full pl-10 pr-10 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full pl-10 pr-10 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-black placeholder-gray-500"
                 />
                 {searchTerm && (
                   <button
@@ -250,7 +250,7 @@ export default function NavBar() {
                     ))}
                     {searchTerm && (
                       <div
-                        className="p-3 text-center text-green-600 hover:bg-gray-50 cursor-pointer border-t border-gray-100"
+                        className="p-3 text-center text-green-600 hover:bg-gray-50 cursor-pointer border-t border-gray-100 font-medium"
                         onClick={() => {
                           setShowResults(false);
                           navigate(
