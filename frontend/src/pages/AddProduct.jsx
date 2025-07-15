@@ -1,4 +1,3 @@
-// src/components/AddProduct.jsx
 import React, { useState, useEffect } from "react";
 import {
   ArrowLeft,
@@ -10,7 +9,6 @@ import {
   MapPin,
   FileText,
   Shield,
-  Eye,
   Image,
   ChevronDown,
   ChevronRight,
@@ -39,19 +37,16 @@ export default function AddProduct() {
   const [selectedPath, setSelectedPath] = useState([]);
   const [categoryBreadcrumb, setCategoryBreadcrumb] = useState([]);
   const [finalCategorySelected, setFinalCategorySelected] = useState(false);
-  // Add these new state variables after existing warehouse states
   const [focusedField, setFocusedField] = useState(null);
   const [fieldValues, setFieldValues] = useState({});
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [categoryLoading, setCategoryLoading] = useState(false);
-  // Update formData state - remove isAvailable
-  // Add new state for warehouse distribution
+
   const [warehouses, setWarehouses] = useState([]);
   const [warehouseDistribution, setWarehouseDistribution] = useState({});
-  const [showWarehouseDistribution, setShowWarehouseDistribution] =
-    useState(false);
+  const [showWarehouseDistribution, setShowWarehouseDistribution] = useState(false);
   const [warehouseLoading, setWarehouseLoading] = useState(false);
 
   // Initialize with root categories
@@ -72,12 +67,8 @@ export default function AddProduct() {
         setCategoryBreadcrumb([]);
         setFinalCategorySelected(false);
         setFormData((prev) => ({ ...prev, categoryId: "" }));
-      } else {
-        console.error("Failed to fetch root categories:", response.statusText);
       }
-    } catch (error) {
-      console.error("Failed to fetch root categories:", error);
-    } finally {
+    } catch (error) {} finally {
       setCategoryLoading(false);
     }
   };
@@ -91,12 +82,9 @@ export default function AddProduct() {
       if (response.ok) {
         const data = await response.json();
         return data;
-      } else {
-        console.error("Failed to fetch child categories:", response.statusText);
-        return [];
       }
-    } catch (error) {
-      console.error("Failed to fetch child categories:", error);
+      return [];
+    } catch {
       return [];
     } finally {
       setCategoryLoading(false);
@@ -113,8 +101,7 @@ export default function AddProduct() {
         return data.hasChildren;
       }
       return false;
-    } catch (error) {
-      console.error("Failed to check child categories:", error);
+    } catch {
       return false;
     }
   };
@@ -123,26 +110,14 @@ export default function AddProduct() {
     const hasChildren = await checkHasChildren(category.category_id);
 
     if (hasChildren) {
-      // Category has children, show next level
       const childCategories = await fetchChildCategories(category.category_id);
-
-      // Update selected path
       const newPath = [...selectedPath.slice(0, level), category];
       setSelectedPath(newPath);
-
-      // Update category levels (remove levels after current and add new level)
-      const newLevels = [
-        ...categoryLevels.slice(0, level + 1),
-        childCategories,
-      ];
-      setCategoryLevels(newLevels);
-
-      // Update breadcrumb
+      setCategoryLevels([...categoryLevels.slice(0, level + 1), childCategories]);
       setCategoryBreadcrumb(newPath);
       setFinalCategorySelected(false);
       setFormData((prev) => ({ ...prev, categoryId: "" }));
     } else {
-      // This is a leaf category (no children), select it as final
       const newPath = [...selectedPath.slice(0, level), category];
       setSelectedPath(newPath);
       setCategoryBreadcrumb(newPath);
@@ -151,12 +126,8 @@ export default function AddProduct() {
         ...prev,
         categoryId: category.category_id.toString(),
       }));
-
-      // Remove levels after current selection
       setCategoryLevels((prev) => prev.slice(0, level + 1));
     }
-
-    // Clear category error
     if (errors.categoryId) {
       setErrors((prev) => ({ ...prev, categoryId: "" }));
     }
@@ -166,7 +137,6 @@ export default function AddProduct() {
     fetchRootCategories();
   };
 
-  // Add this function after existing useEffect
   const fetchWarehouses = async () => {
     setWarehouseLoading(true);
     try {
@@ -176,21 +146,17 @@ export default function AddProduct() {
       if (response.ok) {
         const data = await response.json();
         setWarehouses(data);
-        // Initialize warehouse distribution with proper defaults
         const initialDistribution = {};
         data.forEach((warehouse) => {
           initialDistribution[warehouse.warehouse_id] = {
-            quantity: 0, // Default stock to 0
-            reorderLevel: 20, // Default reorder level to 20
+            quantity: 0,
+            reorderLevel: 20,
           };
         });
         setWarehouseDistribution(initialDistribution);
-      } else {
-        console.error("Failed to fetch warehouses:", response.statusText);
       }
-    } catch (error) {
-      console.error("Failed to fetch warehouses:", error);
-    } finally {
+    } catch {}
+    finally {
       setWarehouseLoading(false);
     }
   };
@@ -209,7 +175,6 @@ export default function AddProduct() {
       },
     }));
 
-    // Update field values for focus management
     setFieldValues((prev) => ({
       ...prev,
       [`${warehouseId}-${field}`]: value,
@@ -223,8 +188,7 @@ export default function AddProduct() {
 
     setFocusedField(fieldKey);
 
-    // If the current value is the default, clear it
-    if (currentValue === defaultValue) {
+    if (currentValue === defaultValue || currentValue === undefined) {
       setFieldValues((prev) => ({
         ...prev,
         [fieldKey]: "",
@@ -232,7 +196,7 @@ export default function AddProduct() {
     } else {
       setFieldValues((prev) => ({
         ...prev,
-        [fieldKey]: currentValue.toString(),
+        [fieldKey]: String(currentValue ?? ""),
       }));
     }
   };
@@ -244,7 +208,6 @@ export default function AddProduct() {
 
     setFocusedField(null);
 
-    // If field is empty, restore default value
     if (currentFieldValue === "" || currentFieldValue === undefined) {
       setWarehouseDistribution((prev) => ({
         ...prev,
@@ -259,7 +222,6 @@ export default function AddProduct() {
         [fieldKey]: defaultValue.toString(),
       }));
     } else {
-      // Update with the actual value
       const numValue = parseInt(currentFieldValue) || defaultValue;
       setWarehouseDistribution((prev) => ({
         ...prev,
@@ -271,18 +233,20 @@ export default function AddProduct() {
     }
   };
 
+  // SAFER: Always fallback to string
   const getFieldDisplayValue = (warehouseId, field) => {
     const fieldKey = `${warehouseId}-${field}`;
     const isFocused = focusedField === fieldKey;
 
     if (isFocused) {
-      return fieldValues[fieldKey] || "";
+      return fieldValues[fieldKey] ?? "";
     }
 
-    return (
-      warehouseDistribution[warehouseId]?.[field]?.toString() ||
-      (field === "quantity" ? "0" : "20")
-    );
+    const warehouseObj = warehouseDistribution[warehouseId];
+    if (!warehouseObj) return field === "quantity" ? "0" : "20";
+    const val = warehouseObj[field];
+    if (val === undefined || val === null) return field === "quantity" ? "0" : "20";
+    return val.toString();
   };
 
   const toggleWarehouseDistribution = () => {
@@ -298,14 +262,12 @@ export default function AddProduct() {
     }
     setLoading(true);
 
-    // Convert string values to appropriate types and remove isAvailable
     const productData = {
       ...formData,
       categoryId: parseInt(formData.categoryId),
       price: parseFloat(formData.price),
       quantity: parseInt(formData.quantity),
       isRefundable: formData.isRefundable === "true",
-      // Remove isAvailable: formData.isAvailable === "true",
       warehouseDistribution: showWarehouseDistribution
         ? warehouseDistribution
         : null,
@@ -332,7 +294,6 @@ export default function AddProduct() {
       }
 
       alert("Product added successfully!");
-      // Reset the form
       setFormData({
         productName: "",
         categoryId: "",
@@ -343,7 +304,6 @@ export default function AddProduct() {
         description: "",
         imageUrl: "",
         isRefundable: "true",
-        // Remove isAvailable: "true",
       });
       setWarehouseDistribution({});
       setShowWarehouseDistribution(false);
@@ -779,7 +739,6 @@ export default function AddProduct() {
                   <option value="false">❌ No (Non-refundable)</option>
                 </select>
               </div>
-              // Remove the entire is_available field section and replace with:
               {/* Warehouse Distribution Section */}
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
