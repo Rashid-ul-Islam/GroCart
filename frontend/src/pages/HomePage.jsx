@@ -797,6 +797,18 @@ const HomePage = () => {
     navigate(`/product/${product.id}`);
   };
 
+  const handleShopNowClick = () => {
+    // Scroll to the Most Popular section with offset to account for fixed navbar
+    const mostPopularSection = document.getElementById("most-popular-section");
+    if (mostPopularSection) {
+      const offsetTop = mostPopularSection.offsetTop - 100; // 100px offset for navbar
+      window.scrollTo({
+        top: offsetTop,
+        behavior: "smooth",
+      });
+    }
+  };
+
   const sectionConfigs = [
     {
       key: "mostPopular",
@@ -868,7 +880,10 @@ const HomePage = () => {
                 <p className="text-lg md:text-xl mb-8 opacity-90">
                   Explore premium quality products with unbeatable prices
                 </p>
-                <button className="bg-white text-purple-600 px-6 md:px-8 py-3 md:py-4 rounded-full font-bold text-base md:text-lg hover:bg-gray-100 transition-all duration-200 transform hover:scale-105 shadow-lg">
+                <button
+                  onClick={handleShopNowClick}
+                  className="bg-white text-purple-600 px-6 md:px-8 py-3 md:py-4 rounded-full font-bold text-base md:text-lg hover:bg-gray-100 transition-all duration-200 transform hover:scale-105 shadow-lg"
+                >
                   Shop Now
                 </button>
               </div>
@@ -877,17 +892,23 @@ const HomePage = () => {
             </div>
 
             {/* Product Sections */}
-            {sectionConfigs.map((config) => (
-              <ProductSection
+            {sectionConfigs.map((config, index) => (
+              <div
                 key={config.key}
-                title={config.title}
-                products={config.products}
-                loading={false}
-                onProductClick={handleProductClick}
-                onAddToCart={handleAddToCart}
-                onShowLoginModal={handleShowLoginModal}
-                sectionKey={config.key}
-              />
+                id={index === 0 ? "most-popular-section" : undefined}
+                className={index === 0 ? "scroll-mt-24" : undefined}
+              >
+                <ProductSection
+                  key={config.key}
+                  title={config.title}
+                  products={config.products}
+                  loading={false}
+                  onProductClick={handleProductClick}
+                  onAddToCart={handleAddToCart}
+                  onShowLoginModal={handleShowLoginModal}
+                  sectionKey={config.key}
+                />
+              </div>
             ))}
           </div>
         </main>

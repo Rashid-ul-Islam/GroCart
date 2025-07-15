@@ -13,7 +13,6 @@ import {
   ShoppingBag,
   CreditCard,
   ArrowRight,
-  Tag,
   Gift,
 } from "lucide-react";
 import LoginModal from "../auth/LoginModal.jsx";
@@ -43,9 +42,7 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
       sum + (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 0),
     0
   );
-  const tax = subtotal * 0.08; // 8% tax
-  const shipping = subtotal > 100 ? 0 : 50;
-  const total = subtotal + tax + shipping;
+  const total = subtotal;
   const itemCount = cartItems.reduce(
     (sum, item) => sum + (parseInt(item.quantity) || 0),
     0
@@ -357,7 +354,7 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
       <div
         className={`fixed top-0 right-0 h-full w-96 bg-white shadow-2xl z-50 transform transition-all duration-500 ease-in-out ${
           isCartOpen ? "translate-x-0" : "translate-x-full"
-        }`}
+        } flex flex-col`}
       >
         {/* Animated background elements */}
         <div className="absolute inset-0 opacity-30">
@@ -366,7 +363,7 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
         </div>
 
         {/* Header */}
-        <div className="relative z-10 p-6 border-b border-gray-200 bg-white/80 backdrop-blur-md">
+        <div className="relative z-10 p-6 border-b border-gray-200 bg-white/80 backdrop-blur-md flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 rounded-xl bg-gradient-to-br from-blue-100 to-purple-100">
@@ -376,7 +373,9 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
                 <h2 className="text-xl font-bold text-gray-800">
                   🛒 Shopping Cart
                 </h2>
-                <p className="text-sm text-gray-500 font-medium">{itemCount} items</p>
+                <p className="text-sm text-gray-500 font-medium">
+                  {itemCount} items
+                </p>
               </div>
             </div>
             <button
@@ -389,7 +388,7 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
         </div>
 
         {/* Cart Items */}
-        <div className="relative z-10 flex-1 overflow-y-auto p-6 space-y-4 max-h-[calc(100vh-300px)]">
+        <div className="relative z-10 overflow-y-auto p-6 space-y-4 h-[calc(100vh-400px)] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -494,39 +493,12 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
 
         {/* Footer - Totals and Checkout */}
         {cartItems.length > 0 && (
-          <div className="relative z-10 p-6 border-t border-gray-200 bg-white/80 backdrop-blur-md">
-            {/* Promo Code Input */}
-            <div className="mb-4">
-              <div className="flex items-center space-x-2">
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    placeholder="Enter promo code"
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 bg-white text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 pl-10 font-semibold"
-                  />
-                  <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                </div>
-                <button className="px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white rounded-xl font-bold transition-all duration-200 shadow-lg transform hover:scale-105">
-                  Apply
-                </button>
-              </div>
-            </div>
-
+          <div className="relative z-10 p-6 border-t border-gray-200 bg-white/80 backdrop-blur-md flex-shrink-0">
             {/* Totals */}
             <div className="space-y-2 mb-6">
               <div className="flex justify-between text-gray-600 font-medium">
                 <span>Subtotal</span>
                 <span>${subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-gray-600 font-medium">
-                <span>Tax</span>
-                <span>${tax.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-gray-600 font-medium">
-                <span>Shipping</span>
-                <span>
-                  {shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}
-                </span>
               </div>
               <div className="border-t border-gray-200 pt-2">
                 <div className="flex justify-between font-bold text-xl text-gray-800">
@@ -583,6 +555,32 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
 
         .shadow-3xl {
           box-shadow: 0 35px 60px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        /* Custom scrollbar styles */
+        .scrollbar-thin::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 10px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 10px;
+          transition: background 0.2s ease;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+
+        /* Firefox scrollbar */
+        .scrollbar-thin {
+          scrollbar-width: thin;
+          scrollbar-color: #cbd5e1 #f1f5f9;
         }
       `}</style>
     </>

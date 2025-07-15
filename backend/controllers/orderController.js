@@ -213,11 +213,14 @@ export const createOrder = async (req, res) => {
     await updateOrderStatus(order_id, 'pending', user_id, 'Order created', client);
 
     // Clear user's cart
+    // Clear user's cart by setting now_in_cart to false
     const clearCartQuery = `
-      DELETE FROM "ShoppingCart"
+      UPDATE "ShoppingCart"
+      SET now_in_cart = false, added_at = CURRENT_TIMESTAMP
       WHERE user_id = $1 AND now_in_cart = true;
     `;
     await client.query(clearCartQuery, [user_id]);
+
 
     // Find an available delivery boy in the region
     let delivery_id = null;
@@ -237,8 +240,8 @@ export const createOrder = async (req, res) => {
 
         // Create delivery record
         const deliveryQuery = `
-          INSERT INTO "Delivery" (order_id, address_id, delivery_boy_id, created_at, updated_at)
-          VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          INSERT INTO "Delivery" (order_id, address_id, delivery_boy_id, estimated_arrival, created_at, updated_at)
+          VALUES ($1, $2, $3, CURRENT_TIMESTAMP + INTERVAL '1 day', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           RETURNING delivery_id;
         `;
         const deliveryResult = await client.query(deliveryQuery, [order_id, address_id, delivery_boy_id]);
@@ -257,8 +260,8 @@ export const createOrder = async (req, res) => {
       } else {
         // No delivery boy available, create delivery record without assignment
         const deliveryQuery = `
-          INSERT INTO "Delivery" (order_id, address_id, delivery_boy_id, created_at, updated_at)
-          VALUES ($1, $2, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          INSERT INTO "Delivery" (order_id, address_id, delivery_boy_id, created_at, estimated_arrival, updated_at)
+          VALUES ($1, $2, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '1 day', CURRENT_TIMESTAMP)
           RETURNING delivery_id;
         `;
         const deliveryResult = await client.query(deliveryQuery, [order_id, address_id]);
@@ -267,8 +270,8 @@ export const createOrder = async (req, res) => {
     } else {
       // No delivery region found, create delivery record without assignment
       const deliveryQuery = `
-        INSERT INTO "Delivery" (order_id, address_id, delivery_boy_id, created_at, updated_at)
-        VALUES ($1, $2, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        INSERT INTO "Delivery" (order_id, address_id, delivery_boy_id, created_at, estimated_arrival, updated_at)
+        VALUES ($1, $2, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '1 day', CURRENT_TIMESTAMP)
         RETURNING delivery_id;
       `;
       const deliveryResult = await client.query(deliveryQuery, [order_id, address_id]);
@@ -300,6 +303,54 @@ export const createOrder = async (req, res) => {
     client.release();
   }
 };
+
+// Calculate shipping cost and estimated delivery
+export const calculateShippingAndDelivery = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+
+    if (!user_id || isNaN(user_id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid user ID is required'
+      });
+    }
+
+    // Call the PostgreSQL function
+    const query = `
+      SELECT * FROM calculate_shipping_and_delivery($1);
+    `;
+
+    const result = await pool.query(query, [parseInt(user_id)]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No delivery region found for this user'
+      });
+    }
+
+    const deliveryInfo = result.rows[0];
+    console.log('Delivery Info:', deliveryInfo);
+    res.status(200).json({
+      success: true,
+      data: {
+        shipping_cost: parseFloat(deliveryInfo.shipping_cost),
+        estimated_delivery_date: deliveryInfo.estimated_delivery_date,
+        delivery_region_id: parseInt(deliveryInfo.delivery_region_id)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error calculating shipping and delivery:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to calculate shipping and delivery information',
+      error: error.message
+    });
+  }
+};
+
 
 // Get user orders
 export const getUserOrders = async (req, res) => {
@@ -418,10 +469,17 @@ export const getOrderDetails = async (req, res) => {
     const orderQuery = `
       SELECT 
         o.*,
+        u.first_name,
+        u.last_name,
+        u.email,
+        u.phone_number,
         a.address as delivery_address,
         d.delivery_id,
         d.delivery_boy_id,
         d.estimated_arrival as estimated_delivery,
+        d.actual_arrival,
+        d.is_aborted,
+        db.availability_status as delivery_boy_status,
         db_user.first_name as db_first_name,
         db_user.last_name as db_last_name,
         db_user.phone_number as db_phone,
@@ -436,6 +494,7 @@ export const getOrderDetails = async (req, res) => {
           LIMIT 1
         ) as status
       FROM "Order" o
+      LEFT JOIN "User" u ON o.user_id = u.user_id
       LEFT JOIN "Delivery" d ON o.order_id = d.order_id
       LEFT JOIN "Address" a ON d.address_id = a.address_id
       LEFT JOIN "DeliveryBoy" db ON d.delivery_boy_id = db.user_id
@@ -445,12 +504,16 @@ export const getOrderDetails = async (req, res) => {
 
     const itemsQuery = `
       SELECT 
+        oi.order_item_id,
         oi.product_id,
         oi.quantity,
         oi.price,
         p.name,
+        p.description,
+        p.origin,
+        p.unit_measure,
         cat.name as category,
-        pi.image_url as image
+        pi.image_url
       FROM "OrderItem" oi
       JOIN "Product" p ON oi.product_id = p.product_id
       LEFT JOIN "Category" cat ON p.category_id = cat.category_id
@@ -479,7 +542,10 @@ export const getOrderDetails = async (req, res) => {
     }
 
     const order = orderResult.rows[0];
-    const items = itemsResult.rows.map(item => ({ ...item, image: item.image || '/api/placeholder/80/80' }));
+    const items = itemsResult.rows.map(item => ({
+      ...item,
+      image_url: item.image_url || '/api/placeholder/80/80'
+    }));
     const statusHistory = statusHistoryResult.rows;
 
     // Process status history into the format the frontend expects
@@ -521,11 +587,15 @@ export const getOrderDetails = async (req, res) => {
     const responseData = {
       ...order,
       order_id: `ORD-${String(order.order_id).padStart(6, '0')}`,
+      address: order.delivery_address,
       items,
+      status_history: statusHistory,
       tracking_info,
       delivery_boy,
       can_review_products,
       can_review_delivery,
+      current_status: order.status || 'pending',
+      estimated_arrival: order.estimated_delivery,
     };
 
     res.json({
