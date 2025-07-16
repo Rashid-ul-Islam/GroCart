@@ -68,7 +68,7 @@ export const addToCart = async (req, res) => {
     console.log('quantity:', quantity);
     // Check if product exists and is available
     const productQuery = `
-      SELECT product_id, name, price, quantity as stock, is_available
+      SELECT product_id, name, price, is_available
       FROM "Product"
       WHERE product_id = $1;
     `;
@@ -200,7 +200,7 @@ export const updateCartItem = async (req, res) => {
 
     // Check stock availability
     const stockQuery = `
-      SELECT p.quantity as stock, p.name
+      SELECT p.is_available, p.name
       FROM "ShoppingCart" sc
       JOIN "Product" p ON sc.product_id = p.product_id
       WHERE sc.cart_item_id = $1;
@@ -217,7 +217,7 @@ export const updateCartItem = async (req, res) => {
 
     const product = stockResult.rows[0];
     
-    if (product.stock < quantity) {
+    if (product.is_available === false) {
       return res.status(400).json({
         success: false,
         message: 'Insufficient stock available'

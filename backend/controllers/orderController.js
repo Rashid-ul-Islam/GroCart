@@ -48,7 +48,8 @@ export const createOrder = async (req, res) => {
     // Check stock availability and validate items
     const productIds = items.map(item => item.product_id);
     const stockQuery = `
-      SELECT product_id, quantity, is_available, name, price
+      SELECT product_id, quantity, total_available_stock, buying_in_progress, is_available, name, price,
+             (total_available_stock - buying_in_progress) as available_now
       FROM "Product"
       WHERE product_id = ANY($1);
     `;
@@ -77,11 +78,12 @@ export const createOrder = async (req, res) => {
           message: `Product "${product?.name || 'Unknown'}" is not available`
         });
       }
-      if (product.quantity < item.quantity) {
+      // Check if there's enough reserved stock for this item
+      if (product.buying_in_progress < item.quantity) {
         await client.query('ROLLBACK');
         return res.status(400).json({
           success: false,
-          message: `Insufficient stock for product "${product.name}". Available: ${product.quantity}, Requested: ${item.quantity}`
+          message: `Stock not properly reserved for product "${product.name}". Please try checking stock again.`
         });
       }
       if (item.quantity <= 0) {
@@ -203,9 +205,12 @@ export const createOrder = async (req, res) => {
       `;
       await client.query(orderItemQuery, [order_id, item.product_id, item.quantity, itemPrice]);
 
+      // Convert reserved stock to actual stock reduction
       const updateProductQuery = `
         UPDATE "Product"
-        SET quantity = quantity - $1, updated_at = CURRENT_TIMESTAMP
+        SET quantity = quantity - $1,
+            buying_in_progress = buying_in_progress - $1,
+            updated_at = CURRENT_TIMESTAMP
         WHERE product_id = $2;
       `;
       await client.query(updateProductQuery, [item.quantity, item.product_id]);

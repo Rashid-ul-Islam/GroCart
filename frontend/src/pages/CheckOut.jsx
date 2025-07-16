@@ -13,8 +13,9 @@ import {
   Minus,
   Gift,
   Tag,
-  X,
   Trash2,
+  X,
+  AlertTriangle,
   User,
   Phone,
   Mail,
@@ -42,6 +43,11 @@ const CheckoutPage = () => {
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState(false);
+  const [stockCheckResult, setStockCheckResult] = useState(null);
+  const [showStockModal, setShowStockModal] = useState(false);
+  const [isCheckingStock, setIsCheckingStock] = useState(false);
+  const [isStockReserved, setIsStockReserved] = useState(false);
+  const [isReleasingStock, setIsReleasingStock] = useState(false);
   const navigate = useNavigate();
   const [newAddress, setNewAddress] = useState({
     address: "",
@@ -105,6 +111,28 @@ const CheckoutPage = () => {
     }
     fetchCheckoutData();
   }, []);
+
+  // Cleanup effect to release reserved stock when leaving checkout (component unmount only)
+  useEffect(() => {
+    return () => {
+      // Release stock when component unmounts only if stock is reserved
+      if (isStockReserved && orderData?.items?.length > 0) {
+        console.log("Component unmounting - releasing reserved stock");
+        releaseStock();
+      }
+    };
+  }, []); // Empty dependency array - only runs on mount/unmount
+
+  // Release stock if user goes back from shipping step
+  const goBackToReview = () => {
+    if (isStockReserved) {
+      console.log("Releasing stock - user going back to review");
+      releaseStock();
+      setIsStockReserved(false);
+    }
+    setCurrentStep(1);
+  };
+
   const viewOrderDetails = () => {
     if (orderData?.orderId) {
       navigate(`/order-details/${orderData.orderId}`);
@@ -365,6 +393,11 @@ const CheckoutPage = () => {
 
       if (response.ok) {
         const orderResult = await response.json();
+
+        // Order confirmed - stock should be permanently deducted, not released
+        // The backend order creation will handle final stock deduction
+        setIsStockReserved(false); // Clear reservation state
+
         setOrderConfirmed(true);
         setCurrentStep(4);
         // Store the order ID for navigation
@@ -377,6 +410,136 @@ const CheckoutPage = () => {
       console.error("Error processing order:", error);
     } finally {
       setIsProcessingOrder(false);
+    }
+  };
+
+  // Stock checking functions
+  const checkStockAvailability = async () => {
+    setIsCheckingStock(true);
+    try {
+      const items = orderData.items.map((item) => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+      }));
+
+      const response = await fetch(
+        "http://localhost:3000/api/stock/check-availability",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({ items }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setStockCheckResult(data.data);
+
+        if (!data.data.all_available) {
+          setShowStockModal(true);
+          return false;
+        } else {
+          // All items available - now reserve the stock
+          console.log("Stock check passed, now reserving stock...");
+          const reserveSuccess = await reserveStock(items);
+          if (reserveSuccess) {
+            console.log("Stock successfully reserved!");
+            setIsStockReserved(true);
+            return true;
+          } else {
+            console.log("Stock reservation failed!");
+            return false;
+          }
+        }
+      } else {
+        console.error("Stock check failed:", data.message);
+        return false;
+      }
+    } catch (error) {
+      console.error("Error checking stock:", error);
+      return false;
+    } finally {
+      setIsCheckingStock(false);
+    }
+  };
+
+  const reserveStock = async (items) => {
+    try {
+      const response = await fetch("http://localhost:3000/api/stock/reserve", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ items }),
+      });
+
+      const data = await response.json();
+      if (!data.success) {
+        console.error("Stock reservation failed:", data.message);
+        // Show stock modal if reservation failed
+        if (data.failed_items) {
+          setStockCheckResult({
+            all_available: false,
+            unavailable_items: data.failed_items,
+          });
+          setShowStockModal(true);
+        }
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error("Error reserving stock:", error);
+      return false;
+    }
+  };
+
+  const releaseStock = async () => {
+    if (isReleasingStock) {
+      console.log("releaseStock already in progress, skipping");
+      return;
+    }
+    
+    setIsReleasingStock(true);
+    try {
+      console.log("releaseStock called - releasing reserved stock");
+      const items = orderData.items.map((item) => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+      }));
+
+      await fetch("http://localhost:3000/api/stock/release", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ items }),
+      });
+      
+      // Reset the reservation state
+      setIsStockReserved(false);
+      console.log("Stock released successfully");
+    } catch (error) {
+      console.error("Error releasing stock:", error);
+    } finally {
+      setIsReleasingStock(false);
+    }
+  };
+
+  const updateCartQuantities = async (adjustedItems) => {
+    try {
+      for (const item of adjustedItems) {
+        await updateQuantity(item.id, item.quantity);
+      }
+      // Refresh checkout data after updates
+      await fetchCheckoutData();
+    } catch (error) {
+      console.error("Error updating cart quantities:", error);
     }
   };
 
@@ -494,18 +657,44 @@ const CheckoutPage = () => {
       </div>
 
       <motion.button
-        onClick={() => setCurrentStep(2)}
-        disabled={!orderData?.items?.length}
+        onClick={async () => {
+          const stockAvailable = await checkStockAvailability();
+          if (stockAvailable) {
+            setCurrentStep(2);
+          }
+        }}
+        disabled={!orderData?.items?.length || isCheckingStock}
         className={`w-full mt-6 py-3 px-6 rounded-xl font-semibold transition-colors flex items-center justify-center space-x-2 ${
-          orderData?.items?.length > 0
+          orderData?.items?.length > 0 && !isCheckingStock
             ? "bg-blue-600 text-white hover:bg-blue-700"
             : "bg-gray-300 text-gray-500 cursor-not-allowed"
         }`}
-        whileHover={orderData?.items?.length > 0 ? { scale: 1.02 } : {}}
-        whileTap={orderData?.items?.length > 0 ? { scale: 0.98 } : {}}
+        whileHover={
+          orderData?.items?.length > 0 && !isCheckingStock
+            ? { scale: 1.02 }
+            : {}
+        }
+        whileTap={
+          orderData?.items?.length > 0 && !isCheckingStock
+            ? { scale: 0.98 }
+            : {}
+        }
       >
-        <span>Continue to Shipping</span>
-        <ArrowRight className="w-5 h-5" />
+        {isCheckingStock ? (
+          <>
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+            />
+            <span>Checking Stock...</span>
+          </>
+        ) : (
+          <>
+            <span>Continue to Shipping</span>
+            <ArrowRight className="w-5 h-5" />
+          </>
+        )}
       </motion.button>
     </motion.div>
   );
@@ -615,7 +804,7 @@ const CheckoutPage = () => {
 
       <div className="flex space-x-4">
         <motion.button
-          onClick={() => setCurrentStep(1)}
+          onClick={goBackToReview}
           className="flex-1 border border-gray-300 text-gray-700 py-3 px-6 rounded-xl hover:bg-gray-50 transition-colors"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -995,6 +1184,124 @@ const CheckoutPage = () => {
     </motion.div>
   );
 
+  // Stock Modal Component
+  const StockAvailabilityModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-2xl p-6 max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-gray-900">
+            Stock Availability Update
+          </h3>
+          <button
+            onClick={() => {
+              setShowStockModal(false);
+            }}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {stockCheckResult?.unavailable_items?.map((item, index) => (
+            <div
+              key={index}
+              className="p-4 border-2 border-red-200 rounded-xl bg-red-50"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-semibold text-gray-900">{item.name}</h4>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Requested:{" "}
+                    <span className="font-medium">{item.requested}</span>
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Available:{" "}
+                    <span className="font-medium text-green-600">
+                      {item.available}
+                    </span>
+                  </p>
+                  {item.available <= 0 ? (
+                    <p className="text-sm text-red-600 mt-2 font-medium">
+                      {item.reason}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-orange-600 mt-2">
+                      You can get up to {item.available} units
+                    </p>
+                  )}
+                </div>
+                <AlertTriangle className="w-6 h-6 text-red-500 mt-1" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 space-y-3">
+          <motion.button
+            onClick={async () => {
+              // Adjust quantities to available amounts
+              const adjustedItems = orderData.items
+                .map((item) => {
+                  const unavailableItem =
+                    stockCheckResult.unavailable_items.find(
+                      (ui) => ui.product_id === item.product_id
+                    );
+                  if (unavailableItem) {
+                    return {
+                      ...item,
+                      quantity: Math.max(0, unavailableItem.available),
+                    };
+                  }
+                  return item;
+                })
+                .filter((item) => item.quantity > 0);
+
+              await updateCartQuantities(adjustedItems);
+              setShowStockModal(false);
+            }}
+            className="w-full bg-blue-600 text-white py-3 px-6 rounded-xl font-semibold hover:bg-blue-700 transition-colors"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            Adjust to Available Quantities
+          </motion.button>
+
+          <motion.button
+            onClick={async () => {
+              // Check stock again
+              setShowStockModal(false);
+              const stockAvailable = await checkStockAvailability();
+              if (stockAvailable) {
+                setCurrentStep(2);
+              }
+            }}
+            className="w-full border border-blue-600 text-blue-600 py-3 px-6 rounded-xl font-semibold hover:bg-blue-50 transition-colors"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            Check Again
+          </motion.button>
+
+          <motion.button
+            onClick={() => {
+              setShowStockModal(false);
+            }}
+            className="w-full border border-gray-300 text-gray-700 py-3 px-6 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            Continue Shopping
+          </motion.button>
+        </div>
+      </motion.div>
+    </div>
+  );
+
   // Main Render
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
@@ -1055,6 +1362,9 @@ const CheckoutPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Stock Availability Modal */}
+      {showStockModal && <StockAvailabilityModal />}
     </div>
   );
 };

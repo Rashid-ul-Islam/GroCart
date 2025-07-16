@@ -160,6 +160,7 @@ export const getProductInventory = async (req, res) => {
     `;
 
     const result = await pool.query(query, [product_id]);
+    console.log('Product Inventory Result:', result.rows);
 
     // Add color coding for quantity_in_stock (actual stock levels)
     const inventory = result.rows.map(row => {
