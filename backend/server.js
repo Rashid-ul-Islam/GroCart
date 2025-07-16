@@ -29,6 +29,7 @@ import enhancedDeliveryRoute from "./routes/enhancedDeliveryRoute.js";
 import warehouseInventoryRoute from "./routes/warehouseInventoryRoute.js";
 import userProfileRoute from "./routes/userProfileRoute.js";
 import reviewRoute from "./routes/reviewRoute.js";
+import stockRoute from "./routes/stockRoute.js";
 
 const app = express();
 app.use(cors());
@@ -67,6 +68,7 @@ app.use("/api/delivery", enhancedDeliveryRoute);
 app.use("/api/warehouse", warehouseInventoryRoute);
 app.use("/api/user", userProfileRoute);
 app.use("/api/reviews", reviewRoute);
+app.use("/api/stock", stockRoute);
 
 app.listen(port, () => {
   console.log(`Server running on ${port}`);
