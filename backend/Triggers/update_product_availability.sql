@@ -22,6 +22,7 @@ BEGIN
     UPDATE "Product"
     SET 
         is_available = (total_stock > 0),
+        total_available_stock = total_stock,
         updated_at = NOW()
     WHERE product_id = affected_product_id;
     

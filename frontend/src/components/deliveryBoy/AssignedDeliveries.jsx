@@ -153,6 +153,7 @@ export const AssignedDeliveries = () => {
       );
 
       if (!response.ok) {
+        console.error("Failed to mark products as fetched:", response);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 

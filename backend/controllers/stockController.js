@@ -1,4 +1,4 @@
-import db from '../db.js';
+import pool from '../db.js';
 
 // Check stock availability for cart items (only check, don't reserve)
 export const checkStockAvailability = async (req, res) => {
@@ -31,7 +31,7 @@ export const checkStockAvailability = async (req, res) => {
                 WHERE p.product_id = $1
             `;
 
-            const stockResult = await db.query(stockQuery, [product_id]);
+            const stockResult = await pool.query(stockQuery, [product_id]);
 
             if (stockResult.rows.length === 0) {
                 unavailableItems.push({
@@ -92,11 +92,11 @@ export const checkStockAvailability = async (req, res) => {
 
 // Reserve stock for items (mark as buying_in_progress)
 export const reserveStock = async (req, res) => {
-    const client = await db.connect();
-    
+    const client = await pool.connect();
+
     try {
         await client.query('BEGIN');
-        
+
         const { items } = req.body;
 
         if (!items || !Array.isArray(items)) {
@@ -133,7 +133,7 @@ export const reserveStock = async (req, res) => {
                     WHERE product_id = $1
                 `;
                 const checkResult = await client.query(checkQuery, [product_id]);
-                
+
                 if (checkResult.rows.length > 0) {
                     const product = checkResult.rows[0];
                     failedReservations.push({
@@ -189,7 +189,7 @@ export const reserveStock = async (req, res) => {
 
 // Release reserved stock
 export const releaseStock = async (req, res) => {
-    const client = await db.connect();
+    const client = await pool.connect();
 
     try {
         await client.query('BEGIN');
@@ -252,7 +252,7 @@ export const getRealTimeStock = async (req, res) => {
             WHERE product_id = ANY($1)
         `;
 
-        const result = await db.query(stockQuery, [productIdArray]);
+        const result = await pool.query(stockQuery, [productIdArray]);
 
         res.json({
             success: true,
@@ -275,7 +275,7 @@ export const resetStuckStock = async (req, res) => {
     try {
         // This should only be used as an admin function or in emergencies
         // In normal operation, stock should be properly managed by the frontend
-        const result = await db.query(`
+        const result = await pool.query(`
             UPDATE "Product" 
             SET buying_in_progress = 0
             WHERE buying_in_progress > 0
@@ -300,7 +300,7 @@ export const resetStuckStock = async (req, res) => {
 // Get products with stuck buying_in_progress (for monitoring)
 export const getStuckStock = async (req, res) => {
     try {
-        const result = await db.query(`
+        const result = await pool.query(`
             SELECT 
                 product_id,
                 name,

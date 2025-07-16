@@ -1,4 +1,4 @@
-import db from '../db.js';
+import pool from '../db.js';
 
 // Utility function to update order status in StatusHistory
 const updateOrderStatusHistory = async (client, orderId, status, updatedBy = null) => {
@@ -17,7 +17,7 @@ const updateOrderStatusHistory = async (client, orderId, status, updatedBy = nul
 
 // Action 1: Products Fetched (Delivery boy has collected products from warehouse)
 export const markProductsFetched = async (req, res) => {
-    const client = await db.connect();
+    const client = await pool.connect();
 
     try {
         await client.query('BEGIN');
@@ -70,42 +70,112 @@ export const markProductsFetched = async (req, res) => {
         // Update to "left_warehouse" status
         await updateOrderStatusHistory(client, orderId, 'left_warehouse', delivery_boy_id);
 
-        // Decrease inventory quantities for all products in this order
-        const inventoryUpdateQuery = `
-            UPDATE "Inventory" i
-            SET quantity_in_stock = i.quantity_in_stock - oi.quantity,
-                last_restock_date = NOW()
-            FROM "OrderItem" oi
-            WHERE i.product_id = oi.product_id 
-            AND oi.order_id = $1
-            AND i.quantity_in_stock >= oi.quantity
+        // Get the target warehouse for this delivery
+        const warehouseQuery = `
+            SELECT dr.warehouse_id
+            FROM "Order" o
+            JOIN "Delivery" d ON o.order_id = d.order_id
+            JOIN "Address" a ON d.address_id = a.address_id
+            JOIN "Region" r ON a.region_id = r.region_id
+            JOIN "DeliveryRegion" dr ON r.delivery_region_id = dr.delivery_region_id
+            WHERE o.order_id = $1
         `;
 
-        const inventoryResult = await client.query(inventoryUpdateQuery, [orderId]);
-        console.log(`Updated inventory for ${inventoryResult.rowCount} products from order ${orderId}`);
+        const warehouseResult = await client.query(warehouseQuery, [orderId]);
+        let targetWarehouseId = warehouseResult.rows[0]?.warehouse_id;
 
-        // Check if any products had insufficient inventory
-        const insufficientInventoryQuery = `
-            SELECT p.name, oi.quantity as ordered, i.quantity_in_stock as available
-            FROM "OrderItem" oi
-            JOIN "Product" p ON oi.product_id = p.product_id
-            LEFT JOIN "Inventory" i ON oi.product_id = i.product_id
-            WHERE oi.order_id = $1
-            AND (i.quantity_in_stock IS NULL OR i.quantity_in_stock < oi.quantity)
-        `;
+        // If no target warehouse found, use the first available warehouse
+        if (!targetWarehouseId) {
+            const fallbackQuery = `SELECT warehouse_id FROM "Warehouse" ORDER BY warehouse_id LIMIT 1`;
+            const fallbackResult = await client.query(fallbackQuery);
+            targetWarehouseId = fallbackResult.rows[0]?.warehouse_id;
+        }
 
-        const insufficientResult = await client.query(insufficientInventoryQuery, [orderId]);
-        console.log('Insufficient inventory check:', insufficientResult.rows);
-        if (insufficientResult.rows.length > 0) {
+        if (!targetWarehouseId) {
             await client.query('ROLLBACK');
-            const insufficientProducts = insufficientResult.rows.map(row =>
-                `${row.name} (ordered: ${row.ordered}, available: ${row.available || 0})`
-            ).join(', ');
-
             return res.status(400).json({
                 success: false,
-                message: `Insufficient inventory for products: ${insufficientProducts}`
+                message: 'No warehouse found for this delivery'
             });
+        }
+
+        // Check and update inventory for each product in the order
+        const fetchOrderItemsQuery = `
+            SELECT oi.product_id, oi.quantity, p.name
+            FROM "OrderItem" oi
+            JOIN "Product" p ON oi.product_id = p.product_id
+            WHERE oi.order_id = $1
+        `;
+
+        const fetchOrderItemsResult = await client.query(fetchOrderItemsQuery, [orderId]);
+        console.log('Processing order items for inventory:', fetchOrderItemsResult.rows);
+
+        for (const item of fetchOrderItemsResult.rows) {
+            const { product_id, quantity, name } = item;
+
+            // Check current stock in target warehouse
+            const stockQuery = `
+                SELECT COALESCE(quantity_in_stock, 0) as current_stock
+                FROM "Inventory"
+                WHERE product_id = $1 AND warehouse_id = $2
+            `;
+
+            const stockResult = await client.query(stockQuery, [product_id, targetWarehouseId]);
+            const currentStock = stockResult.rows[0]?.current_stock || 0;
+
+            if (currentStock < quantity) {
+                // Try to transfer from other warehouses (simplified - by warehouse_id order)
+                const transferQuery = `
+                    SELECT i.warehouse_id, i.quantity_in_stock
+                    FROM "Inventory" i
+                    WHERE i.product_id = $1 
+                    AND i.warehouse_id != $2
+                    AND i.quantity_in_stock > 0
+                    ORDER BY i.warehouse_id ASC
+                `;
+
+                const transferResult = await client.query(transferQuery, [product_id, targetWarehouseId]);
+                let remainingNeeded = quantity - currentStock;
+
+                for (const source of transferResult.rows) {
+                    if (remainingNeeded <= 0) break;
+
+                    const transferQuantity = Math.min(source.quantity_in_stock, remainingNeeded);
+
+                    // Update source warehouse
+                    await client.query(
+                        `UPDATE "Inventory" SET quantity_in_stock = quantity_in_stock - $1 
+                         WHERE product_id = $2 AND warehouse_id = $3`,
+                        [transferQuantity, product_id, source.warehouse_id]
+                    );
+
+                    // Update target warehouse
+                    await client.query(
+                        `INSERT INTO "Inventory" (product_id, warehouse_id, quantity_in_stock)
+                         VALUES ($1, $2, $3)
+                         ON CONFLICT (product_id, warehouse_id)
+                         DO UPDATE SET quantity_in_stock = "Inventory".quantity_in_stock + $3`,
+                        [product_id, targetWarehouseId, transferQuantity]
+                    );
+
+                    remainingNeeded -= transferQuantity;
+                }
+
+                if (remainingNeeded > 0) {
+                    await client.query('ROLLBACK');
+                    return res.status(400).json({
+                        success: false,
+                        message: `Insufficient inventory for ${name}: need ${remainingNeeded} more units`
+                    });
+                }
+            }
+
+            // Final deduction from target warehouse
+            await client.query(
+                `UPDATE "Inventory" SET quantity_in_stock = quantity_in_stock - $1 
+                 WHERE product_id = $2 AND warehouse_id = $3`,
+                [quantity, product_id, targetWarehouseId]
+            );
         }
 
         await client.query('COMMIT');
@@ -130,7 +200,7 @@ export const markProductsFetched = async (req, res) => {
 
 // Action 2: Delivery Completed (Customer received products)
 export const markDeliveryCompletedNew = async (req, res) => {
-    const client = await db.connect();
+    const client = await pool.connect();
 
     try {
         await client.query('BEGIN');
@@ -221,7 +291,7 @@ export const markDeliveryCompletedNew = async (req, res) => {
 
 // Action 3: Rate Customer (Available after payment received)
 export const rateCustomer = async (req, res) => {
-    const client = await db.connect();
+    const client = await pool.connect();
 
     try {
         await client.query('BEGIN');
@@ -334,7 +404,7 @@ export const rateCustomer = async (req, res) => {
 
 // Utility function to fix deliveries without proper status history
 export const fixDeliveryStatusHistory = async (req, res) => {
-    const client = await db.connect();
+    const client = await pool.connect();
 
     try {
         await client.query('BEGIN');
@@ -401,7 +471,7 @@ export const fixDeliveryStatusHistory = async (req, res) => {
 
 // Debug function to check all deliveries in the system
 export const debugDeliveries = async (req, res) => {
-    const client = await db.connect();
+    const client = await pool.connect();
 
     try {
         // Get all deliveries
@@ -448,7 +518,7 @@ export const debugDeliveries = async (req, res) => {
 
 // Fix specific delivery status from pending to assigned
 export const updatePendingDeliveriesToAssigned = async (req, res) => {
-    const client = await db.connect();
+    const client = await pool.connect();
 
     try {
         await client.query('BEGIN');
@@ -516,7 +586,7 @@ export const updatePendingDeliveriesToAssigned = async (req, res) => {
 
 // Manually update a specific delivery to assigned status
 export const updateDeliveryToAssigned = async (req, res) => {
-    const client = await db.connect();
+    const client = await pool.connect();
 
     try {
         await client.query('BEGIN');

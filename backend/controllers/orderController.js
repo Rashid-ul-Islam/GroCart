@@ -54,7 +54,7 @@ export const createOrder = async (req, res) => {
       WHERE product_id = ANY($1);
     `;
     const stockResult = await client.query(stockQuery, [productIds]);
-    
+
     if (stockResult.rows.length !== items.length) {
       await client.query('ROLLBACK');
       return res.status(400).json({
@@ -134,7 +134,7 @@ export const createOrder = async (req, res) => {
     // Get delivery information using the existing SQL function
     const deliveryInfoQuery = `SELECT * FROM find_delivery_region_for_user($1);`;
     const deliveryInfoResult = await client.query(deliveryInfoQuery, [user_id]);
-    
+
     // REJECT ORDER if no delivery region found
     if (deliveryInfoResult.rows.length === 0) {
       await client.query('ROLLBACK');
@@ -145,7 +145,7 @@ export const createOrder = async (req, res) => {
     }
 
     const deliveryInfo = deliveryInfoResult.rows[0];
-    
+
     // REJECT ORDER if no delivery boys available
     if (deliveryInfo.available_delivery_boys === 0) {
       await client.query('ROLLBACK');
@@ -163,9 +163,9 @@ export const createOrder = async (req, res) => {
       deliveryInfo.delivery_region_id,
       user_id
     ]);
-    
+
     const delivery_boy_id = assignResult.rows[0].delivery_boy_id;
-    
+
     // REJECT ORDER if delivery boy assignment fails
     if (!delivery_boy_id) {
       await client.query('ROLLBACK');
@@ -246,7 +246,7 @@ export const createOrder = async (req, res) => {
     // Create delivery record with GUARANTEED delivery boy assignment
     const estimatedDelivery = new Date();
     estimatedDelivery.setDate(estimatedDelivery.getDate() + estimatedDeliveryDays);
-    
+
     const deliveryQuery = `
       INSERT INTO "Delivery" (
         order_id, address_id, delivery_boy_id, estimated_arrival, created_at, updated_at
@@ -258,7 +258,7 @@ export const createOrder = async (req, res) => {
       order_id, address_id, delivery_boy_id, estimatedDelivery
     ]);
     const delivery_id = deliveryResult.rows[0].delivery_id;
-    
+
     // Update delivery boy's current load
     const updateLoadQuery = `
       UPDATE "DeliveryBoy"
@@ -266,7 +266,7 @@ export const createOrder = async (req, res) => {
       WHERE user_id = $1;
     `;
     await client.query(updateLoadQuery, [delivery_boy_id]);
-    
+
     // Update order status to assigned
     await updateOrderStatus(order_id, 'assigned', delivery_boy_id, 'Order assigned to delivery boy', client);
 

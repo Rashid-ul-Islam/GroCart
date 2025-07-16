@@ -509,6 +509,7 @@ const InventoryManagement = () => {
 
       const data = await apiCall(`/inventory/transferLog?${params}`);
       setTransferLogs(data.logs || []);
+      console.log("Transfer logs data:", data);
       setTransferLogsPagination(data.pagination || {});
     } catch (error) {
       setError("Failed to fetch transfer logs");
@@ -1326,19 +1327,20 @@ const InventoryManagement = () => {
                                         {log.target_warehouse_name}
                                       </span>
                                     </div>
-                                    {log.distance_km && (
-                                      <div className="text-xs text-gray-500 mt-1">
-                                        Distance: {log.distance_km.toFixed(2)}{" "}
-                                        km
-                                      </div>
-                                    )}
+                                    {log.distance_km &&
+                                      !isNaN(Number(log.distance_km)) && (
+                                        <div className="text-xs text-gray-500 mt-1">
+                                          Distance:{" "}
+                                          {Number(log.distance_km).toFixed(2)}{" "}
+                                          km
+                                        </div>
+                                      )}
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                   <span className="font-medium">
                                     {log.quantity_transferred}
                                   </span>{" "}
-                                  {log.unit_measure}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                                   <div className="space-y-1">
@@ -1346,7 +1348,7 @@ const InventoryManagement = () => {
                                       <span className="text-gray-500">
                                         Source:
                                       </span>
-                                      <span>
+                                      <span className="text-red-600">
                                         {log.source_stock_before} →{" "}
                                         {log.source_stock_after}
                                       </span>
@@ -1355,7 +1357,7 @@ const InventoryManagement = () => {
                                       <span className="text-gray-500">
                                         Target:
                                       </span>
-                                      <span>
+                                      <span className="text-red-600">
                                         {log.target_stock_before} →{" "}
                                         {log.target_stock_after}
                                       </span>

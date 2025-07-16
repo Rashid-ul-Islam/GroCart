@@ -503,7 +503,7 @@ const CheckoutPage = () => {
       console.log("releaseStock already in progress, skipping");
       return;
     }
-    
+
     setIsReleasingStock(true);
     try {
       console.log("releaseStock called - releasing reserved stock");
@@ -520,7 +520,7 @@ const CheckoutPage = () => {
         },
         body: JSON.stringify({ items }),
       });
-      
+
       // Reset the reservation state
       setIsStockReserved(false);
       console.log("Stock released successfully");
