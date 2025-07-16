@@ -282,28 +282,57 @@ export default function ProductEdit() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header Section */}
         <div className="mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-white rounded-lg shadow-lg">
-                  <Edit3 className="w-8 h-8 text-purple-600" />
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 bg-white rounded-3xl shadow-2xl p-8 border-t-8 border-purple-600 relative overflow-hidden">
+            {/* Background decoration */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-purple-100 to-transparent rounded-full -translate-y-32 translate-x-32 opacity-50"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-yellow-100 to-transparent rounded-full translate-y-24 -translate-x-24 opacity-50"></div>
+            
+            <div className="space-y-4 relative z-10">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className="p-4 bg-gradient-to-br from-purple-600 to-purple-700 rounded-2xl shadow-xl transform rotate-3 hover:rotate-0 transition-transform duration-300">
+                    <Edit3 className="w-10 h-10 text-white" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-bold text-purple-900">✨</span>
+                  </div>
                 </div>
-                <h1 className="text-4xl font-bold text-black">
-                  ✏️ Edit Product
-                </h1>
+                <div>
+                  <h1 className="text-5xl font-black text-transparent bg-gradient-to-r from-purple-600 via-purple-800 to-indigo-600 bg-clip-text drop-shadow-lg">
+                    ✏️ Edit Product
+                  </h1>
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="w-12 h-1 bg-gradient-to-r from-purple-600 to-yellow-400 rounded-full"></div>
+                    <div className="w-6 h-1 bg-gradient-to-r from-yellow-400 to-purple-600 rounded-full"></div>
+                    <div className="w-3 h-1 bg-purple-600 rounded-full"></div>
+                  </div>
+                </div>
               </div>
-              <p className="text-xl text-black max-w-2xl font-medium">
-                Update product information with ease. All fields are optional -
-                modify only what needs to be changed.
-              </p>
+              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border-l-4 border-purple-500 shadow-inner">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
+                    📝 Optional Fields
+                  </span>
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                    ⚡ Quick Updates
+                  </span>
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                    🎯 Smart Validation
+                  </span>
+                </div>
+              </div>
             </div>
-            <Button
-              onClick={handleCancel}
-              className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-8 py-4 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300 flex items-center gap-3 font-bold"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              Back to Admin Panel
-            </Button>
+            
+            <div className="relative z-10">
+              <Button
+                onClick={handleCancel}
+                className="bg-gradient-to-r from-gray-600 via-gray-700 to-gray-800 hover:from-gray-700 hover:via-gray-800 hover:to-gray-900 text-white px-8 py-4 rounded-2xl shadow-2xl transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 font-bold border-2 border-gray-500 hover:border-gray-400"
+              >
+                <ArrowLeft className="w-6 h-6" />
+                <span className="hidden sm:inline">Back to Admin Panel</span>
+                <span className="sm:hidden">Back</span>
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -373,7 +402,7 @@ export default function ProductEdit() {
                         value={newImageUrl}
                         onChange={(e) => setNewImageUrl(e.target.value)}
                         placeholder="Enter image URL"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-500"
                       />
                       <Button
                         type="button"
