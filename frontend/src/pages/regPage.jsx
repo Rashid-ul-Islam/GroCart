@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Eye,
   EyeOff,
@@ -16,8 +17,10 @@ import {
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import LoginModal from "../components/auth/LoginModal";
 
 export default function RegisterPage() {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -37,6 +40,7 @@ export default function RegisterPage() {
 
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   // API data states
   const [divisions, setDivisions] = useState([]);
@@ -344,6 +348,8 @@ export default function RegisterPage() {
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
         alert("Registration successful! Welcome to GroCart!");
+        // Navigate to HomePage after successful registration
+        navigate("/");
       } else {
         alert(`Registration failed: ${data.error}`);
       }
@@ -355,8 +361,21 @@ export default function RegisterPage() {
     }
   };
 
+  const handleLoginSuccess = () => {
+    setShowLoginModal(false);
+    // Navigate to HomePage after successful login
+    navigate("/");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400 flex items-center justify-center p-4">
+      {/* Login Modal */}
+      <LoginModal 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
+
       <div className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-white/30 overflow-hidden">
         {/* Simplified Header Box */}
         <div className="bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700 p-12 text-center relative overflow-hidden">
@@ -758,12 +777,12 @@ export default function RegisterPage() {
           {/* Sign In Link */}
           <div className="text-center text-sm text-gray-600">
             Already have an account?{" "}
-            <a
-              href="/login"
-              className="text-green-600 hover:text-green-700 font-medium"
+            <button
+              onClick={() => setShowLoginModal(true)}
+              className="text-green-600 hover:text-green-700 font-medium underline"
             >
               Sign in here
-            </a>
+            </button>
           </div>
         </div>
       </div>

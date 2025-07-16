@@ -799,7 +799,7 @@ export default function AddProduct() {
                                 <label className="block text-xs font-medium text-gray-700 mb-1">
                                   Stock Quantity
                                 </label>
-                                <Input
+                                <Input 
                                   type="number"
                                   min="0"
                                   value={getFieldDisplayValue(
@@ -825,7 +825,7 @@ export default function AddProduct() {
                                       "quantity"
                                     )
                                   }
-                                  className="text-sm"
+                                  className="text-sm bg-white text-black <border-black-9></border-black-900 focus:border-black-500 focus:ring-black-200 rounded-lg px-3 py-2 w-full"
                                   placeholder="0"
                                 />
                               </div>
@@ -860,7 +860,7 @@ export default function AddProduct() {
                                       "reorderLevel"
                                     )
                                   }
-                                  className="text-sm"
+                                  className="text-sm bg-white text-black <border-black-9></border-black-900 focus:border-black-500 focus:ring-black-200 rounded-lg px-3 py-2 w-full"
                                   placeholder="20"
                                 />
                               </div>
