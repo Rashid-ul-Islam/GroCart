@@ -56,7 +56,9 @@ const ProductDetailsPage = () => {
   const [selectedProducts, setSelectedProducts] = useState(null);
   const [categoryPath, setCategoryPath] = useState([]);
 
-  console.log(productId);
+  // Log productId for debugging
+  console.log("Product ID:", productId);
+  
   // Mock API calls - replace with actual API endpoints
   useEffect(() => {
     const fetchProduct = async () => {
@@ -261,11 +263,12 @@ const ProductDetailsPage = () => {
   };
 
   const renderStars = (rating) => {
+    const numericRating = parseFloat(rating) || 0;
     return [...Array(5)].map((_, i) => (
       <Star
         key={i}
         className={`w-4 h-4 ${
-          i < Math.floor(rating)
+          i < Math.floor(numericRating)
             ? "fill-yellow-400 text-yellow-400"
             : "text-gray-300"
         }`}
@@ -615,46 +618,75 @@ const ProductDetailsPage = () => {
               {activeTab === "specifications" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h4 className="font-semibold mb-3">Product Details</h4>
+                    <h4 className="font-semibold mb-3 text-black">Product Details</h4>
                     <dl className="space-y-2">
                       <div className="flex justify-between">
-                        <dt className="text-gray-600">Brand:</dt>
-                        <dd>{product.brand}</dd>
+                        <dt className="text-gray-600">Name:</dt>
+                        <dd className="text-black font-medium">{product.product_name || product.name || "N/A"}</dd>
                       </div>
                       <div className="flex justify-between">
-                        <dt className="text-gray-600">Weight:</dt>
-                        <dd>{product.weight}</dd>
-                      </div>
-                      <div className="flex justify-between">
-                        <dt className="text-gray-600">Dimensions:</dt>
-                        <dd>{product.dimensions}</dd>
+                        <dt className="text-gray-600">Price:</dt>
+                        <dd className="text-black font-medium">৳{parseFloat(product.price || 0).toFixed(2)}</dd>
                       </div>
                       <div className="flex justify-between">
                         <dt className="text-gray-600">Origin:</dt>
-                        <dd>{product.origin}</dd>
+                        <dd className="text-black font-medium">{product.origin || "Not specified"}</dd>
                       </div>
                       <div className="flex justify-between">
-                        <dt className="text-gray-600">Unit:</dt>
-                        <dd>{product.unit_measure}</dd>
+                        <dt className="text-gray-600">Quantity Available:</dt>
+                        <dd className="text-black font-medium">{product.quantity || "In stock"}</dd>
                       </div>
                     </dl>
                   </div>
                   <div>
-                    <h4 className="font-semibold mb-3">Warranty & Support</h4>
+                    <h4 className="font-semibold mb-3 text-black">Product Status</h4>
                     <dl className="space-y-2">
-                      <div className="flex justify-between">
-                        <dt className="text-gray-600">Warranty:</dt>
-                        <dd>{product.warranty}</dd>
-                      </div>
-                      <div className="flex justify-between">
-                        <dt className="text-gray-600">Refundable:</dt>
-                        <dd>{product.is_refundable ? "Yes" : "No"}</dd>
-                      </div>
                       <div className="flex justify-between">
                         <dt className="text-gray-600">Available:</dt>
                         <dd>
-                          {product.is_available ? "In Stock" : "Out of Stock"}
+                          <span className={`px-2 py-1 rounded text-sm font-medium ${
+                            product.is_available 
+                              ? "bg-green-100 text-green-800" 
+                              : "bg-red-100 text-red-800"
+                          }`}>
+                            {product.is_available ? "In Stock" : "Out of Stock"}
+                          </span>
                         </dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt className="text-gray-600">Refundable:</dt>
+                        <dd>
+                          <span className={`px-2 py-1 rounded text-sm font-medium ${
+                            product.is_refundable 
+                              ? "bg-green-100 text-green-800" 
+                              : "bg-gray-100 text-gray-800"
+                          }`}>
+                            {product.is_refundable ? "Yes" : "No"}
+                          </span>
+                        </dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt className="text-gray-600">Rating:</dt>
+                        <dd className="flex items-center space-x-2">
+                          <span className="text-black font-medium">{parseFloat(product.rating || product.avg_rating || 0).toFixed(1)}</span>
+                          <div className="flex">
+                            {renderStars(product.rating || product.avg_rating || 0)}
+                          </div>
+                        </dd>
+                      </div>
+                      {product.discount_percentage && product.discount_percentage > 0 && (
+                        <div className="flex justify-between">
+                          <dt className="text-gray-600">Discount:</dt>
+                          <dd>
+                            <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-medium">
+                              {product.discount_percentage}% OFF
+                            </span>
+                          </dd>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <dt className="text-gray-600">Reviews:</dt>
+                        <dd className="text-black font-medium">{product.review_count || 0} reviews</dd>
                       </div>
                     </dl>
                   </div>
@@ -667,82 +699,98 @@ const ProductDetailsPage = () => {
                   <div className="flex items-start space-x-8">
                     <div className="text-center">
                       <div className="text-4xl font-bold text-gray-900">
-                        {reviewStats.average_rating}
+                        {reviewStats.average_rating || "0.0"}
                       </div>
                       <div className="flex justify-center mt-1">
-                        {renderStars(reviewStats.average_rating)}
+                        {renderStars(reviewStats.average_rating || 0)}
                       </div>
                       <div className="text-sm text-gray-600 mt-1">
-                        {reviewStats.total_reviews} reviews
+                        {reviewStats.total_reviews || 0} reviews
                       </div>
                     </div>
 
                     <div className="flex-1 space-y-2">
-                      {Object.entries(reviewStats.rating_distribution)
-                        .reverse()
-                        .map(([rating, count]) => (
-                          <div
-                            key={rating}
-                            className="flex items-center space-x-3"
-                          >
-                            <span className="text-sm w-6">{rating}★</span>
-                            <div className="flex-1 bg-gray-200 rounded-full h-2">
-                              <div
-                                className="bg-yellow-400 h-2 rounded-full"
-                                style={{
-                                  width: `${
-                                    (count / reviewStats.total_reviews) * 100
-                                  }%`,
-                                }}
-                              ></div>
+                      {reviewStats.rating_distribution && Object.entries(reviewStats.rating_distribution).length > 0 ? (
+                        Object.entries(reviewStats.rating_distribution)
+                          .reverse()
+                          .map(([rating, count]) => (
+                            <div
+                              key={rating}
+                              className="flex items-center space-x-3"
+                            >
+                              <span className="text-sm w-6">{rating}★</span>
+                              <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                <div
+                                  className="bg-yellow-400 h-2 rounded-full"
+                                  style={{
+                                    width: `${
+                                      (count / (reviewStats.total_reviews || 1)) * 100
+                                    }%`,
+                                  }}
+                                ></div>
+                              </div>
+                              <span className="text-sm text-gray-600 w-8">
+                                {count}
+                              </span>
                             </div>
-                            <span className="text-sm text-gray-600 w-8">
-                              {count}
-                            </span>
-                          </div>
-                        ))}
+                          ))
+                      ) : (
+                        <div className="text-gray-500 text-center py-4">
+                          No rating distribution available
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Reviews List */}
                   <div className="space-y-4">
-                    {reviews.map((review) => (
-                      <div key={review.id} className="border rounded-lg p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <span className="font-medium">
-                                {review.user_name}
-                              </span>
-                              {review.verified && (
-                                <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
-                                  Verified Purchase
+                    {reviews && reviews.length > 0 ? (
+                      reviews.map((review) => (
+                        <div key={review.id} className="border rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <div className="flex items-center space-x-2">
+                                <span className="font-medium">
+                                  {review.user_name || "Anonymous"}
                                 </span>
-                              )}
-                            </div>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <div className="flex">
-                                {renderStars(review.rating)}
+                                {review.verified && (
+                                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                                    Verified Purchase
+                                  </span>
+                                )}
                               </div>
-                              <span className="text-sm text-gray-600">
-                                {review.date}
-                              </span>
+                              <div className="flex items-center space-x-2 mt-1">
+                                <div className="flex">
+                                  {renderStars(review.rating || 0)}
+                                </div>
+                                <span className="text-sm text-gray-600">
+                                  {review.date || "Date not available"}
+                                </span>
+                              </div>
                             </div>
                           </div>
+                          <p className="text-gray-700 mb-3">
+                            {review.comment || "No comment provided"}
+                          </p>
+                          <div className="flex items-center space-x-4">
+                            <button className="flex items-center space-x-1 text-sm text-gray-600 hover:text-gray-800">
+                              <ThumbsUp className="w-4 h-4" />
+                              <span>Helpful ({review.helpful_count || 0})</span>
+                            </button>
+                            <button className="flex items-center space-x-1 text-sm text-gray-600 hover:text-gray-800">
+                              <Flag className="w-4 h-4" />
+                              <span>Report</span>
+                            </button>
+                          </div>
                         </div>
-                        <p className="text-gray-700 mb-3">{review.comment}</p>
-                        <div className="flex items-center space-x-4">
-                          <button className="flex items-center space-x-1 text-sm text-gray-600 hover:text-gray-800">
-                            <ThumbsUp className="w-4 h-4" />
-                            <span>Helpful ({review.helpful_count})</span>
-                          </button>
-                          <button className="flex items-center space-x-1 text-sm text-gray-600 hover:text-gray-800">
-                            <Flag className="w-4 h-4" />
-                            <span>Report</span>
-                          </button>
-                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No reviews yet</h3>
+                        <p className="text-gray-500">Be the first to review this product!</p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               )}

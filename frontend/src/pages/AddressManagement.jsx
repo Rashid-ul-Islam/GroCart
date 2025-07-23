@@ -787,10 +787,10 @@ const AddressManagement = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-black mb-2">
             Address Management System
           </h1>
-          <p className="text-gray-600">
+          <p className="text-black">
             Manage divisions, districts, cities, regions, and delivery areas
           </p>
         </div>
@@ -863,7 +863,7 @@ const AddressManagement = () => {
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-gray-600">Loading...</span>
+              <span className="ml-3 text-black">Loading...</span>
             </div>
           ) : (
             <>
@@ -871,7 +871,7 @@ const AddressManagement = () => {
               {activeTab === "overview" && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold text-gray-900">
+                    <h2 className="text-2xl font-bold text-black">
                       System Overview
                     </h2>
                     <Button
@@ -943,7 +943,7 @@ const AddressManagement = () => {
                   {/* Data Overview */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="border border-gray-200 rounded-lg p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      <h3 className="text-lg font-semibold text-black mb-4">
                         Divisions Overview
                       </h3>
                       <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -952,10 +952,10 @@ const AddressManagement = () => {
                             key={division.division_id}
                             className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                           >
-                            <span className="font-medium text-gray-900">
+                            <span className="font-medium text-black">
                               {division.name}
                             </span>
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-black">
                               ID: {division.division_id}
                             </span>
                           </div>
@@ -964,7 +964,7 @@ const AddressManagement = () => {
                     </div>
 
                     <div className="border border-gray-200 rounded-lg p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      <h3 className="text-lg font-semibold text-black mb-4">
                         Delivery Regions
                       </h3>
                       <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -974,14 +974,14 @@ const AddressManagement = () => {
                             className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                           >
                             <div>
-                              <span className="font-medium text-gray-900">
+                              <span className="font-medium text-black">
                                 {region.name}
                               </span>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-black">
                                 Lat: {region.latitude}, Lng: {region.longitude}
                               </p>
                             </div>
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-black">
                               Warehouse: {region.warehouse_id}
                             </span>
                           </div>
@@ -995,14 +995,14 @@ const AddressManagement = () => {
               {/* New Address Tab */}
               {activeTab === "new-address" && (
                 <div className="space-y-6">
-                  <h2 className="text-2xl font-bold text-gray-900">
+                  <h2 className="text-2xl font-bold text-black">
                     Add New Address
                   </h2>
 
                   <form onSubmit={handleSubmitNewAddress} className="space-y-6">
                     {/* Creation Intent Selection */}
                     <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <h4 className="font-medium text-blue-900 mb-3">
+                      <h4 className="font-medium text-black mb-3">
                         What do you want to create?
                       </h4>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -1028,7 +1028,7 @@ const AddressManagement = () => {
                             }
                             className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                           />
-                          <span className="text-sm text-blue-800">
+                          <span className="text-sm text-black font-medium">
                             Division
                           </span>
                         </label>
@@ -1054,7 +1054,7 @@ const AddressManagement = () => {
                             }
                             className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                           />
-                          <span className="text-sm text-blue-800">
+                          <span className="text-sm text-black font-medium">
                             District
                           </span>
                         </label>
@@ -1079,7 +1079,7 @@ const AddressManagement = () => {
                             }
                             className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                           />
-                          <span className="text-sm text-blue-800">City</span>
+                          <span className="text-sm text-black font-medium">City</span>
                         </label>
 
                         <label className="flex items-center space-x-2 cursor-pointer">
@@ -1099,7 +1099,7 @@ const AddressManagement = () => {
                             }
                             className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                           />
-                          <span className="text-sm text-blue-800">Region</span>
+                          <span className="text-sm text-black font-medium">Region</span>
                         </label>
                       </div>
                     </div>
@@ -1107,7 +1107,7 @@ const AddressManagement = () => {
                     {/* Conditional Form Fields */}
                     {creationIntent.createDivision && (
                       <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-black mb-2">
                           Division
                         </label>
                         <div className="relative">
@@ -1118,16 +1118,17 @@ const AddressManagement = () => {
                             }
                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
                           >
-                            <option value="">Select Division</option>
+                            <option value="" className="text-black">Select Division</option>
                             {divisions.map((division) => (
                               <option
                                 key={division.division_id}
                                 value={division.division_id}
+                                className="text-black"
                               >
                                 {division.name}
                               </option>
                             ))}
-                            <option value="new">+ Create New Division</option>
+                            <option value="new" className="text-black">+ Create New Division</option>
                           </select>
                           <ChevronDown
                             className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
@@ -1140,7 +1141,7 @@ const AddressManagement = () => {
                             <input
                               type="text"
                               placeholder="Enter new division name"
-                              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 placeholder:text-black ${
                                 fieldErrors.division
                                   ? "border-red-500 focus:ring-red-500"
                                   : "border-gray-300 focus:ring-blue-500"
@@ -1167,7 +1168,7 @@ const AddressManagement = () => {
 
                     {creationIntent.createDistrict && (
                       <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-black mb-2">
                           District
                         </label>
                         <div className="relative">
@@ -1179,17 +1180,18 @@ const AddressManagement = () => {
                             disabled={!newAddress.selectedDivision}
                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
                           >
-                            <option value="">Select District</option>
+                            <option value="" className="text-black">Select District</option>
                             {districts.map((district) => (
                               <option
                                 key={district.district_id}
                                 value={district.district_id}
+                                className="text-black"
                               >
                                 {district.name}
                               </option>
                             ))}
                             {newAddress.selectedDivision && (
-                              <option value="new">+ Create New District</option>
+                              <option value="new" className="text-black">+ Create New District</option>
                             )}
                           </select>
                           <ChevronDown
@@ -1203,7 +1205,7 @@ const AddressManagement = () => {
                             <input
                               type="text"
                               placeholder="Enter new district name"
-                              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 placeholder:text-black ${
                                 fieldErrors.district
                                   ? "border-red-500 focus:ring-red-500"
                                   : "border-gray-300 focus:ring-blue-500"
@@ -1230,7 +1232,7 @@ const AddressManagement = () => {
 
                     {creationIntent.createCity && (
                       <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-black mb-2">
                           City
                         </label>
                         <div className="relative">
@@ -1240,14 +1242,14 @@ const AddressManagement = () => {
                             disabled={!newAddress.selectedDistrict}
                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
                           >
-                            <option value="">Select City</option>
+                            <option value="" className="text-black">Select City</option>
                             {cities.map((city) => (
-                              <option key={city.city_id} value={city.city_id}>
+                              <option key={city.city_id} value={city.city_id} className="text-black">
                                 {city.name}
                               </option>
                             ))}
                             {newAddress.selectedDistrict && (
-                              <option value="new">+ Create New City</option>
+                              <option value="new" className="text-black">+ Create New City</option>
                             )}
                           </select>
                           <ChevronDown
@@ -1261,7 +1263,7 @@ const AddressManagement = () => {
                             <input
                               type="text"
                               placeholder="Enter new city name"
-                              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 placeholder:text-black ${
                                 fieldErrors.city
                                   ? "border-red-500 focus:ring-red-500"
                                   : "border-gray-300 focus:ring-blue-500"
@@ -1289,13 +1291,13 @@ const AddressManagement = () => {
                     {creationIntent.createRegion && (
                       <>
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-black mb-2">
                             Region Name
                           </label>
                           <input
                             type="text"
                             placeholder="Enter region name"
-                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 placeholder:text-black ${
                               fieldErrors.region
                                 ? "border-red-500 focus:ring-red-500"
                                 : "border-gray-300 focus:ring-blue-500"
@@ -1318,7 +1320,7 @@ const AddressManagement = () => {
                         </div>
 
                         <div className="mb-6">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-black mb-2">
                             Delivery Region (Optional)
                           </label>
                           <div className="relative">
@@ -1332,11 +1334,12 @@ const AddressManagement = () => {
                               }
                               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
                             >
-                              <option value="">Select Delivery Region</option>
+                              <option value="" className="text-black">Select Delivery Region</option>
                               {deliveryRegions.map((region) => (
                                 <option
                                   key={region.delivery_region_id}
                                   value={region.delivery_region_id}
+                                  className="text-black"
                                 >
                                   {region.name}
                                 </option>
@@ -1378,7 +1381,7 @@ const AddressManagement = () => {
                     <h2 className="text-xl font-semibold text-gray-900">
                       Add New Delivery Region
                     </h2>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-black">
                       Create delivery coverage areas
                     </div>
                   </div>
@@ -1389,7 +1392,7 @@ const AddressManagement = () => {
                   >
                     {/* Delivery Region Name */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-black mb-2">
                         Delivery Region Name *
                       </label>
                       <input
@@ -1407,7 +1410,7 @@ const AddressManagement = () => {
                             }));
                           }
                         }}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-black ${
                           deliveryRegionErrors.name
                             ? "border-red-300"
                             : "border-gray-300"
@@ -1423,7 +1426,7 @@ const AddressManagement = () => {
 
                     {/* Latitude */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-black mb-2">
                         Latitude *
                       </label>
                       <input
@@ -1442,7 +1445,7 @@ const AddressManagement = () => {
                             }));
                           }
                         }}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-black ${
                           deliveryRegionErrors.latitude
                             ? "border-red-300"
                             : "border-gray-300"
@@ -1458,7 +1461,7 @@ const AddressManagement = () => {
 
                     {/* Longitude */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-black mb-2">
                         Longitude *
                       </label>
                       <input
@@ -1477,7 +1480,7 @@ const AddressManagement = () => {
                             }));
                           }
                         }}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-black ${
                           deliveryRegionErrors.longitude
                             ? "border-red-300"
                             : "border-gray-300"
@@ -1493,7 +1496,7 @@ const AddressManagement = () => {
 
                     {/* Warehouse Selection */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-black mb-2">
                         Warehouse *
                       </label>
                       <select
@@ -1516,11 +1519,12 @@ const AddressManagement = () => {
                             : "border-gray-300"
                         }`}
                       >
-                        <option value="">Select a warehouse</option>
+                        <option value="" className="text-black">Select a warehouse</option>
                         {warehouses.map((warehouse) => (
                           <option
                             key={warehouse.warehouse_id}
                             value={warehouse.warehouse_id}
+                            className="text-black"
                           >
                             {warehouse.name} - {warehouse.location}
                           </option>
@@ -1713,10 +1717,10 @@ const AddressManagement = () => {
                             ) : (
                               <>
                                 <div>
-                                  <span className="font-medium text-gray-900">
+                                  <span className="font-medium text-black">
                                     {region.name}
                                   </span>
-                                  <p className="text-sm text-gray-500">
+                                  <p className="text-sm text-black">
                                     {region.delivery_region_name
                                       ? `Delivery: ${region.delivery_region_name}`
                                       : "No delivery region"}
@@ -1758,7 +1762,7 @@ const AddressManagement = () => {
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-black mb-2">
                           Search Type
                         </label>
                         <select
@@ -1766,22 +1770,22 @@ const AddressManagement = () => {
                           onChange={(e) => setSearchType(e.target.value)}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
-                          <option value="region">Search by Region</option>
-                          <option value="delivery_region">
+                          <option value="region" className="text-black">Search by Region</option>
+                          <option value="delivery_region" className="text-black">
                             Search by Delivery Region
                           </option>
                         </select>
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-black mb-2">
                           Search Term
                         </label>
                         <input
                           type="text"
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-black"
                           placeholder={`Enter ${
                             searchType === "region"
                               ? "region"
@@ -1818,7 +1822,7 @@ const AddressManagement = () => {
                               <span className="font-medium text-gray-900">
                                 {result.name}
                               </span>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-black">
                                 {result.description}
                               </p>
                             </div>
@@ -1851,7 +1855,7 @@ const AddressManagement = () => {
                             <h4 className="font-semibold text-gray-900">
                               {deliveryRegion.name}
                             </h4>
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-black">
                               Warehouse: {deliveryRegion.warehouse_id}
                             </span>
                           </div>
@@ -1868,7 +1872,7 @@ const AddressManagement = () => {
                                   key={region.region_id}
                                   className="flex items-center justify-between p-2 bg-white rounded border"
                                 >
-                                  <span className="text-sm text-gray-700">
+                                  <span className="text-sm text-black">
                                     {region.name}
                                   </span>
                                   <select
@@ -1881,11 +1885,12 @@ const AddressManagement = () => {
                                     }
                                     className="text-xs border border-gray-300 rounded px-2 py-1"
                                   >
-                                    <option value="">No Delivery Region</option>
+                                    <option value="" className="text-black">No Delivery Region</option>
                                     {deliveryRegions.map((dr) => (
                                       <option
                                         key={dr.delivery_region_id}
                                         value={dr.delivery_region_id}
+                                        className="text-black"
                                       >
                                         {dr.name}
                                       </option>
@@ -1900,7 +1905,7 @@ const AddressManagement = () => {
                               region.delivery_region_id ===
                               deliveryRegion.delivery_region_id
                           ).length === 0 && (
-                            <p className="text-sm text-gray-500 italic">
+                            <p className="text-sm text-black italic">
                               No regions assigned to this delivery region
                             </p>
                           )}
@@ -1935,11 +1940,12 @@ const AddressManagement = () => {
                               }
                               className="text-xs border border-gray-300 rounded px-2 py-1"
                             >
-                              <option value="">Assign to...</option>
+                              <option value="" className="text-black">Assign to...</option>
                               {deliveryRegions.map((dr) => (
                                 <option
                                   key={dr.delivery_region_id}
                                   value={dr.delivery_region_id}
+                                  className="text-black"
                                 >
                                   {dr.name}
                                 </option>
@@ -1951,7 +1957,7 @@ const AddressManagement = () => {
 
                     {regions.filter((region) => !region.delivery_region_id)
                       .length === 0 && (
-                      <p className="text-sm text-gray-500 italic">
+                      <p className="text-sm text-black italic">
                         All regions are assigned to delivery regions
                       </p>
                     )}
