@@ -17,6 +17,8 @@ import {
   Circle,
   ArrowRight,
   CheckCircle2,
+  Star,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -59,7 +61,9 @@ const OrderStats = ({ stats }) => {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold text-gray-700 mb-1">{stat.title}</p>
+                <p className="text-xs font-bold text-gray-700 mb-1">
+                  {stat.title}
+                </p>
                 <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
               </div>
               <div className={`p-2 rounded-full ${stat.color}`}>
@@ -73,7 +77,21 @@ const OrderStats = ({ stats }) => {
   );
 };
 
-const StatusFlowChart = ({ orderId, currentStatus }) => {
+// Helper function to get step color based on status
+const getStepColor = (status) => {
+  switch (status) {
+    case "completed":
+      return "bg-green-500 border-green-500 text-white";
+    case "current":
+      return "bg-blue-500 border-blue-500 text-white";
+    case "pending":
+      return "bg-gray-200 border-gray-300 text-gray-500";
+    default:
+      return "bg-gray-200 border-gray-300 text-gray-500";
+  }
+};
+
+const StatusFlowChart = ({ order, paymentMethod }) => {
   const [statusHistory, setStatusHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -82,15 +100,42 @@ const StatusFlowChart = ({ orderId, currentStatus }) => {
     return null;
   }
 
-  // Define the complete order flow
-  const orderFlow = [
-    { key: 'confirmed', label: 'Order Confirmed', icon: Package },
-    { key: 'preparing', label: 'Preparing', icon: Clock },
-    { key: 'assigned', label: 'Assigned to Delivery', icon: Truck },
-    { key: 'left_warehouse', label: 'Left Warehouse', icon: MapPin },
-    { key: 'out_for_delivery', label: 'Out for Delivery', icon: Truck },
-    { key: 'delivered', label: 'Delivered', icon: CheckCircle2 },
-  ];
+  // Define different order flows based on payment method
+  const getOrderFlow = (paymentMethod) => {
+    const baseFlow = [
+      { key: "pending", label: "Order Created", icon: Package },
+      { key: "confirmed", label: "Order Confirmed", icon: CheckCircle2 },
+      { key: "assigned", label: "Assigned to Delivery", icon: Truck },
+      { key: "left_warehouse", label: "Left Warehouse", icon: MapPin },
+      { key: "in_transit", label: "Out for Delivery", icon: Truck },
+      { key: "delivery_completed", label: "Delivered", icon: CheckCircle2 },
+    ];
+
+    if (paymentMethod && paymentMethod.toLowerCase() === "bkash") {
+      // For bKash: Payment first, then delivery flow
+      return [
+        {
+          key: "payment_received",
+          label: "Payment Received",
+          icon: DollarSign,
+        },
+        ...baseFlow.slice(1), // Skip 'pending' for bKash since payment is first
+        { key: "delivery_completed", label: "Delivered", icon: CheckCircle2 },
+      ];
+    } else {
+      // For COD: Delivery flow first, then payment
+      return [
+        ...baseFlow,
+        {
+          key: "payment_received",
+          label: "Payment Received",
+          icon: DollarSign,
+        },
+      ];
+    }
+  };
+
+  const orderFlow = getOrderFlow(paymentMethod);
 
   useEffect(() => {
     if (orderId) {
@@ -101,7 +146,9 @@ const StatusFlowChart = ({ orderId, currentStatus }) => {
   const fetchStatusHistory = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:3000/api/status/order/${orderId}/history`);
+      const response = await fetch(
+        `http://localhost:3000/api/status/order/${orderId}/history`
+      );
       if (!response.ok) throw new Error("Failed to fetch status history");
       const data = await response.json();
       if (data.success && Array.isArray(data.data)) {
@@ -118,45 +165,57 @@ const StatusFlowChart = ({ orderId, currentStatus }) => {
   };
 
   const getStepStatus = (stepKey) => {
-    if (!stepKey || !Array.isArray(statusHistory)) return 'pending';
-    
+    if (!stepKey || !Array.isArray(statusHistory)) return "pending";
+
     // Check if this step has been completed based on status history
-    const stepCompleted = statusHistory.some(entry => entry && entry.status === stepKey);
-    const isCurrentStep = currentStatus === stepKey;
-    
-    if (stepCompleted || isCurrentStep) {
-      return 'completed';
+    const stepCompleted = statusHistory.some(
+      (entry) => entry && entry.status === stepKey
+    );
+
+    if (stepCompleted) {
+      return "completed";
     }
-    
+
     // Check if this step should be active based on current status
-    if (!currentStatus) return 'pending';
-    
-    const currentIndex = orderFlow.findIndex(step => step.key === currentStatus);
-    const stepIndex = orderFlow.findIndex(step => step.key === stepKey);
-    
-    if (currentIndex !== -1 && stepIndex <= currentIndex) {
-      return 'completed';
+    if (!currentStatus) return "pending";
+
+    // For the current step, mark as current/active
+    if (currentStatus === stepKey) {
+      return "current";
     }
-    
-    return 'pending';
+
+    // Check if this step should be completed based on the order flow and current status
+    const currentIndex = orderFlow.findIndex(
+      (step) => step.key === currentStatus
+    );
+    const stepIndex = orderFlow.findIndex((step) => step.key === stepKey);
+
+    if (currentIndex !== -1 && stepIndex !== -1 && stepIndex < currentIndex) {
+      return "completed";
+    }
+
+    return "pending";
   };
 
   const getStepColor = (status) => {
     switch (status) {
-      case 'completed':
-        return 'bg-green-500 text-white border-green-500';
-      case 'current':
-        return 'bg-blue-500 text-white border-blue-500 animate-pulse';
+      case "completed":
+        return "bg-green-500 text-white border-green-500";
+      case "current":
+        return "bg-blue-500 text-white border-blue-500 animate-pulse";
       default:
-        return 'bg-gray-200 text-gray-500 border-gray-300';
+        return "bg-gray-200 text-gray-500 border-gray-300";
     }
   };
 
   const getConnectorColor = (fromStatus, toStatus) => {
-    if (fromStatus === 'completed' && (toStatus === 'completed' || toStatus === 'current')) {
-      return 'bg-green-500';
+    if (
+      fromStatus === "completed" &&
+      (toStatus === "completed" || toStatus === "current")
+    ) {
+      return "bg-green-500";
     }
-    return 'bg-gray-300';
+    return "bg-gray-300";
   };
 
   if (loading) {
@@ -171,8 +230,8 @@ const StatusFlowChart = ({ orderId, currentStatus }) => {
   }
 
   // Don't show flow chart for cancelled orders or null status
-  if (!currentStatus || currentStatus === 'cancelled') {
-    if (currentStatus === 'cancelled') {
+  if (!currentStatus || currentStatus === "cancelled") {
+    if (currentStatus === "cancelled") {
       return (
         <div className="bg-red-50 rounded-lg p-4 border border-red-200">
           <div className="flex items-center gap-2 text-red-600">
@@ -197,38 +256,63 @@ const StatusFlowChart = ({ orderId, currentStatus }) => {
             const stepStatus = getStepStatus(step.key);
             const isLastStep = index === orderFlow.length - 1;
             const Icon = step.icon;
-            
+
             return (
               <div key={step.key} className="flex items-center flex-1">
                 <div className="flex flex-col items-center">
-                  <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${getStepColor(stepStatus)}`}>
-                    {stepStatus === 'completed' ? (
+                  <div
+                    className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${getStepColor(
+                      stepStatus
+                    )}`}
+                  >
+                    {stepStatus === "completed" ? (
                       <CheckCircle className="w-5 h-5" />
+                    ) : stepStatus === "current" ? (
+                      <Icon className="w-5 h-5 animate-pulse" />
                     ) : (
                       <Icon className="w-5 h-5" />
                     )}
                   </div>
-                  <span className="text-xs font-medium text-gray-600 mt-2 text-center max-w-20">
+                  <span
+                    className={`text-xs font-medium mt-2 text-center max-w-20 transition-colors duration-300 ${
+                      stepStatus === "completed"
+                        ? "text-green-600"
+                        : stepStatus === "current"
+                        ? "text-blue-600"
+                        : "text-gray-600"
+                    }`}
+                  >
                     {step.label}
                   </span>
                   {(() => {
-                    const historyEntry = Array.isArray(statusHistory) ? 
-                      statusHistory.find(entry => entry && entry.status === step.key) : null;
+                    const historyEntry = Array.isArray(statusHistory)
+                      ? statusHistory.find(
+                          (entry) => entry && entry.status === step.key
+                        )
+                      : null;
                     return historyEntry && historyEntry.updated_at ? (
                       <span className="text-xs text-gray-500 mt-1">
-                        {new Date(historyEntry.updated_at).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
+                        {new Date(historyEntry.updated_at).toLocaleDateString(
+                          "en-US",
+                          {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }
+                        )}
                       </span>
                     ) : null;
                   })()}
                 </div>
                 {!isLastStep && (
                   <div className="flex-1 h-1 mx-2 rounded">
-                    <div className={`h-full rounded transition-all duration-300 ${getConnectorColor(stepStatus, getStepStatus(orderFlow[index + 1].key))}`}></div>
+                    <div
+                      className={`h-full rounded transition-all duration-300 ${getConnectorColor(
+                        stepStatus,
+                        getStepStatus(orderFlow[index + 1].key)
+                      )}`}
+                    ></div>
                   </div>
                 )}
               </div>
@@ -239,6 +323,255 @@ const StatusFlowChart = ({ orderId, currentStatus }) => {
     </div>
   );
 };
+
+function DeliveryReviewModal({ order, onClose }) {
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  if (!order) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (rating === 0) {
+      alert("Please select a rating");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // API call to submit delivery review would go here
+      console.log("Delivery Review:", {
+        orderId: order.order_id,
+        rating,
+        comment,
+      });
+      alert("Delivery review submitted successfully!");
+      onClose();
+    } catch (error) {
+      console.error("Error submitting delivery review:", error);
+      alert("Failed to submit review. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="relative bg-white max-w-md w-full rounded-3xl shadow-2xl border-t-[9px] border-green-600 p-0 animate-fadeIn">
+        <div className="flex items-center gap-2 absolute -top-8 left-8 bg-gradient-to-br from-green-600 to-green-400 border-4 border-white rounded-full shadow-lg p-4">
+          <Truck className="h-8 w-8 text-white" />
+        </div>
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 rounded-full bg-green-50 hover:bg-green-100 text-green-700 hover:text-red-600 focus:outline-none"
+        >
+          <XIcon className="w-6 h-6" />
+        </button>
+        <div className="p-8 pt-12">
+          <h2 className="text-3xl font-extrabold text-green-700 mb-3 tracking-tight">
+            Delivery Review
+          </h2>
+          <p className="text-sm text-gray-400 mb-6">
+            Rate your delivery experience for Order {order.order_id}
+          </p>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Rate the delivery service:
+              </label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    className={`p-1 ${
+                      star <= rating ? "text-yellow-400" : "text-gray-300"
+                    } hover:text-yellow-400 transition-colors`}
+                  >
+                    <Star
+                      className={`w-8 h-8 ${
+                        star <= rating ? "fill-current" : ""
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Additional comments (optional):
+              </label>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={3}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Tell us about your delivery experience..."
+              />
+            </div>
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                onClick={onClose}
+                className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-bold"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-lg font-bold"
+              >
+                {submitting ? "Submitting..." : "Submit Review"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProductReviewModal({ order, onClose }) {
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  if (!order) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedProduct) {
+      alert("Please select a product to review");
+      return;
+    }
+    if (rating === 0) {
+      alert("Please select a rating");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // API call to submit product review would go here
+      console.log("Product Review:", {
+        orderId: order.order_id,
+        productId: selectedProduct.product_id,
+        productName: selectedProduct.product_name,
+        rating,
+        comment,
+      });
+      alert("Product review submitted successfully!");
+      onClose();
+    } catch (error) {
+      console.error("Error submitting product review:", error);
+      alert("Failed to submit review. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="relative bg-white max-w-md w-full rounded-3xl shadow-2xl border-t-[9px] border-yellow-600 p-0 animate-fadeIn">
+        <div className="flex items-center gap-2 absolute -top-8 left-8 bg-gradient-to-br from-yellow-600 to-yellow-400 border-4 border-white rounded-full shadow-lg p-4">
+          <Star className="h-8 w-8 text-white" />
+        </div>
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 rounded-full bg-yellow-50 hover:bg-yellow-100 text-yellow-700 hover:text-red-600 focus:outline-none"
+        >
+          <XIcon className="w-6 h-6" />
+        </button>
+        <div className="p-8 pt-12">
+          <h2 className="text-3xl font-extrabold text-yellow-700 mb-3 tracking-tight">
+            Product Review
+          </h2>
+          <p className="text-sm text-gray-400 mb-6">
+            Rate the products from Order {order.order_id}
+          </p>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select product to review:
+              </label>
+              <select
+                value={selectedProduct?.product_id || ""}
+                onChange={(e) => {
+                  const product = order.items?.find(
+                    (item) => item.product_id === parseInt(e.target.value)
+                  );
+                  setSelectedProduct(product);
+                }}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              >
+                <option value="">Choose a product...</option>
+                {order.items?.map((item) => (
+                  <option key={item.product_id} value={item.product_id}>
+                    {item.product_name || "Unknown Product"}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Rate this product:
+              </label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    className={`p-1 ${
+                      star <= rating ? "text-yellow-400" : "text-gray-300"
+                    } hover:text-yellow-400 transition-colors`}
+                  >
+                    <Star
+                      className={`w-8 h-8 ${
+                        star <= rating ? "fill-current" : ""
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Review comments (optional):
+              </label>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={3}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                placeholder="Tell us about this product..."
+              />
+            </div>
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                onClick={onClose}
+                className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-bold"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white px-6 py-3 rounded-lg font-bold"
+              >
+                {submitting ? "Submitting..." : "Submit Review"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function OrderDetailsModal({ order, onClose }) {
   if (!order) return null;
@@ -261,37 +594,60 @@ function OrderDetailsModal({ order, onClose }) {
           <p className="text-sm text-gray-400 mb-6">
             Placed on{" "}
             <span className="text-gray-700 font-bold">
-              {order.order_date ? new Date(order.order_date).toLocaleString("en-US") : "Date not available"}
+              {order.order_date
+                ? new Date(order.order_date).toLocaleString("en-US")
+                : "Date not available"}
             </span>
           </p>
           <div className="space-y-3 mb-6">
             <div className="flex items-center gap-2">
-              <span className="text-gray-500 font-semibold w-[120px]">Order ID:</span>
-              <span className="text-gray-900 font-bold">{order.order_id || "Unknown"}</span>
+              <span className="text-gray-500 font-semibold w-[120px]">
+                Order ID:
+              </span>
+              <span className="text-gray-900 font-bold">
+                {order.order_id || "Unknown"}
+              </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-gray-500 font-semibold w-[120px]">Status:</span>
-              <span className={`font-bold px-3 py-1 rounded-full text-sm bg-purple-50 text-purple-700 flex items-center gap-2`}>
+              <span className="text-gray-500 font-semibold w-[120px]">
+                Status:
+              </span>
+              <span
+                className={`font-bold px-3 py-1 rounded-full text-sm bg-purple-50 text-purple-700 flex items-center gap-2`}
+              >
                 {order.status || "Pending"}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-gray-500 font-semibold w-[120px]">Address:</span>
-              <span className="text-gray-900">{order.delivery_address || "Address not available"}</span>
+              <span className="text-gray-500 font-semibold w-[120px]">
+                Address:
+              </span>
+              <span className="text-gray-900">
+                {order.delivery_address || "Address not available"}
+              </span>
             </div>
           </div>
           <div className="mb-2">
-            <span className="font-semibold text-gray-600 mb-2 block">Order Items:</span>
+            <span className="font-semibold text-gray-600 mb-2 block">
+              Order Items:
+            </span>
             {Array.isArray(order.items) && order.items.length > 0 ? (
               <div className="divide-y divide-gray-100 bg-gray-50 rounded-xl overflow-hidden border border-gray-200">
                 {order.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center px-4 py-2">
+                  <div
+                    key={idx}
+                    className="flex justify-between items-center px-4 py-2"
+                  >
                     <div>
                       <div className="font-bold text-gray-900">
-                        {item?.name || <i className="text-gray-400">Unknown Item</i>}
+                        {item?.product_name || (
+                          <i className="text-gray-400">Unknown Item</i>
+                        )}
                       </div>
                       {item?.category && (
-                        <div className="text-xs text-gray-500">{item.category}</div>
+                        <div className="text-xs text-gray-500">
+                          {item.category}
+                        </div>
                       )}
                     </div>
                     <div className="flex gap-2 items-center">
@@ -306,7 +662,9 @@ function OrderDetailsModal({ order, onClose }) {
                 ))}
               </div>
             ) : (
-              <div className="text-gray-400 italic text-center py-3">No items found.</div>
+              <div className="text-gray-400 italic text-center py-3">
+                No items found.
+              </div>
             )}
           </div>
         </div>
@@ -329,6 +687,9 @@ export default function MyOrders() {
     activeOrders: 0,
     totalSpent: 0,
   });
+  const [showDeliveryReview, setShowDeliveryReview] = useState(false);
+  const [showProductReview, setShowProductReview] = useState(false);
+  const [reviewOrder, setReviewOrder] = useState(null);
 
   useEffect(() => {
     if (isLoggedIn && user) {
@@ -385,11 +746,28 @@ export default function MyOrders() {
     } catch (err) {}
   };
 
+  const handleDeliveryReview = (order) => {
+    setReviewOrder(order);
+    setShowDeliveryReview(true);
+  };
+
+  const handleProductReview = (order) => {
+    setReviewOrder(order);
+    setShowProductReview(true);
+  };
+
+  const closeReviewModals = () => {
+    setShowDeliveryReview(false);
+    setShowProductReview(false);
+    setReviewOrder(null);
+  };
+
   const getStatusColor = (status) => {
     if (!status) return "text-gray-600 bg-gray-50";
-    
+
     switch (status) {
       case "delivered":
+      case "delivery_completed":
         return "text-green-600 bg-green-50";
       case "out_for_delivery":
         return "text-blue-600 bg-blue-50";
@@ -403,6 +781,8 @@ export default function MyOrders() {
         return "text-orange-600 bg-orange-50";
       case "left_warehouse":
         return "text-indigo-600 bg-indigo-50";
+      case "payment_received":
+        return "text-green-600 bg-green-50";
       default:
         return "text-gray-600 bg-gray-50";
     }
@@ -410,9 +790,10 @@ export default function MyOrders() {
 
   const getStatusIcon = (status) => {
     if (!status) return <Package className="w-5 h-5" />;
-    
+
     switch (status) {
       case "delivered":
+      case "delivery_completed":
         return <CheckCircle className="w-5 h-5" />;
       case "out_for_delivery":
         return <Truck className="w-5 h-5" />;
@@ -426,6 +807,8 @@ export default function MyOrders() {
         return <Truck className="w-5 h-5" />;
       case "left_warehouse":
         return <MapPin className="w-5 h-5" />;
+      case "payment_received":
+        return <CheckCircle className="w-5 h-5" />;
       default:
         return <Package className="w-5 h-5" />;
     }
@@ -433,7 +816,7 @@ export default function MyOrders() {
 
   const formatDate = (dateString) => {
     if (!dateString) return "Date not available";
-    
+
     try {
       return new Date(dateString).toLocaleDateString("en-US", {
         year: "numeric",
@@ -451,7 +834,7 @@ export default function MyOrders() {
   const filteredOrders = orders.filter((order) => {
     // Comprehensive null checks
     if (!order) return false;
-    
+
     const orderIdMatch =
       order.order_id &&
       typeof order.order_id === "string" &&
@@ -486,9 +869,13 @@ export default function MyOrders() {
         <div className="p-6">
           <div className="flex justify-between items-start mb-4">
             <div>
-              <h3 className="text-lg font-bold text-gray-800 mb-1">{order.order_id || "Unknown Order"}</h3>
+              <h3 className="text-lg font-bold text-gray-800 mb-1">
+                {order.order_id || "Unknown Order"}
+              </h3>
               <p className="text-sm text-gray-600 font-medium">
-                {order.order_date ? formatDate(order.order_date) : "Date not available"}
+                {order.order_date
+                  ? formatDate(order.order_date)
+                  : "Date not available"}
               </p>
             </div>
             <div
@@ -497,7 +884,9 @@ export default function MyOrders() {
               )}`}
             >
               {getStatusIcon(order.status)}
-              {order.status ? order.status.replace("_", " ").toUpperCase() : "PENDING"}
+              {order.status
+                ? order.status.replace("_", " ").toUpperCase()
+                : "PENDING"}
             </div>
           </div>
           <div className="space-y-3 mb-4">
@@ -510,14 +899,20 @@ export default function MyOrders() {
               <span>{order.items?.length ?? 0} items</span>
             </div>
           </div>
-          
-          {/* Show status flow chart for active orders */}
-          {(activeTab === "active" || activeTab === "all") && order.status && order.status !== "delivered" && order.status !== "cancelled" && (
-            <div className="mb-4">
-              <StatusFlowChart orderId={order.order_id} currentStatus={order.status} />
-            </div>
-          )}
-          
+
+          {/* Show status flow chart only for active orders and non-completed/cancelled orders */}
+          {activeTab === "active" &&
+            order.status &&
+            !["delivery_completed", "cancelled"].includes(order.status) && (
+              <div className="mb-4">
+                <StatusFlowChart
+                  orderId={order.order_id}
+                  currentStatus={order.status}
+                  paymentMethod={order.payment_method}
+                />
+              </div>
+            )}
+
           <div className="flex gap-3 mt-4">
             <Button
               onClick={() => setSelectedOrder(order)}
@@ -526,6 +921,28 @@ export default function MyOrders() {
               <Eye className="w-4 h-4" />
               View Details
             </Button>
+
+            {/* Show review buttons only for delivered/completed orders */}
+            {(order.status === "delivery_completed" ||
+              order.status === "delivered" ||
+              order.status === "payment_received") && (
+              <>
+                <Button
+                  onClick={() => handleDeliveryReview(order)}
+                  className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 font-bold flex items-center gap-2"
+                >
+                  <Truck className="w-4 h-4" />
+                  Delivery Review
+                </Button>
+                <Button
+                  onClick={() => handleProductReview(order)}
+                  className="bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 font-bold flex items-center gap-2"
+                >
+                  <Star className="w-4 h-4" />
+                  Product Review
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -574,7 +991,11 @@ export default function MyOrders() {
                   <div className="flex gap-3 flex-wrap">
                     {[
                       { key: "all", label: "All Orders", icon: Package },
-                      { key: "completed", label: "Completed", icon: CheckCircle },
+                      {
+                        key: "completed",
+                        label: "Completed",
+                        icon: CheckCircle,
+                      },
                       { key: "cancelled", label: "Cancelled", icon: XCircle },
                     ].map((tab) => {
                       const Icon = tab.icon;
@@ -622,7 +1043,9 @@ export default function MyOrders() {
                   <div className="bg-gradient-to-r from-orange-100 to-orange-200 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                     <Activity className="w-8 h-8 text-orange-600" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">Active Orders</h3>
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">
+                    Active Orders
+                  </h3>
                   <p className="text-gray-600 text-sm mb-4 font-medium">
                     View your ongoing deliveries
                   </p>
@@ -647,7 +1070,9 @@ export default function MyOrders() {
           {loading ? (
             <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
               <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto mb-6"></div>
-              <p className="text-gray-600 font-semibold text-lg">Loading your orders...</p>
+              <p className="text-gray-600 font-semibold text-lg">
+                Loading your orders...
+              </p>
             </div>
           ) : error ? (
             <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
@@ -680,6 +1105,18 @@ export default function MyOrders() {
             <OrderDetailsModal
               order={selectedOrder}
               onClose={() => setSelectedOrder(null)}
+            />
+          )}
+          {showDeliveryReview && (
+            <DeliveryReviewModal
+              order={reviewOrder}
+              onClose={closeReviewModals}
+            />
+          )}
+          {showProductReview && (
+            <ProductReviewModal
+              order={reviewOrder}
+              onClose={closeReviewModals}
             />
           )}
         </div>

@@ -1,4 +1,4 @@
-import db from '../db.js';
+import pool from '../db.js';
 
 /**
  * Consolidated status tracking utility
@@ -6,8 +6,8 @@ import db from '../db.js';
  */
 
 // Update order status with consolidated tracking
-export const updateOrderStatus = async (orderId, newStatus, updatedBy = null, notes = null, existingClient = null) => {
-    const client = existingClient || await db.connect();
+export const updateOrderStatus = async (orderId, newStatus, updatepooly = null, notes = null, existingClient = null) => {
+    const client = existingClient || await pool.connect();
     const shouldManageTransaction = !existingClient;
 
     try {
@@ -35,7 +35,7 @@ export const updateOrderStatus = async (orderId, newStatus, updatedBy = null, no
         // Insert status tracking record using consolidated StatusHistory table
         await client.query(
             'INSERT INTO "StatusHistory" (entity_type, entity_id, status, updated_by, notes) VALUES ($1, $2, $3, $4, $5)',
-            ['order', orderId, newStatus, updatedBy, notes]
+            ['order', orderId, newStatus, updatepooly, notes]
         );
 
         if (shouldManageTransaction) {
@@ -55,8 +55,8 @@ export const updateOrderStatus = async (orderId, newStatus, updatedBy = null, no
 };
 
 // Update delivery status with consolidated tracking
-export const updateDeliveryStatus = async (deliveryId, newStatus, updatedBy, notes = null, existingClient = null) => {
-    const client = existingClient || await db.connect();
+export const updateDeliveryStatus = async (deliveryId, newStatus, updatepooly, notes = null, existingClient = null) => {
+    const client = existingClient || await pool.connect();
     const shouldManageTransaction = !existingClient;
 
     try {
@@ -84,7 +84,7 @@ export const updateDeliveryStatus = async (deliveryId, newStatus, updatedBy, not
         // Insert status tracking record using consolidated StatusHistory table
         await client.query(
             'INSERT INTO "StatusHistory" (entity_type, entity_id, status, updated_by, notes) VALUES ($1, $2, $3, $4, $5)',
-            ['delivery', deliveryId, newStatus, updatedBy, notes]
+            ['delivery', deliveryId, newStatus, updatepooly, notes]
         );
 
         if (shouldManageTransaction) {
@@ -106,23 +106,52 @@ export const updateDeliveryStatus = async (deliveryId, newStatus, updatedBy, not
 // Get status history for an entity (order or delivery)
 export const getStatusHistory = async (entityType, entityId) => {
     try {
-        const query = `
-      SELECT 
-        sh.status,
-        sh.updated_at,
-        sh.notes,
-        u.first_name,
-        u.last_name,
-        u.username
-      FROM "StatusHistory" sh
-      LEFT JOIN "User" u ON sh.updated_by = u.user_id
-      WHERE sh.entity_type = $1 AND sh.entity_id = $2
-      ORDER BY sh.updated_at DESC
-    `;
+        let actualEntityId = entityId;
 
-        const result = await db.query(query, [entityType, entityId]);
+        // Handle order identifier format conversion
+        if (entityType === 'order' && typeof entityId === 'string' && entityId.startsWith('ORD-')) {
+            // Extract the numeric part and query the Order table to get the actual order_id
+            const orderQuery = `
+                SELECT order_id 
+                FROM "Order" 
+                WHERE order_id = $1 OR CONCAT('ORD-', LPAD(order_id::text, 6, '0')) = $2
+            `;
+
+            const orderResult = await pool.query(orderQuery, [parseInt(entityId.replace('ORD-', '')), entityId]);
+
+            if (orderResult.rows.length === 0) {
+                throw new Error(`Order not found with identifier: ${entityId}`);
+            }
+
+            actualEntityId = orderResult.rows[0].order_id;
+        }
+
+        // Ensure entityId is an integer for database query
+        const numericEntityId = parseInt(actualEntityId);
+        if (isNaN(numericEntityId)) {
+            throw new Error(`Invalid entity ID format: ${entityId}`);
+        }
+
+        const query = `
+            SELECT 
+                sh.status,
+                sh.updated_at,
+                sh.notes,
+                u.first_name,
+                u.last_name,
+                u.username
+            FROM "StatusHistory" sh
+            LEFT JOIN "User" u ON sh.updated_by = u.user_id
+            WHERE sh.entity_type = $1 AND sh.entity_id = $2
+            ORDER BY sh.updated_at DESC
+        `;
+
+        const result = await pool.query(query, [entityType, numericEntityId]);
+        console.log(`Fetched ${result.rows.length} status history records for ${entityType} ID: ${numericEntityId}`);
+        console.log(result.rows);
         return result.rows;
     } catch (error) {
+        console.error(`Error fetching ${entityType} status history:`, error);
         throw error;
     }
 };
@@ -130,24 +159,51 @@ export const getStatusHistory = async (entityType, entityId) => {
 // Get current status for an entity
 export const getCurrentStatus = async (entityType, entityId) => {
     try {
-        const query = `
-      SELECT status, updated_at
-      FROM "StatusHistory"
-      WHERE entity_type = $1 AND entity_id = $2
-      ORDER BY updated_at DESC
-      LIMIT 1
-    `;
+        let actualEntityId = entityId;
 
-        const result = await db.query(query, [entityType, entityId]);
+        // Handle order identifier format conversion
+        if (entityType === 'order' && typeof entityId === 'string' && entityId.startsWith('ORD-')) {
+            // Extract the numeric part and query the Order table to get the actual order_id
+            const orderQuery = `
+                SELECT order_id 
+                FROM "Order" 
+                WHERE order_id = $1 OR CONCAT('ORD-', LPAD(order_id::text, 6, '0')) = $2
+            `;
+
+            const orderResult = await pool.query(orderQuery, [parseInt(entityId.replace('ORD-', '')), entityId]);
+
+            if (orderResult.rows.length === 0) {
+                throw new Error(`Order not found with identifier: ${entityId}`);
+            }
+
+            actualEntityId = orderResult.rows[0].order_id;
+        }
+
+        // Ensure entityId is an integer for database query
+        const numericEntityId = parseInt(actualEntityId);
+        if (isNaN(numericEntityId)) {
+            throw new Error(`Invalid entity ID format: ${entityId}`);
+        }
+
+        const query = `
+            SELECT status, updated_at
+            FROM "StatusHistory"
+            WHERE entity_type = $1 AND entity_id = $2
+            ORDER BY updated_at DESC
+            LIMIT 1
+        `;
+
+        const result = await pool.query(query, [entityType, numericEntityId]);
         return result.rows.length > 0 ? result.rows[0] : null;
     } catch (error) {
+        console.error(`Error fetching current ${entityType} status:`, error);
         throw error;
     }
 };
 
 // Migration helper: Convert existing OrderStatusHistory to consolidated StatusHistory
 export const migrateOrderStatusHistory = async () => {
-    const client = await db.connect();
+    const client = await pool.connect();
 
     try {
         await client.query('BEGIN');
