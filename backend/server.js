@@ -30,6 +30,8 @@ import warehouseInventoryRoute from "./routes/warehouseInventoryRoute.js";
 import userProfileRoute from "./routes/userProfileRoute.js";
 import reviewRoute from "./routes/reviewRoute.js";
 import stockRoute from "./routes/stockRoute.js";
+import adminReturnRoute from "./routes/adminReturnRoute.js";
+import walletRoute from "./routes/walletRoute.js";
 
 const app = express();
 app.use(cors());
@@ -62,6 +64,7 @@ app.use("/api/delivery", assignDeliveryRoute);
 app.use("/api/favorites", favoritesRoute);
 app.use("/api/order", orderRoute);
 app.use("/api/admin", approvalsRoute);
+app.use("/api/admin", adminReturnRoute);
 // New consolidated routes
 app.use("/api/status", statusTrackingRoute);
 app.use("/api/delivery", enhancedDeliveryRoute);
@@ -69,6 +72,7 @@ app.use("/api/warehouse", warehouseInventoryRoute);
 app.use("/api/user", userProfileRoute);
 app.use("/api/reviews", reviewRoute);
 app.use("/api/stock", stockRoute);
+app.use("/api/wallet", walletRoute);
 
 app.listen(port, () => {
   console.log(`Server running on ${port}`);

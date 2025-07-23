@@ -31,7 +31,7 @@ export const getProductsForHomepage = async (req, res) => {
       FROM "Product" p
       LEFT JOIN "Category" c ON p.category_id = c.category_id
       LEFT JOIN "ProductImage" pi ON p.product_id = pi.product_id AND pi.is_primary = true
-      LEFT JOIN "Review" r ON p.product_id = r.product_id AND r.review_status = 'approved'
+      LEFT JOIN "Review" r ON p.product_id = r.product_id
       WHERE p.is_available = true
       GROUP BY p.product_id, p.name, p.price, p.unit_measure, p.origin, 
                p.description, p.is_available, p.is_refundable, c.name, pi.image_url, p.created_at
@@ -141,11 +141,11 @@ export const getProductsForHomepage = async (req, res) => {
       ORDER BY RANDOM()
       LIMIT 8
     `;
-    
+
     const fallbackProducts = await getProductsWithDetails(fallbackQuery);
 
     // Prepare response data - remove created_at from final response
-    const cleanupProducts = (products) => 
+    const cleanupProducts = (products) =>
       products.map(({ created_at, ...product }) => product);
 
     const homepageData = {
@@ -176,11 +176,11 @@ export const getProductsForHomepage = async (req, res) => {
 // Get products by section/category with pagination and filtering
 export const getProductsBySection = async (req, res) => {
   try {
-    const { 
-      section, 
-      page = 1, 
-      limit = 20, 
-      sortBy = 'name', 
+    const {
+      section,
+      page = 1,
+      limit = 20,
+      sortBy = 'name',
       sortOrder = 'ASC',
       minPrice,
       maxPrice,
@@ -193,7 +193,7 @@ export const getProductsBySection = async (req, res) => {
     // Validate sort parameters
     const validSortFields = ['name', 'price', 'rating', 'created_at'];
     const validSortOrders = ['ASC', 'DESC'];
-    
+
     const sortField = validSortFields.includes(sortBy) ? sortBy : 'name';
     const sortDirection = validSortOrders.includes(sortOrder.toUpperCase()) ? sortOrder.toUpperCase() : 'ASC';
 
@@ -215,7 +215,7 @@ export const getProductsBySection = async (req, res) => {
       FROM "Product" p
       LEFT JOIN "Category" c ON p.category_id = c.category_id
       LEFT JOIN "ProductImage" pi ON p.product_id = pi.product_id AND pi.is_primary = true
-      LEFT JOIN "Review" r ON p.product_id = r.product_id AND r.review_status = 'approved'
+      LEFT JOIN "Review" r ON p.product_id = r.product_id
       WHERE p.is_available = true
     `;
 
@@ -308,7 +308,7 @@ export const getProductsBySection = async (req, res) => {
       SELECT COUNT(DISTINCT p.product_id) as total
       FROM "Product" p
       LEFT JOIN "Category" c ON p.category_id = c.category_id
-      LEFT JOIN "Review" r ON p.product_id = r.product_id AND r.review_status = 'approved'
+      LEFT JOIN "Review" r ON p.product_id = r.product_id
       WHERE p.is_available = true
     `;
 
@@ -446,7 +446,7 @@ export const getProductById = async (req, res) => {
         p.created_at
       FROM "Product" p
       LEFT JOIN "Category" c ON p.category_id = c.category_id
-      LEFT JOIN "Review" r ON p.product_id = r.product_id AND r.review_status = 'approved'
+      LEFT JOIN "Review" r ON p.product_id = r.product_id
       WHERE p.product_id = $1 AND p.is_available = true
       GROUP BY p.product_id, p.name, p.price, p.unit_measure, p.origin, 
                p.description, p.is_available, p.is_refundable, c.name, c.category_id, p.created_at
@@ -474,13 +474,16 @@ export const getProductById = async (req, res) => {
     // Get recent reviews
     const reviewQuery = `
       SELECT 
-        r.review_id,
+        r.review_id as id,
         r.rating,
         r.comment,
-        u.username AS user_name
+        r.review_date as date,
+        u.username AS user_name,
+        true as verified
       FROM "Review" r
       LEFT JOIN "User" u ON r.user_id = u.user_id
-      WHERE r.product_id = $1 AND r.review_status = 'approved'
+      WHERE r.product_id = $1
+      ORDER BY r.review_date DESC
       LIMIT 10
     `;
 
@@ -512,10 +515,10 @@ export const getProductById = async (req, res) => {
 // Search products
 export const searchProducts = async (req, res) => {
   try {
-    const { 
-      q: searchTerm, 
-      page = 1, 
-      limit = 20, 
+    const {
+      q: searchTerm,
+      page = 1,
+      limit = 20,
       sortBy = 'relevance',
       category,
       minPrice,
@@ -556,7 +559,7 @@ export const searchProducts = async (req, res) => {
       FROM "Product" p
       LEFT JOIN "Category" c ON p.category_id = c.category_id
       LEFT JOIN "ProductImage" pi ON p.product_id = pi.product_id AND pi.is_primary = true
-      LEFT JOIN "Review" r ON p.product_id = r.product_id AND r.review_status = 'approved'
+      LEFT JOIN "Review" r ON p.product_id = r.product_id
       WHERE p.is_available = true
       AND (
         LOWER(p.name) LIKE $2 OR 

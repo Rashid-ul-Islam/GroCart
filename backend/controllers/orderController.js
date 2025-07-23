@@ -780,7 +780,7 @@ export const cancelOrder = async (req, res) => {
     }
 
     // Update order status to cancelled using consolidated approach
-    await updateOrderStatus(order_id, 'cancelled', cancelled_by, `Order cancelled. Reason: ${cancellation_reason}`, client);
+    await updateOrderStatus(order_id, 'cancelled', cancelled_by, `Order cancelled. Reason: ${reason}`, client);
 
     // Update delivery boy availability
     const updateDeliveryBoyQuery = `
@@ -1068,10 +1068,12 @@ export const getCompletedOrders = async (req, res) => {
       result.rows.map(async (order) => {
         const itemsQuery = `
           SELECT 
+            oi.order_item_id,
             oi.product_id,
             oi.quantity,
             oi.price,
-            p.name as product_name
+            p.name as product_name,
+            p.is_refundable
           FROM "OrderItem" oi
           JOIN "Product" p ON oi.product_id = p.product_id
           WHERE oi.order_id = $1
@@ -1209,5 +1211,299 @@ export const getOrderStats = async (req, res) => {
   } catch (error) {
     console.error('Error fetching order stats:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch order stats', error: error.message });
+  }
+};
+
+// Get order items with refundability status for return requests
+export const getOrderItemsForReturn = async (req, res) => {
+  try {
+    const { order_id } = req.params;
+    const { user_id } = req.query;
+
+    if (!order_id || !user_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order ID and User ID are required'
+      });
+    }
+
+    // First verify the order belongs to the user and is completed
+    const orderQuery = `
+      SELECT o.order_id, o.user_id,
+        (
+          SELECT sh.status
+          FROM "StatusHistory" sh
+          WHERE sh.entity_type = 'order' AND sh.entity_id = o.order_id
+          ORDER BY sh.updated_at DESC
+          LIMIT 1
+        ) as status
+      FROM "Order" o
+      WHERE o.order_id = $1 AND o.user_id = $2
+    `;
+
+    const orderResult = await pool.query(orderQuery, [order_id, user_id]);
+
+    if (orderResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found or does not belong to user'
+      });
+    }
+
+    const order = orderResult.rows[0];
+    const validStatuses = ['delivery_completed', 'delivered', 'payment_received'];
+
+    if (!validStatuses.includes(order.status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Return requests can only be made for completed orders'
+      });
+    }
+
+    // Get order items with product refundability and existing return requests
+    const itemsQuery = `
+      SELECT 
+        oi.order_item_id,
+        oi.product_id,
+        oi.quantity,
+        oi.price,
+        p.name as product_name,
+        p.is_refundable,
+        COALESCE(rr.status, 'none') as return_status,
+        rr.return_id,
+        rr.requested_at
+      FROM "OrderItem" oi
+      JOIN "Product" p ON oi.product_id = p.product_id
+      LEFT JOIN "ReturnRequest" rr ON oi.order_item_id = rr.order_item_id
+      WHERE oi.order_id = $1
+      ORDER BY oi.order_item_id
+    `;
+
+    const itemsResult = await pool.query(itemsQuery, [order_id]);
+
+    res.json({
+      success: true,
+      data: {
+        order_id: order_id,
+        status: order.status,
+        items: itemsResult.rows
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching order items for return:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching order items for return',
+      error: error.message
+    });
+  }
+};
+
+// Create return request for multiple order items
+export const createReturnRequest = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const { order_id, user_id, items, reason } = req.body;
+
+    if (!order_id || !user_id || !items || !Array.isArray(items) || items.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'Order ID, User ID, and items array are required'
+      });
+    }
+
+    // Verify order belongs to user and is completed
+    const orderQuery = `
+      SELECT o.order_id, o.user_id,
+        (
+          SELECT sh.status
+          FROM "StatusHistory" sh
+          WHERE sh.entity_type = 'order' AND sh.entity_id = o.order_id
+          ORDER BY sh.updated_at DESC
+          LIMIT 1
+        ) as status
+      FROM "Order" o
+      WHERE o.order_id = $1 AND o.user_id = $2
+    `;
+
+    const orderResult = await client.query(orderQuery, [order_id, user_id]);
+
+    if (orderResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found or does not belong to user'
+      });
+    }
+
+    const order = orderResult.rows[0];
+    const validStatuses = ['delivery_completed', 'delivered', 'payment_received'];
+
+    if (!validStatuses.includes(order.status)) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'Return requests can only be made for completed orders'
+      });
+    }
+
+    // Validate each item and check refundability
+    const returnRequests = [];
+
+    for (const item of items) {
+      const { order_item_id } = item;
+
+      if (!order_item_id) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          success: false,
+          message: 'Each item must have an order_item_id'
+        });
+      }
+
+      // Check if item belongs to order and is refundable
+      const itemQuery = `
+        SELECT oi.order_item_id, oi.product_id, p.is_refundable, p.name as product_name
+        FROM "OrderItem" oi
+        JOIN "Product" p ON oi.product_id = p.product_id
+        WHERE oi.order_item_id = $1 AND oi.order_id = $2
+      `;
+
+      const itemResult = await client.query(itemQuery, [order_item_id, order_id]);
+
+      if (itemResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          success: false,
+          message: `Order item ${order_item_id} not found in this order`
+        });
+      }
+
+      const orderItem = itemResult.rows[0];
+
+      if (!orderItem.is_refundable) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          success: false,
+          message: `Product '${orderItem.product_name}' is not refundable`
+        });
+      }
+
+      // Check if return request already exists for this item
+      const existingReturnQuery = `
+        SELECT return_id FROM "ReturnRequest" 
+        WHERE order_item_id = $1
+      `;
+
+      const existingReturn = await client.query(existingReturnQuery, [order_item_id]);
+
+      if (existingReturn.rows.length > 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          success: false,
+          message: `Return request already exists for product '${orderItem.product_name}'`
+        });
+      }
+
+      // Create return request
+      const insertReturnQuery = `
+        INSERT INTO "ReturnRequest" (
+          order_item_id, 
+          user_id, 
+          reason, 
+          status,
+          requested_at
+        ) VALUES ($1, $2, $3, 'Requested', now())
+        RETURNING return_id
+      `;
+
+      const returnResult = await client.query(insertReturnQuery, [
+        order_item_id,
+        user_id,
+        reason || 'Return requested'
+      ]);
+
+      returnRequests.push({
+        return_id: returnResult.rows[0].return_id,
+        order_item_id: order_item_id,
+        product_name: orderItem.product_name
+      });
+    }
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: `Return request created for ${returnRequests.length} item(s)`,
+      data: returnRequests
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error creating return request:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating return request',
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+};
+
+// Get user's return requests
+export const getUserReturnRequests = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+
+    if (!user_id || isNaN(user_id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid user ID is required'
+      });
+    }
+
+    const query = `
+      SELECT 
+        rr.return_id,
+        rr.order_item_id,
+        rr.reason,
+        rr.status,
+        rr.requested_at,
+        rr.approved_at,
+        rr.rejected_at,
+        rr.refund_amount,
+        oi.order_id,
+        oi.quantity,
+        oi.price,
+        p.product_id,
+        p.name as product_name,
+        o.order_date
+      FROM "ReturnRequest" rr
+      JOIN "OrderItem" oi ON rr.order_item_id = oi.order_item_id
+      JOIN "Product" p ON oi.product_id = p.product_id
+      JOIN "Order" o ON oi.order_id = o.order_id
+      WHERE rr.user_id = $1
+      ORDER BY rr.requested_at DESC
+    `;
+
+    const result = await pool.query(query, [user_id]);
+
+    res.json({
+      success: true,
+      data: result.rows
+    });
+
+  } catch (error) {
+    console.error('Error fetching return requests:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching return requests',
+      error: error.message
+    });
   }
 };

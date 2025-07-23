@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import React from "react";
 import { useAuth } from "../context/AuthContext";
 import {
   Package,
@@ -19,6 +20,8 @@ import {
   CheckCircle2,
   Star,
   MessageSquare,
+  RotateCcw,
+  Ban,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -91,7 +94,7 @@ const getStepColor = (status) => {
   }
 };
 
-const StatusFlowChart = ({ order, paymentMethod }) => {
+const StatusFlowChart = ({ orderId, currentStatus, paymentMethod }) => {
   const [statusHistory, setStatusHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -325,8 +328,9 @@ const StatusFlowChart = ({ order, paymentMethod }) => {
 };
 
 function DeliveryReviewModal({ order, onClose }) {
+  const { user } = useAuth();
   const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState("");
+  const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   if (!order) return null;
@@ -338,19 +342,42 @@ function DeliveryReviewModal({ order, onClose }) {
       return;
     }
 
+    if (!user || !user.user_id) {
+      alert("User not authenticated");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      // API call to submit delivery review would go here
-      console.log("Delivery Review:", {
-        orderId: order.order_id,
-        rating,
-        comment,
-      });
-      alert("Delivery review submitted successfully!");
-      onClose();
+      // Submit delivery review to DeliveryPerformance table
+      const response = await fetch(
+        `http://localhost:3000/api/reviews/delivery?user_id=${user.user_id}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            order_id: order.order_id,
+            rating,
+            feedback,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert("Delivery review submitted successfully!");
+        onClose();
+        // Refresh the page to update button states
+        window.location.reload();
+      } else {
+        throw new Error(result.message || "Failed to submit review");
+      }
     } catch (error) {
       console.error("Error submitting delivery review:", error);
-      alert("Failed to submit review. Please try again.");
+      alert(error.message || "Failed to submit review. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -401,14 +428,14 @@ function DeliveryReviewModal({ order, onClose }) {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Additional comments (optional):
+                Feedback (optional):
               </label>
               <textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
                 rows={3}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Tell us about your delivery experience..."
+                placeholder="Share your delivery experience..."
               />
             </div>
             <div className="flex gap-3 pt-4">
@@ -435,6 +462,7 @@ function DeliveryReviewModal({ order, onClose }) {
 }
 
 function ProductReviewModal({ order, onClose }) {
+  const { user } = useAuth();
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
@@ -453,21 +481,42 @@ function ProductReviewModal({ order, onClose }) {
       return;
     }
 
+    if (!user || !user.user_id) {
+      alert("User not authenticated");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      // API call to submit product review would go here
-      console.log("Product Review:", {
-        orderId: order.order_id,
-        productId: selectedProduct.product_id,
-        productName: selectedProduct.product_name,
-        rating,
-        comment,
+      // Submit product review
+      const response = await fetch("http://localhost:3000/api/reviews/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reviewType: "product",
+          itemId: selectedProduct.product_id,
+          orderId: order.order_id,
+          userId: user.user_id,
+          rating,
+          comment,
+        }),
       });
-      alert("Product review submitted successfully!");
-      onClose();
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert("Product review submitted successfully!");
+        onClose();
+        // Refresh the page to update button states
+        window.location.reload();
+      } else {
+        throw new Error(result.message || "Failed to submit review");
+      }
     } catch (error) {
       console.error("Error submitting product review:", error);
-      alert("Failed to submit review. Please try again.");
+      alert(error.message || "Failed to submit review. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -572,6 +621,315 @@ function ProductReviewModal({ order, onClose }) {
     </div>
   );
 }
+
+function ReturnProductsModal({ order, onClose }) {
+  const [selectedItems, setSelectedItems] = useState(new Set());
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [orderItems, setOrderItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (order && order.order_id) {
+      fetchOrderItems();
+    }
+  }, [order]);
+
+  const fetchOrderItems = async () => {
+    try {
+      setLoading(true);
+      const orderId = order.order_id.replace("ORD-", "");
+      const response = await fetch(
+        `http://localhost:3000/api/order/return-items/${orderId}?user_id=${user.user_id}`
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setOrderItems(data.data.items);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching order items:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleItemSelection = (orderItemId, isRefundable) => {
+    if (!isRefundable) return;
+
+    const newSelectedItems = new Set(selectedItems);
+    if (newSelectedItems.has(orderItemId)) {
+      newSelectedItems.delete(orderItemId);
+    } else {
+      newSelectedItems.add(orderItemId);
+    }
+    setSelectedItems(newSelectedItems);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (selectedItems.size === 0) {
+      alert("Please select at least one item to return");
+      return;
+    }
+
+    if (!reason.trim()) {
+      alert("Please provide a reason for the return");
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const orderId = order.order_id.replace("ORD-", "");
+      const items = Array.from(selectedItems).map((orderItemId) => ({
+        order_item_id: orderItemId,
+      }));
+
+      const response = await fetch(
+        "http://localhost:3000/api/order/return-request",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            order_id: orderId,
+            user_id: user.user_id,
+            items: items,
+            reason: reason,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert(
+          `Return request submitted successfully for ${selectedItems.size} item(s)`
+        );
+        onClose();
+      } else {
+        alert(data.message || "Failed to submit return request");
+      }
+    } catch (error) {
+      console.error("Error submitting return request:", error);
+      alert("Failed to submit return request");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!order) return null;
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="relative bg-white max-w-2xl w-full rounded-3xl shadow-2xl border-t-[9px] border-red-600 p-0 animate-fadeIn">
+        <div className="flex items-center gap-2 absolute -top-8 left-8 bg-gradient-to-br from-red-600 to-red-400 border-4 border-white rounded-full shadow-lg p-4">
+          <RotateCcw className="h-8 w-8 text-white" />
+        </div>
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 rounded-full bg-red-50 hover:bg-red-100 text-red-700 hover:text-red-800 focus:outline-none"
+        >
+          <XIcon className="w-6 h-6" />
+        </button>
+        <div className="p-8 pt-12">
+          <h2 className="text-3xl font-extrabold text-red-700 mb-3 tracking-tight">
+            Return Products
+          </h2>
+          <p className="text-sm text-gray-400 mb-6">
+            Select products to return from Order {order.order_id}
+          </p>
+
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
+              <p className="text-gray-600 mt-2">Loading order items...</p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Select items to return:
+                </label>
+                <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
+                  {orderItems.map((item) => (
+                    <div
+                      key={item.order_item_id}
+                      className={`p-4 border-b border-gray-100 last:border-b-0 ${
+                        !item.is_refundable ? "bg-gray-50" : "hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedItems.has(item.order_item_id)}
+                            onChange={() =>
+                              handleItemSelection(
+                                item.order_item_id,
+                                item.is_refundable
+                              )
+                            }
+                            disabled={
+                              !item.is_refundable ||
+                              item.return_status !== "none"
+                            }
+                            className="w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500"
+                          />
+                          <div>
+                            <div className="font-medium text-gray-900">
+                              {item.product_name}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Quantity: {item.quantity} × ৳{item.price}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          {!item.is_refundable ? (
+                            <span className="text-xs text-red-600 bg-red-100 px-2 py-1 rounded">
+                              Not Refundable
+                            </span>
+                          ) : item.return_status !== "none" ? (
+                            <span className="text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded">
+                              Return {item.return_status}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                              Refundable
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for return:
+                </label>
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  rows={3}
+                  required
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="Please explain why you want to return these items..."
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-bold"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={submitting || selectedItems.size === 0}
+                  className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-lg font-bold"
+                >
+                  {submitting
+                    ? "Submitting..."
+                    : `Return ${selectedItems.size} Item(s)`}
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const CancelOrderModal = React.memo(
+  ({ isOpen, order, onClose, onConfirm, reason, setReason, cancelling }) => {
+    if (!isOpen || !order) return null;
+
+    const handleReasonChange = (e) => {
+      setReason(e.target.value);
+    };
+
+    const handleKeyDown = (e) => {
+      // Prevent any unwanted form submissions or page reloads
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        if (reason.trim()) {
+          onConfirm();
+        }
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="relative bg-white max-w-md w-full rounded-3xl shadow-2xl border-t-[9px] border-red-600 p-0 animate-fadeIn">
+          <div className="flex items-center gap-2 absolute -top-8 left-8 bg-gradient-to-br from-red-600 to-red-400 border-4 border-white rounded-full shadow-lg p-4">
+            <Ban className="h-8 w-8 text-white" />
+          </div>
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 rounded-full bg-red-50 hover:bg-red-100 text-red-700 hover:text-red-800 focus:outline-none"
+          >
+            <XIcon className="w-6 h-6" />
+          </button>
+          <div className="p-8 pt-12">
+            <h2 className="text-3xl font-extrabold text-red-700 mb-3 tracking-tight">
+              Cancel Order
+            </h2>
+            <p className="text-sm text-gray-400 mb-6">
+              Are you sure you want to cancel Order {order.order_id}?
+            </p>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Reason for cancellation:
+              </label>
+              <textarea
+                value={reason}
+                onChange={handleReasonChange}
+                onKeyDown={handleKeyDown}
+                rows={3}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                placeholder="Please tell us why you want to cancel this order..."
+                required
+                autoFocus
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                onClick={onClose}
+                className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-bold"
+                disabled={cancelling}
+              >
+                Keep Order
+              </Button>
+              <Button
+                type="button"
+                onClick={onConfirm}
+                disabled={cancelling || !reason.trim()}
+                className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-lg font-bold"
+              >
+                {cancelling ? "Cancelling..." : "Cancel Order"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+);
 
 function OrderDetailsModal({ order, onClose }) {
   if (!order) return null;
@@ -689,7 +1047,18 @@ export default function MyOrders() {
   });
   const [showDeliveryReview, setShowDeliveryReview] = useState(false);
   const [showProductReview, setShowProductReview] = useState(false);
+  const [showReturnProducts, setShowReturnProducts] = useState(false);
   const [reviewOrder, setReviewOrder] = useState(null);
+  const [reviewedDeliveries, setReviewedDeliveries] = useState(new Set());
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
+
+  // Optimized cancel reason setter to prevent re-renders
+  const handleSetCancelReason = useCallback((value) => {
+    setCancelReason(value);
+  }, []);
 
   useEffect(() => {
     if (isLoggedIn && user) {
@@ -720,6 +1089,8 @@ export default function MyOrders() {
       const data = await response.json();
       if (data.success) {
         setOrders(data.data);
+        // Check review statuses for completed orders
+        checkReviewStatuses(data.data);
       } else {
         setOrders([]);
         setError(data.message || "Failed to fetch orders");
@@ -756,9 +1127,121 @@ export default function MyOrders() {
     setShowProductReview(true);
   };
 
+  const handleReturnProducts = (order) => {
+    setReviewOrder(order);
+    setShowReturnProducts(true);
+  };
+
+  const handleCancelOrder = useCallback((order) => {
+    setOrderToCancel(order);
+    setCancelReason("");
+    setShowCancelConfirm(true);
+  }, []);
+
+  const closeCancelModal = useCallback(() => {
+    setShowCancelConfirm(false);
+    setOrderToCancel(null);
+    setCancelReason("");
+  }, []);
+
+  const confirmCancelOrder = useCallback(async () => {
+    if (!cancelReason.trim()) {
+      alert("Please provide a reason for cancellation");
+      return;
+    }
+
+    setCancelling(true);
+    try {
+      const orderId = orderToCancel.order_id.replace("ORD-", "");
+      const response = await fetch(
+        `http://localhost:3000/api/order/cancel/${orderId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            cancelled_by: user.user_id,
+            reason: cancelReason,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert("Order cancelled successfully");
+        closeCancelModal();
+        // Refresh orders
+        fetchOrders(activeTab);
+        fetchOrderStats();
+      } else {
+        alert(data.message || "Failed to cancel order");
+      }
+    } catch (error) {
+      console.error("Error cancelling order:", error);
+      alert("Failed to cancel order. Please try again.");
+    } finally {
+      setCancelling(false);
+    }
+  }, [
+    cancelReason,
+    orderToCancel,
+    user.user_id,
+    activeTab,
+    closeCancelModal,
+    fetchOrders,
+    fetchOrderStats,
+  ]);
+
+  // Check if delivery review exists for an order
+  const checkDeliveryReviewStatus = async (orderId) => {
+    if (!user || !user.user_id) return false;
+
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/reviews/delivery-check/${orderId}?user_id=${user.user_id}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        return data.success && data.data.exists;
+      }
+    } catch (error) {
+      console.error("Error checking delivery review status:", error);
+    }
+    return false;
+  };
+
+  // Check review status for all completed orders
+  const checkReviewStatuses = async (ordersList) => {
+    if (!user || !user.user_id) return;
+
+    const deliveryReviewed = new Set();
+
+    for (const order of ordersList) {
+      // Only check for completed/delivered orders
+      if (
+        order.status === "delivery_completed" ||
+        order.status === "delivered" ||
+        order.status === "payment_received"
+      ) {
+        // Check delivery review
+        const hasDeliveryReview = await checkDeliveryReviewStatus(
+          order.order_id
+        );
+        if (hasDeliveryReview) {
+          deliveryReviewed.add(order.order_id);
+        }
+      }
+    }
+
+    setReviewedDeliveries(deliveryReviewed);
+  };
+
   const closeReviewModals = () => {
     setShowDeliveryReview(false);
     setShowProductReview(false);
+    setShowReturnProducts(false);
     setReviewOrder(null);
   };
 
@@ -922,26 +1405,68 @@ export default function MyOrders() {
               View Details
             </Button>
 
-            {/* Show review buttons only for delivered/completed orders */}
+            {/* Show cancel button only for active orders that can be cancelled */}
+            {(activeTab === "active" ||
+              (order.status &&
+                ![
+                  "delivery_completed",
+                  "delivered",
+                  "cancelled",
+                  "payment_received",
+                ].includes(order.status))) && (
+              <Button
+                onClick={() => handleCancelOrder(order)}
+                className="px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 font-bold flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+              >
+                <Ban className="w-4 h-4" />
+                Cancel Order
+              </Button>
+            )}
+
+            {/* Show delivery review button only for delivered/completed orders */}
             {(order.status === "delivery_completed" ||
               order.status === "delivered" ||
               order.status === "payment_received") && (
-              <>
-                <Button
-                  onClick={() => handleDeliveryReview(order)}
-                  className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 font-bold flex items-center gap-2"
-                >
-                  <Truck className="w-4 h-4" />
-                  Delivery Review
-                </Button>
-                <Button
-                  onClick={() => handleProductReview(order)}
-                  className="bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 font-bold flex items-center gap-2"
-                >
-                  <Star className="w-4 h-4" />
-                  Product Review
-                </Button>
-              </>
+              <Button
+                onClick={() => handleDeliveryReview(order)}
+                disabled={reviewedDeliveries.has(order.order_id)}
+                className={`px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 font-bold flex items-center gap-2 ${
+                  reviewedDeliveries.has(order.order_id)
+                    ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                    : "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
+                }`}
+              >
+                <Truck className="w-4 h-4" />
+                {reviewedDeliveries.has(order.order_id)
+                  ? "Delivery Reviewed"
+                  : "Delivery Review"}
+              </Button>
+            )}
+
+            {/* Show product review button only for delivered/completed orders */}
+            {(order.status === "delivery_completed" ||
+              order.status === "delivered" ||
+              order.status === "payment_received") && (
+              <Button
+                onClick={() => handleProductReview(order)}
+                className="px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 font-bold flex items-center gap-2 bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white"
+              >
+                <Star className="w-4 h-4" />
+                Product Review
+              </Button>
+            )}
+
+            {/* Show return products button only for delivered/completed orders */}
+            {(order.status === "delivery_completed" ||
+              order.status === "delivered" ||
+              order.status === "payment_received") && (
+              <Button
+                onClick={() => handleReturnProducts(order)}
+                className="px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 font-bold flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Return Products
+              </Button>
             )}
           </div>
         </div>
@@ -1119,6 +1644,21 @@ export default function MyOrders() {
               onClose={closeReviewModals}
             />
           )}
+          {showReturnProducts && (
+            <ReturnProductsModal
+              order={reviewOrder}
+              onClose={closeReviewModals}
+            />
+          )}
+          <CancelOrderModal
+            isOpen={showCancelConfirm}
+            order={orderToCancel}
+            onClose={closeCancelModal}
+            onConfirm={confirmCancelOrder}
+            reason={cancelReason}
+            setReason={handleSetCancelReason}
+            cancelling={cancelling}
+          />
         </div>
       </div>
     </div>

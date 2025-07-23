@@ -13,6 +13,7 @@ import {
   Filter,
   X,
   CheckCircle,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "../components/ui/button.jsx";
 import { Link, useNavigate } from "react-router-dom";
@@ -417,6 +418,12 @@ export default function AdminPanel() {
               <Button className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3">
                 <BarChart3 className="w-6 h-6" />
                 Delivery Dashboard
+              </Button>
+            </Link>
+            <Link to="/admin/return-requests">
+              <Button className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3">
+                <RotateCcw className="w-6 h-6" />
+                Return Requests
               </Button>
             </Link>
             {/* <Link to="/admin/approvals">

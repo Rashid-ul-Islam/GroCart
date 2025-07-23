@@ -5,15 +5,15 @@ import pool from '../db.js'; // Adjust path as needed
 const validateIds = (user_id, product_id) => {
   const userIdNum = parseInt(user_id);
   const productIdNum = parseInt(product_id);
-  
+
   if (isNaN(userIdNum) || userIdNum <= 0) {
     throw new Error('Invalid user_id');
   }
-  
+
   if (isNaN(productIdNum) || productIdNum <= 0) {
     throw new Error('Invalid product_id');
   }
-  
+
   return { userIdNum, productIdNum };
 };
 
@@ -21,7 +21,7 @@ const validateIds = (user_id, product_id) => {
 export const addFavorite = async (req, res) => {
   try {
     const { user_id, product_id } = req.body;
-    
+
     // Validate input
     if (!user_id || !product_id) {
       return res.status(400).json({
@@ -61,14 +61,14 @@ export const addFavorite = async (req, res) => {
     });
   } catch (error) {
     console.error('Error adding favorite:', error);
-    
+
     if (error.message === 'Invalid user_id' || error.message === 'Invalid product_id') {
       return res.status(400).json({
         success: false,
         message: error.message
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -81,7 +81,7 @@ export const addFavorite = async (req, res) => {
 export const removeFavorite = async (req, res) => {
   try {
     const { user_id, product_id } = req.body;
-    
+
     // Validate input
     if (!user_id || !product_id) {
       return res.status(400).json({
@@ -113,14 +113,14 @@ export const removeFavorite = async (req, res) => {
     });
   } catch (error) {
     console.error('Error removing favorite:', error);
-    
+
     if (error.message === 'Invalid user_id' || error.message === 'Invalid product_id') {
       return res.status(400).json({
         success: false,
         message: error.message
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -133,7 +133,7 @@ export const removeFavorite = async (req, res) => {
 export const getUserFavorites = async (req, res) => {
   try {
     const { user_id } = req.params;
-    
+
     if (!user_id) {
       return res.status(400).json({
         success: false,
@@ -238,7 +238,7 @@ export const getUserFavorites = async (req, res) => {
       image: row.image_url || 'https://via.placeholder.com/300x200',
       isAvailable: row.is_available,
       isRefundable: row.is_refundable,
-      rating: parseFloat(row.avg_rating) || 4,
+      rating: parseFloat(row.avg_rating) || 0,
       reviews: parseInt(row.review_count) || 0,
       category: row.category_name,
       addedAt: row.added_at
@@ -263,7 +263,7 @@ export const getUserFavorites = async (req, res) => {
 export const checkFavorite = async (req, res) => {
   try {
     const { user_id, product_id } = req.params;
-    
+
     // Validate input
     if (!user_id || !product_id) {
       return res.status(400).json({
@@ -295,14 +295,14 @@ export const checkFavorite = async (req, res) => {
     });
   } catch (error) {
     console.error('Error checking favorite:', error);
-    
+
     if (error.message === 'Invalid user_id' || error.message === 'Invalid product_id') {
       return res.status(400).json({
         success: false,
         message: error.message
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -315,7 +315,7 @@ export const checkFavorite = async (req, res) => {
 export const getFavoritesCount = async (req, res) => {
   try {
     const { user_id } = req.params;
-    
+
     if (!user_id) {
       return res.status(400).json({
         success: false,
@@ -356,7 +356,7 @@ export const getFavoritesCount = async (req, res) => {
 export const toggleFavorite = async (req, res) => {
   try {
     const { user_id, product_id } = req.body;
-    
+
     // Validate input
     if (!user_id || !product_id) {
       return res.status(400).json({
@@ -409,14 +409,14 @@ export const toggleFavorite = async (req, res) => {
     }
   } catch (error) {
     console.error('Error toggling favorite:', error);
-    
+
     if (error.message === 'Invalid user_id' || error.message === 'Invalid product_id') {
       return res.status(400).json({
         success: false,
         message: error.message
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: 'Internal server error',

@@ -17,10 +17,16 @@ export const getProductsByCategory = async (req, res) => {
         p.is_available, 
         p.created_at, 
         p.updated_at,
-        c.name AS category_name
+        c.name AS category_name,
+        COALESCE(AVG(r.rating), 0.0) AS avg_rating,
+        COALESCE(COUNT(r.review_id), 0) AS review_count
       FROM "Product" p
       LEFT JOIN "Category" c ON p.category_id = c.category_id
+      LEFT JOIN "Review" r ON p.product_id = r.product_id
       WHERE p.category_id = $1 AND p.is_available = true
+      GROUP BY p.product_id, p.name, p.price, p.quantity, p.unit_measure, 
+               p.origin, p.description, p.is_refundable, p.is_available, 
+               p.created_at, p.updated_at, c.name
       ORDER BY p.name ASC;
     `;
 
@@ -68,13 +74,19 @@ export const getProductsByCategoryRecursive = async (req, res) => {
         p.updated_at,
         pi.image_url, 
         pi.is_primary,
-        c.name AS category_name
+        c.name AS category_name,
+        COALESCE(AVG(r.rating), 0.0) AS avg_rating,
+        COALESCE(COUNT(r.review_id), 0) AS review_count
       FROM "Product" p
       JOIN "ProductCategory" pc ON p.product_id = pc.product_id
       JOIN category_tree ct ON pc.category_id = ct.category_id
       LEFT JOIN "ProductImage" pi ON p.product_id = pi.product_id AND pi.is_primary = true
       LEFT JOIN "Category" c ON pc.category_id = c.category_id
+      LEFT JOIN "Review" r ON p.product_id = r.product_id
       WHERE p.is_available = true
+      GROUP BY p.product_id, p.name, p.price, p.quantity, p.unit_measure, 
+               p.origin, p.description, p.is_refundable, p.is_available, 
+               p.created_at, p.updated_at, pi.image_url, pi.is_primary, c.name
       ORDER BY p.name ASC;
     `;
 
@@ -106,17 +118,23 @@ export const getAllProducts = async (req, res) => {
         p.created_at, 
         p.updated_at,
         pi.image_url, 
-        pi.is_primary
+        pi.is_primary,
+        COALESCE(AVG(r.rating), 0.0) AS avg_rating,
+        COALESCE(COUNT(r.review_id), 0) AS review_count
       FROM "Product" p
       LEFT JOIN "ProductImage" pi ON p.product_id = pi.product_id AND pi.is_primary = true
+      LEFT JOIN "Review" r ON p.product_id = r.product_id
       WHERE p.is_available = true
+      GROUP BY p.product_id, p.name, p.price, p.quantity, p.unit_measure, 
+               p.origin, p.description, p.is_refundable, p.is_available, 
+               p.created_at, p.updated_at, pi.image_url, pi.is_primary
       ORDER BY p.created_at DESC
       LIMIT $1 OFFSET $2;
     `;
 
     const { rows } = await pool.query(query, [limit, offset]);
 
-    
+
     const countQuery = `SELECT COUNT(*) FROM "Product" WHERE is_available = true`;
     const countResult = await pool.query(countQuery);
     const totalProducts = parseInt(countResult.rows[0].count);
@@ -154,6 +172,8 @@ export const getProductById = async (req, res) => {
         p.is_available, 
         p.created_at, 
         p.updated_at,
+        COALESCE(AVG(r.rating), 0.0) AS avg_rating,
+        COALESCE(COUNT(r.review_id), 0) AS review_count,
         json_agg(
           json_build_object(
             'image_id', pi.image_id,
@@ -172,6 +192,7 @@ export const getProductById = async (req, res) => {
       LEFT JOIN "ProductImage" pi ON p.product_id = pi.product_id
       LEFT JOIN "ProductCategory" pc ON p.product_id = pc.product_id
       LEFT JOIN "Category" c ON pc.category_id = c.category_id
+      LEFT JOIN "Review" r ON p.product_id = r.product_id
       WHERE p.product_id = $1
       GROUP BY p.product_id, p.name, p.price, p.quantity, p.unit_measure, 
                p.origin, p.description, p.is_refundable, p.is_available, 
@@ -210,11 +231,17 @@ export const searchProducts = async (req, res) => {
         p.created_at, 
         p.updated_at,
         pi.image_url, 
-        pi.is_primary
+        pi.is_primary,
+        COALESCE(AVG(r.rating), 0.0) AS avg_rating,
+        COALESCE(COUNT(r.review_id), 0) AS review_count
       FROM "Product" p
       LEFT JOIN "ProductImage" pi ON p.product_id = pi.product_id AND pi.is_primary = true
+      LEFT JOIN "Review" r ON p.product_id = r.product_id
       WHERE p.is_available = true 
         AND (p.name ILIKE $1 OR p.description ILIKE $1)
+      GROUP BY p.product_id, p.name, p.price, p.quantity, p.unit_measure, 
+               p.origin, p.description, p.is_refundable, p.is_available, 
+               p.created_at, p.updated_at, pi.image_url, pi.is_primary
       ORDER BY p.name ASC
       LIMIT $2 OFFSET $3;
     `;

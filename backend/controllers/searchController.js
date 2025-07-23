@@ -235,7 +235,7 @@ export const searchProducts = async (req, res) => {
       LEFT JOIN "Category" c ON mp.display_category_id = c.category_id
       LEFT JOIN category_hierarchy ch ON c.category_id = ch.category_id
       LEFT JOIN "ProductImage" pi ON mp.product_id = pi.product_id AND pi.is_primary = true
-      LEFT JOIN "Review" r ON mp.product_id = r.product_id AND r.review_status = 'approved'
+      LEFT JOIN "Review" r ON mp.product_id = r.product_id
       
       GROUP BY 
         mp.product_id, mp.name, mp.price,mp.quantity, mp.unit_measure, mp.description, 
@@ -333,7 +333,7 @@ export const searchProducts = async (req, res) => {
 
     console.log("Executing enhanced search query...");
     const start = Date.now();
-    
+
     const [productsResult, countResult] = await Promise.all([
       pool.query(query, [rawSearchTerm, searchTermWithWildcards, limitNum, offsetNum]),
       pool.query(countQuery, [rawSearchTerm, searchTermWithWildcards])
@@ -347,18 +347,18 @@ export const searchProducts = async (req, res) => {
 
     console.log("Results found:", products.length);
     console.log("Total matches:", total);
-    
+
     // Debug: Check for duplicate product IDs
     const productIds = products.map(p => p.id);
     const uniqueProductIds = [...new Set(productIds)];
     console.log(`Unique products: ${uniqueProductIds.length}/${products.length}`);
-    
+
     if (uniqueProductIds.length !== products.length) {
       console.warn("WARNING: Duplicate product IDs found!");
       const duplicates = productIds.filter((id, index) => productIds.indexOf(id) !== index);
       console.log("Duplicate IDs:", duplicates);
     }
-    
+
     if (products.length > 0) {
       console.log("Sample result:", {
         name: products[0].product_name,
@@ -372,14 +372,14 @@ export const searchProducts = async (req, res) => {
         is_refundable: products[0].is_refundable,
         description: products[0].description?.substring(0, 100)
       });
-      
+
       // Debug: Check if any products have descriptions
       const productsWithDescriptions = products.filter(p => p.description && p.description.trim() !== '');
       console.log(`Products with descriptions: ${productsWithDescriptions.length}/${products.length}`);
-      
+
       if (productsWithDescriptions.length > 0) {
         console.log("Sample description:", productsWithDescriptions[0].description.substring(0, 200));
-        
+
         // Debug: Test description matching
         const testDesc = productsWithDescriptions[0].description.toLowerCase();
         console.log("Testing description matching:");
@@ -415,7 +415,7 @@ export const searchProducts = async (req, res) => {
         queryTime,
         rawSearchTerm,
         searchPattern: searchTermWithWildcards,
-        descriptionMatches: products.filter(p => 
+        descriptionMatches: products.filter(p =>
           p.description && p.description.toLowerCase().includes(rawSearchTerm)
         ).length,
         uniqueProducts: uniqueProductIds.length
@@ -473,7 +473,7 @@ export const quickSearch = async (req, res) => {
       FROM "Product" p
       LEFT JOIN "Category" c ON p.category_id = c.category_id
       LEFT JOIN "ProductImage" pi ON p.product_id = pi.product_id AND pi.is_primary = true
-      LEFT JOIN "Review" r ON p.product_id = r.product_id AND r.review_status = 'approved'
+      LEFT JOIN "Review" r ON p.product_id = r.product_id
       WHERE
         p.is_available = true AND
         (

@@ -23,7 +23,9 @@ import ProductDetails from "./pages/ProductDetail.jsx";
 import ProductEdit from "./components/admin/ProductEdit.jsx";
 import UserProfile from "./pages/UserProfile.jsx";
 import MyOrders from "./pages/MyOrders.jsx";
+import ReturnRequests from "./pages/ReturnRequests.jsx";
 import SearchResults from "./pages/SearchResults.jsx";
+import Wallet from "./pages/Wallet.jsx";
 
 export default function App() {
   return (
@@ -46,6 +48,7 @@ export default function App() {
             element={<DeliveryDashboard />}
           />
           <Route path="/admin/approvals" element={<Approvals />} />
+          <Route path="/admin/return-requests" element={<ReturnRequests />} />
           <Route path="/delivery" element={<DeliveryBoy />} />
           <Route path="favorites" element={<FavoriteProducts />} />
           <Route path="/checkout" element={<CheckoutPage />} />
@@ -57,6 +60,7 @@ export default function App() {
           />
           <Route path="/profile" element={<UserProfile />} />
           <Route path="/orders" element={<MyOrders />} />
+          <Route path="/wallet" element={<Wallet />} />
           {/* Add more routes as needed */}
         </Routes>
       </Router>

@@ -147,8 +147,6 @@ export const getStatusHistory = async (entityType, entityId) => {
         `;
 
         const result = await pool.query(query, [entityType, numericEntityId]);
-        console.log(`Fetched ${result.rows.length} status history records for ${entityType} ID: ${numericEntityId}`);
-        console.log(result.rows);
         return result.rows;
     } catch (error) {
         console.error(`Error fetching ${entityType} status history:`, error);

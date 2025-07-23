@@ -24,6 +24,31 @@ import CartBar from "../components/layout/CartBar.jsx";
 import LoginModal from "../components/auth/LoginModal.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 
+// Helper function to calculate rating distribution
+const calculateRatingDistribution = (reviews) => {
+  const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  reviews.forEach((review) => {
+    if (review.rating >= 1 && review.rating <= 5) {
+      distribution[review.rating]++;
+    }
+  });
+  return distribution;
+};
+
+// Helper function to format date
+const formatDate = (dateString) => {
+  if (!dateString) return "Date not available";
+  try {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch (error) {
+    return "Date not available";
+  }
+};
+
 const ProductDetailsPage = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
@@ -58,7 +83,7 @@ const ProductDetailsPage = () => {
 
   // Log productId for debugging
   console.log("Product ID:", productId);
-  
+
   // Mock API calls - replace with actual API endpoints
   useEffect(() => {
     const fetchProduct = async () => {
@@ -71,7 +96,55 @@ const ProductDetailsPage = () => {
         if (!response.ok) throw new Error("Failed to fetch product");
         const result = await response.json();
         if (result.success) {
+          console.log("Product data received:", result.data); // Debug log
           setProduct(result.data);
+
+          // Set reviews if they exist in the response
+          if (result.data.reviews) {
+            console.log("Reviews found:", result.data.reviews); // Debug log
+            setReviews(result.data.reviews);
+
+            // Calculate review statistics
+            const totalReviews = result.data.reviews.length;
+            if (totalReviews > 0) {
+              const totalRating = result.data.reviews.reduce(
+                (sum, review) => sum + review.rating,
+                0
+              );
+              const avgRating = totalRating / totalReviews;
+              console.log("Review stats calculated:", {
+                totalReviews,
+                avgRating,
+                reviews: result.data.reviews,
+              }); // Debug log
+              setReviewStats({
+                totalReviews,
+                total_reviews: totalReviews,
+                averageRating: avgRating,
+                average_rating: avgRating,
+                ratingDistribution: calculateRatingDistribution(
+                  result.data.reviews
+                ),
+                rating_distribution: calculateRatingDistribution(
+                  result.data.reviews
+                ),
+              });
+            } else {
+              setReviewStats({
+                totalReviews: 0,
+                total_reviews: 0,
+                averageRating: 0,
+                average_rating: 0,
+                ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+                rating_distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+              });
+            }
+          }
+
+          // Set product images if they exist
+          if (result.data.images) {
+            setProductImages(result.data.images);
+          }
         } else {
           setError(result.message || "Product not found");
         }
@@ -618,37 +691,51 @@ const ProductDetailsPage = () => {
               {activeTab === "specifications" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h4 className="font-semibold mb-3 text-black">Product Details</h4>
+                    <h4 className="font-semibold mb-3 text-black">
+                      Product Details
+                    </h4>
                     <dl className="space-y-2">
                       <div className="flex justify-between">
                         <dt className="text-gray-600">Name:</dt>
-                        <dd className="text-black font-medium">{product.product_name || product.name || "N/A"}</dd>
+                        <dd className="text-black font-medium">
+                          {product.product_name || product.name || "N/A"}
+                        </dd>
                       </div>
                       <div className="flex justify-between">
                         <dt className="text-gray-600">Price:</dt>
-                        <dd className="text-black font-medium">৳{parseFloat(product.price || 0).toFixed(2)}</dd>
+                        <dd className="text-black font-medium">
+                          ৳{parseFloat(product.price || 0).toFixed(2)}
+                        </dd>
                       </div>
                       <div className="flex justify-between">
                         <dt className="text-gray-600">Origin:</dt>
-                        <dd className="text-black font-medium">{product.origin || "Not specified"}</dd>
+                        <dd className="text-black font-medium">
+                          {product.origin || "Not specified"}
+                        </dd>
                       </div>
                       <div className="flex justify-between">
                         <dt className="text-gray-600">Quantity Available:</dt>
-                        <dd className="text-black font-medium">{product.quantity || "In stock"}</dd>
+                        <dd className="text-black font-medium">
+                          {product.quantity || "In stock"}
+                        </dd>
                       </div>
                     </dl>
                   </div>
                   <div>
-                    <h4 className="font-semibold mb-3 text-black">Product Status</h4>
+                    <h4 className="font-semibold mb-3 text-black">
+                      Product Status
+                    </h4>
                     <dl className="space-y-2">
                       <div className="flex justify-between">
                         <dt className="text-gray-600">Available:</dt>
                         <dd>
-                          <span className={`px-2 py-1 rounded text-sm font-medium ${
-                            product.is_available 
-                              ? "bg-green-100 text-green-800" 
-                              : "bg-red-100 text-red-800"
-                          }`}>
+                          <span
+                            className={`px-2 py-1 rounded text-sm font-medium ${
+                              product.is_available
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
                             {product.is_available ? "In Stock" : "Out of Stock"}
                           </span>
                         </dd>
@@ -656,11 +743,13 @@ const ProductDetailsPage = () => {
                       <div className="flex justify-between">
                         <dt className="text-gray-600">Refundable:</dt>
                         <dd>
-                          <span className={`px-2 py-1 rounded text-sm font-medium ${
-                            product.is_refundable 
-                              ? "bg-green-100 text-green-800" 
-                              : "bg-gray-100 text-gray-800"
-                          }`}>
+                          <span
+                            className={`px-2 py-1 rounded text-sm font-medium ${
+                              product.is_refundable
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
                             {product.is_refundable ? "Yes" : "No"}
                           </span>
                         </dd>
@@ -668,25 +757,34 @@ const ProductDetailsPage = () => {
                       <div className="flex justify-between">
                         <dt className="text-gray-600">Rating:</dt>
                         <dd className="flex items-center space-x-2">
-                          <span className="text-black font-medium">{parseFloat(product.rating || product.avg_rating || 0).toFixed(1)}</span>
+                          <span className="text-black font-medium">
+                            {parseFloat(
+                              product.rating || product.avg_rating || 0
+                            ).toFixed(1)}
+                          </span>
                           <div className="flex">
-                            {renderStars(product.rating || product.avg_rating || 0)}
+                            {renderStars(
+                              product.rating || product.avg_rating || 0
+                            )}
                           </div>
                         </dd>
                       </div>
-                      {product.discount_percentage && product.discount_percentage > 0 && (
-                        <div className="flex justify-between">
-                          <dt className="text-gray-600">Discount:</dt>
-                          <dd>
-                            <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-medium">
-                              {product.discount_percentage}% OFF
-                            </span>
-                          </dd>
-                        </div>
-                      )}
+                      {product.discount_percentage &&
+                        product.discount_percentage > 0 && (
+                          <div className="flex justify-between">
+                            <dt className="text-gray-600">Discount:</dt>
+                            <dd>
+                              <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-medium">
+                                {product.discount_percentage}% OFF
+                              </span>
+                            </dd>
+                          </div>
+                        )}
                       <div className="flex justify-between">
                         <dt className="text-gray-600">Reviews:</dt>
-                        <dd className="text-black font-medium">{product.review_count || 0} reviews</dd>
+                        <dd className="text-black font-medium">
+                          {product.review_count || 0} reviews
+                        </dd>
                       </div>
                     </dl>
                   </div>
@@ -695,6 +793,9 @@ const ProductDetailsPage = () => {
 
               {activeTab === "reviews" && (
                 <div className="space-y-6">
+                  {console.log("Current reviewStats:", reviewStats)}{" "}
+                  {/* Debug log */}
+                  {console.log("Current reviews:", reviews)} {/* Debug log */}
                   {/* Review Summary */}
                   <div className="flex items-start space-x-8">
                     <div className="text-center">
@@ -710,7 +811,9 @@ const ProductDetailsPage = () => {
                     </div>
 
                     <div className="flex-1 space-y-2">
-                      {reviewStats.rating_distribution && Object.entries(reviewStats.rating_distribution).length > 0 ? (
+                      {reviewStats.rating_distribution &&
+                      Object.entries(reviewStats.rating_distribution).length >
+                        0 ? (
                         Object.entries(reviewStats.rating_distribution)
                           .reverse()
                           .map(([rating, count]) => (
@@ -724,7 +827,9 @@ const ProductDetailsPage = () => {
                                   className="bg-yellow-400 h-2 rounded-full"
                                   style={{
                                     width: `${
-                                      (count / (reviewStats.total_reviews || 1)) * 100
+                                      (count /
+                                        (reviewStats.total_reviews || 1)) *
+                                      100
                                     }%`,
                                   }}
                                 ></div>
@@ -741,7 +846,6 @@ const ProductDetailsPage = () => {
                       )}
                     </div>
                   </div>
-
                   {/* Reviews List */}
                   <div className="space-y-4">
                     {reviews && reviews.length > 0 ? (
@@ -750,21 +854,16 @@ const ProductDetailsPage = () => {
                           <div className="flex items-start justify-between mb-3">
                             <div>
                               <div className="flex items-center space-x-2">
-                                <span className="font-medium">
+                                <span className="font-medium text-black">
                                   {review.user_name || "Anonymous"}
                                 </span>
-                                {review.verified && (
-                                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
-                                    Verified Purchase
-                                  </span>
-                                )}
                               </div>
                               <div className="flex items-center space-x-2 mt-1">
                                 <div className="flex">
                                   {renderStars(review.rating || 0)}
                                 </div>
                                 <span className="text-sm text-gray-600">
-                                  {review.date || "Date not available"}
+                                  {formatDate(review.date)}
                                 </span>
                               </div>
                             </div>
@@ -772,23 +871,17 @@ const ProductDetailsPage = () => {
                           <p className="text-gray-700 mb-3">
                             {review.comment || "No comment provided"}
                           </p>
-                          <div className="flex items-center space-x-4">
-                            <button className="flex items-center space-x-1 text-sm text-gray-600 hover:text-gray-800">
-                              <ThumbsUp className="w-4 h-4" />
-                              <span>Helpful ({review.helpful_count || 0})</span>
-                            </button>
-                            <button className="flex items-center space-x-1 text-sm text-gray-600 hover:text-gray-800">
-                              <Flag className="w-4 h-4" />
-                              <span>Report</span>
-                            </button>
-                          </div>
                         </div>
                       ))
                     ) : (
                       <div className="text-center py-8">
                         <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No reviews yet</h3>
-                        <p className="text-gray-500">Be the first to review this product!</p>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                          No reviews yet
+                        </h3>
+                        <p className="text-gray-500">
+                          Be the first to review this product!
+                        </p>
                       </div>
                     )}
                   </div>
