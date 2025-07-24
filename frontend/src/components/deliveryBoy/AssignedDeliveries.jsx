@@ -336,9 +336,6 @@ export const AssignedDeliveries = () => {
         break;
 
       case "delivery_completed":
-        break;
-
-      case "payment_received":
         actions.push({
           key: "rate_customer",
           label: "Rate Customer",
@@ -347,6 +344,10 @@ export const AssignedDeliveries = () => {
             "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800",
           handler: handleRateCustomer,
         });
+        break;
+
+      case "payment_received":
+        // No actions needed after payment is received and customer is rated
         break;
 
       default:
@@ -563,11 +564,11 @@ export const AssignedDeliveries = () => {
 
               {/* Status message for delivery completed */}
               {delivery.currentStatus === "delivery_completed" && (
-                <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-l-4 border-yellow-500 rounded-xl p-4 mb-4">
-                  <div className="flex items-center gap-2 text-yellow-800">
-                    <Clock className="h-5 w-5" />
+                <div className="bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-500 rounded-xl p-4 mb-4">
+                  <div className="flex items-center gap-2 text-green-800">
+                    <CheckCircle className="h-5 w-5" />
                     <span className="font-bold">
-                      ⏳ Waiting for payment confirmation...
+                      ✅ Delivery completed! Please rate the customer.
                     </span>
                   </div>
                 </div>

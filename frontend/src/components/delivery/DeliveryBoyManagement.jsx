@@ -36,7 +36,6 @@ import {
 import {
   Users,
   Star,
-  Phone,
   MapPin,
   Package,
   Clock,
@@ -46,13 +45,11 @@ import {
   Loader2,
   AlertTriangle,
   CheckCircle,
-  XCircle,
 } from "lucide-react";
 import { toast } from "../../hooks/use-toast.js";
 
 export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
   const [deliveryBoys, setDeliveryBoys] = useState([]);
-  const [selectedDeliveryBoy, setSelectedDeliveryBoy] = useState(null);
   const [stats, setStats] = useState({
     availableCount: 0,
     busyCount: 0,
@@ -179,7 +176,10 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
     return (current / max) * 100;
   };
 
-  const handleStatusChange = async (userId, newStatus) => {
+  const handleStatusToggle = async (userId, currentStatus) => {
+    // Toggle between available and offline
+    const newStatus = currentStatus === "available" ? "offline" : "available";
+
     try {
       const response = await fetch(
         `http://localhost:3000/api/delivery/updateDeliveryBoyStatus/${userId}`,
@@ -194,6 +194,7 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
 
       const data = await response.json();
       if (data.success) {
+        // Update the local state to reflect the change
         setDeliveryBoys((prev) =>
           prev.map((boy) =>
             boy.userId === userId
@@ -201,6 +202,9 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
               : boy
           )
         );
+
+        // Refresh stats after status change
+        fetchStats();
 
         toast({
           title: "Status Updated",
@@ -314,7 +318,9 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
       <div className="min-h-screen bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400 flex items-center justify-center">
         <div className="bg-white rounded-2xl shadow-xl p-8 flex items-center">
           <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-          <span className="ml-3 text-gray-800 font-semibold">Loading delivery boys...</span>
+          <span className="ml-3 text-gray-800 font-semibold">
+            Loading delivery boys...
+          </span>
         </div>
       </div>
     );
@@ -326,7 +332,7 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
         <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
           <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <p className="text-red-600 text-lg font-semibold mb-4">{error}</p>
-          <Button 
+          <Button
             onClick={fetchDeliveryBoys}
             className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300"
           >
@@ -358,8 +364,12 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
                 <div className="bg-green-100 rounded-full p-3 mb-4">
                   <Users className="h-6 w-6 text-green-600" />
                 </div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Available</p>
-                <p className="text-3xl font-bold text-gray-800">{stats.availableCount}</p>
+                <p className="text-sm font-medium text-gray-600 mb-1">
+                  Available
+                </p>
+                <p className="text-3xl font-bold text-gray-800">
+                  {stats.availableCount}
+                </p>
               </div>
             </div>
           </div>
@@ -371,7 +381,9 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
                   <Package className="h-6 w-6 text-yellow-600" />
                 </div>
                 <p className="text-sm font-medium text-gray-600 mb-1">Busy</p>
-                <p className="text-3xl font-bold text-gray-800">{stats.busyCount}</p>
+                <p className="text-3xl font-bold text-gray-800">
+                  {stats.busyCount}
+                </p>
               </div>
             </div>
           </div>
@@ -382,8 +394,12 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
                 <div className="bg-gray-100 rounded-full p-3 mb-4">
                   <Clock className="h-6 w-6 text-gray-600" />
                 </div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Offline</p>
-                <p className="text-3xl font-bold text-gray-800">{stats.offlineCount}</p>
+                <p className="text-sm font-medium text-gray-600 mb-1">
+                  Offline
+                </p>
+                <p className="text-3xl font-bold text-gray-800">
+                  {stats.offlineCount}
+                </p>
               </div>
             </div>
           </div>
@@ -394,8 +410,12 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
                 <div className="bg-blue-100 rounded-full p-3 mb-4">
                   <Star className="h-6 w-6 text-blue-600" />
                 </div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Avg Rating</p>
-                <p className="text-3xl font-bold text-gray-800">{stats.avgRating}</p>
+                <p className="text-sm font-medium text-gray-600 mb-1">
+                  Avg Rating
+                </p>
+                <p className="text-3xl font-bold text-gray-800">
+                  {stats.avgRating}
+                </p>
               </div>
             </div>
           </div>
@@ -405,8 +425,12 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <div className="p-6 border-b border-gray-200 flex justify-between items-center">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Delivery Boy Management</h2>
-              <p className="text-gray-600">Monitor performance and manage delivery personnel</p>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                Delivery Boy Management
+              </h2>
+              <p className="text-gray-600">
+                Monitor performance and manage delivery personnel
+              </p>
             </div>
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
@@ -420,7 +444,9 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
               </DialogTrigger>
               <DialogContent className="max-w-4xl bg-white rounded-2xl">
                 <DialogHeader>
-                  <DialogTitle className="text-2xl font-bold text-gray-800">Add New Delivery Boy</DialogTitle>
+                  <DialogTitle className="text-2xl font-bold text-gray-800">
+                    Add New Delivery Boy
+                  </DialogTitle>
                   <DialogDescription className="text-gray-600">
                     Select a user to assign as delivery boy
                   </DialogDescription>
@@ -428,7 +454,9 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
                 <div className="space-y-6">
                   {/* User Search */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Search Users</label>
+                    <label className="text-sm font-medium text-gray-700">
+                      Search Users
+                    </label>
                     <div className="relative">
                       <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input
@@ -442,21 +470,36 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
 
                   {/* Users List */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Select User</label>
+                    <label className="text-sm font-medium text-gray-700">
+                      Select User
+                    </label>
                     <div className="max-h-60 overflow-y-auto border-2 border-gray-300 rounded-lg">
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-gray-50">
-                            <TableHead className="font-bold text-gray-700">Select</TableHead>
-                            <TableHead className="font-bold text-gray-700">User ID</TableHead>
-                            <TableHead className="font-bold text-gray-700">Name</TableHead>
-                            <TableHead className="font-bold text-gray-700">Username</TableHead>
-                            <TableHead className="font-bold text-gray-700">Phone</TableHead>
+                            <TableHead className="font-bold text-gray-700">
+                              Select
+                            </TableHead>
+                            <TableHead className="font-bold text-gray-700">
+                              User ID
+                            </TableHead>
+                            <TableHead className="font-bold text-gray-700">
+                              Name
+                            </TableHead>
+                            <TableHead className="font-bold text-gray-700">
+                              Username
+                            </TableHead>
+                            <TableHead className="font-bold text-gray-700">
+                              Phone
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {filteredUsers.map((user) => (
-                            <TableRow key={user.user_id} className="hover:bg-gray-50">
+                            <TableRow
+                              key={user.user_id}
+                              className="hover:bg-gray-50"
+                            >
                               <TableCell>
                                 <input
                                   type="radio"
@@ -474,9 +517,15 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
                               <TableCell className="font-medium text-gray-800">
                                 {user.user_id}
                               </TableCell>
-                              <TableCell className="text-gray-800">{user.name}</TableCell>
-                              <TableCell className="text-gray-800">{user.username}</TableCell>
-                              <TableCell className="text-gray-800">{user.phone_number}</TableCell>
+                              <TableCell className="text-gray-800">
+                                {user.name}
+                              </TableCell>
+                              <TableCell className="text-gray-800">
+                                {user.username}
+                              </TableCell>
+                              <TableCell className="text-gray-800">
+                                {user.phone_number}
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -486,7 +535,9 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
 
                   {/* Delivery Region Selection */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Delivery Region</label>
+                    <label className="text-sm font-medium text-gray-700">
+                      Delivery Region
+                    </label>
                     <Select
                       value={selectedRegionId.toString()}
                       onValueChange={(value) => setSelectedRegionId(value)}
@@ -518,7 +569,9 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
                     </Button>
                     <Button
                       onClick={handleAddDeliveryBoy}
-                      disabled={!selectedUserId || !selectedRegionId || isLoading}
+                      disabled={
+                        !selectedUserId || !selectedRegionId || isLoading
+                      }
                       className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-2"
                     >
                       {isLoading ? (
@@ -550,21 +603,40 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50">
-                      <TableHead className="font-bold text-gray-700">Name</TableHead>
-                      <TableHead className="font-bold text-gray-700">Region</TableHead>
-                      <TableHead className="font-bold text-gray-700">Status</TableHead>
-                      <TableHead className="font-bold text-gray-700">Current Load</TableHead>
-                      <TableHead className="font-bold text-gray-700">Performance</TableHead>
-                      <TableHead className="font-bold text-gray-700">Today</TableHead>
-                      <TableHead className="font-bold text-gray-700">Actions</TableHead>
+                      <TableHead className="font-bold text-gray-700">
+                        Name
+                      </TableHead>
+                      <TableHead className="font-bold text-gray-700">
+                        Region
+                      </TableHead>
+                      <TableHead className="font-bold text-gray-700">
+                        Status
+                      </TableHead>
+                      <TableHead className="font-bold text-gray-700">
+                        Current Load
+                      </TableHead>
+                      <TableHead className="font-bold text-gray-700">
+                        Performance
+                      </TableHead>
+                      <TableHead className="font-bold text-gray-700">
+                        Today
+                      </TableHead>
+                      <TableHead className="font-bold text-gray-700">
+                        Actions
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredDeliveryBoys.map((boy) => (
-                      <TableRow key={boy.userId} className="hover:bg-gray-50 transition duration-200">
+                      <TableRow
+                        key={boy.userId}
+                        className="hover:bg-gray-50 transition duration-200"
+                      >
                         <TableCell>
                           <div>
-                            <p className="font-medium text-gray-800">{boy.name}</p>
+                            <p className="font-medium text-gray-800">
+                              {boy.name}
+                            </p>
                             <p className="text-sm text-gray-600">{boy.phone}</p>
                           </div>
                         </TableCell>
@@ -575,7 +647,11 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge className={`${getStatusColor(boy.availabilityStatus)} px-3 py-1 rounded-full font-semibold`}>
+                          <Badge
+                            className={`${getStatusColor(
+                              boy.availabilityStatus
+                            )} px-3 py-1 rounded-full font-semibold`}
+                          >
                             {boy.availabilityStatus}
                           </Badge>
                         </TableCell>
@@ -589,11 +665,15 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
                                 {getLoadPercentage(
                                   boy.currentLoad,
                                   boy.maxLoad
-                                ).toFixed(0)}%
+                                ).toFixed(0)}
+                                %
                               </span>
                             </div>
                             <Progress
-                              value={getLoadPercentage(boy.currentLoad, boy.maxLoad)}
+                              value={getLoadPercentage(
+                                boy.currentLoad,
+                                boy.maxLoad
+                              )}
                               className="h-3"
                             />
                           </div>
@@ -602,7 +682,9 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
                           <div className="space-y-1">
                             <div className="flex items-center">
                               <Star className="mr-1 h-3 w-3 text-yellow-400" />
-                              <span className="text-sm text-gray-800">{boy.avgRating}</span>
+                              <span className="text-sm text-gray-800">
+                                {boy.avgRating}
+                              </span>
                             </div>
                             <div className="text-xs text-gray-600">
                               {boy.onTimeRate}% on-time
@@ -620,107 +702,23 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button
-                                  onClick={() => setSelectedDeliveryBoy(boy)}
-                                  className="bg-gradient-to-r from-blue-900 to-cyan-700 hover:from-blue-800 hover:to-blue-600 text-white px-3 py-2 rounded-lg shadow-md transform hover:scale-105 transition duration-200"
-                                >
-                                  View Details
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-3xl bg-white rounded-2xl">
-                                <DialogHeader>
-                                  <DialogTitle className="text-2xl font-bold text-gray-800">
-                                    Delivery Boy Details - {boy.name}
-                                  </DialogTitle>
-                                  <DialogDescription className="text-gray-600">
-                                    Performance metrics and management options
-                                  </DialogDescription>
-                                </DialogHeader>
-                                {selectedDeliveryBoy && (
-                                  <div className="space-y-6">
-                                    <div className="grid grid-cols-2 gap-6">
-                                      <div className="bg-gray-50 rounded-lg p-4">
-                                        <h4 className="font-bold text-gray-800 mb-3">
-                                          Personal Information
-                                        </h4>
-                                        <p className="mb-2 text-gray-700">
-                                          <strong>Name:</strong> {selectedDeliveryBoy.name}
-                                        </p>
-                                        <p className="mb-2 text-gray-700">
-                                          <strong>Phone:</strong> {selectedDeliveryBoy.phone}
-                                        </p>
-                                        <p className="mb-2 text-gray-700">
-                                          <strong>Region:</strong> {selectedDeliveryBoy.deliveryRegion}
-                                        </p>
-                                        <p className="text-gray-700">
-                                          <strong>Joined:</strong>{" "}
-                                          {new Date(selectedDeliveryBoy.joinedDate).toLocaleDateString()}
-                                        </p>
-                                      </div>
-                                      <div className="bg-gray-50 rounded-lg p-4">
-                                        <h4 className="font-bold text-gray-800 mb-3">
-                                          Performance Metrics
-                                        </h4>
-                                        <p className="mb-2 text-gray-700">
-                                          <strong>Total Deliveries:</strong> {selectedDeliveryBoy.totalDeliveries}
-                                        </p>
-                                        <p className="mb-2 text-gray-700">
-                                          <strong>On-time Rate:</strong> {selectedDeliveryBoy.onTimeRate}%
-                                        </p>
-                                        <p className="mb-2 text-gray-700">
-                                          <strong>Average Rating:</strong> {selectedDeliveryBoy.avgRating}/5
-                                        </p>
-                                        <p className="text-gray-700">
-                                          <strong>Monthly Earnings:</strong> ৳
-                                          {selectedDeliveryBoy.monthlyEarnings.toLocaleString()}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    <div className="flex space-x-4">
-                                      <Button
-                                        onClick={() =>
-                                          handleStatusChange(
-                                            selectedDeliveryBoy.userId,
-                                            "available"
-                                          )
-                                        }
-                                        className={`flex-1 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 ${
-                                          selectedDeliveryBoy.availabilityStatus === "available"
-                                            ? "bg-gradient-to-r from-green-600 to-green-700 text-white"
-                                            : "bg-gradient-to-r from-green-100 to-green-200 text-green-700 hover:from-green-200 hover:to-green-300"
-                                        }`}
-                                      >
-                                        <CheckCircle className="mr-2 h-4 w-4" />
-                                        Set Available
-                                      </Button>
-                                      <Button
-                                        onClick={() =>
-                                          handleStatusChange(
-                                            selectedDeliveryBoy.userId,
-                                            "offline"
-                                          )
-                                        }
-                                        className={`flex-1 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 ${
-                                          selectedDeliveryBoy.availabilityStatus === "offline"
-                                            ? "bg-gradient-to-r from-gray-600 to-gray-700 text-white"
-                                            : "bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300"
-                                        }`}
-                                      >
-                                        <XCircle className="mr-2 h-4 w-4" />
-                                        Set Offline
-                                      </Button>
-                                    </div>
-                                  </div>
-                                )}
-                              </DialogContent>
-                            </Dialog>
-                            <Button className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-3 py-2 rounded-lg shadow-md transform hover:scale-105 transition duration-200">
-                              <Phone className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <Button
+                            onClick={() =>
+                              handleStatusToggle(
+                                boy.userId,
+                                boy.availabilityStatus
+                              )
+                            }
+                            className={`px-4 py-2 rounded-lg shadow-md transform hover:scale-105 transition duration-200 text-white font-medium ${
+                              boy.availabilityStatus === "available"
+                                ? "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+                                : "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                            }`}
+                          >
+                            {boy.availabilityStatus === "available"
+                              ? "Set Offline"
+                              : "Set Available"}
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
