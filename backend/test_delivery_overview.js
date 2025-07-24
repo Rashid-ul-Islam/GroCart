@@ -2,30 +2,30 @@ import { getDeliveryStats, getRecentOrders } from './controllers/deliveryOvervie
 
 // Mock request and response objects
 const mockReq = {
-  query: {}
+    query: {}
 };
 
 const mockRes = {
-  json: (data) => {
-    console.log('Response:', JSON.stringify(data, null, 2));
-  },
-  status: (code) => ({
     json: (data) => {
-      console.log(`Status ${code}:`, JSON.stringify(data, null, 2));
-    }
-  })
+        console.log('Response:', JSON.stringify(data, null, 2));
+    },
+    status: (code) => ({
+        json: (data) => {
+            console.log(`Status ${code}:`, JSON.stringify(data, null, 2));
+        }
+    })
 };
 
 console.log('Testing getDeliveryStats...');
 try {
-  await getDeliveryStats(mockReq, mockRes);
+    await getDeliveryStats(mockReq, mockRes);
 } catch (error) {
-  console.error('Error testing getDeliveryStats:', error.message);
+    console.error('Error testing getDeliveryStats:', error.message);
 }
 
 console.log('\nTesting getRecentOrders...');
 try {
-  await getRecentOrders(mockReq, mockRes);
+    await getRecentOrders(mockReq, mockRes);
 } catch (error) {
-  console.error('Error testing getRecentOrders:', error.message);
+    console.error('Error testing getRecentOrders:', error.message);
 }

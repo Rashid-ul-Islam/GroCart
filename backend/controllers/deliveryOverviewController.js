@@ -71,7 +71,7 @@ export const getDeliveryStats = async (req, res) => {
     `;
 
     const result = await client.query(statsQuery, [today, yesterday]);
-    
+
     if (result.rows.length === 0) {
       client.release();
       return res.json({
@@ -86,9 +86,9 @@ export const getDeliveryStats = async (req, res) => {
     }
 
     const stats = result.rows[0];
-    
+
     console.log('Delivery overview stats fetched successfully:', stats);
-    
+
     client.release();
     res.json({
       totalDeliveries: parseInt(stats.total_deliveries) || 0,
@@ -102,9 +102,9 @@ export const getDeliveryStats = async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching delivery overview stats:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch delivery statistics',
-      details: error.message 
+      details: error.message
     });
   }
 };
@@ -113,10 +113,10 @@ export const getDeliveryStats = async (req, res) => {
 export const getRecentOrders = async (req, res) => {
   try {
     console.log('Fetching recent orders...');
-    
+
     const { searchTerm, filterRegion, limit = 10 } = req.query;
     const client = await pool.connect();
-    
+
     let whereConditions = ['d.created_at >= NOW() - INTERVAL \'7 days\''];
     let queryParams = [];
     let paramIndex = 1;
@@ -201,21 +201,21 @@ export const getRecentOrders = async (req, res) => {
       deliveryBoyName: order.delivery_boy_name,
       expectedDeliveryTime: order.expected_delivery_time,
       createdAt: order.created_at,
-      estimatedTime: order.hours_until_delivery 
+      estimatedTime: order.hours_until_delivery
         ? `${Math.abs(Math.round(order.hours_until_delivery))}h ${order.hours_until_delivery < 0 ? 'overdue' : 'remaining'}`
         : 'Time not set'
     }));
 
     console.log(`Recent orders fetched successfully: ${orders.length} orders`);
-    
+
     client.release();
     res.json(orders);
 
   } catch (error) {
     console.error('Error fetching recent orders:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch recent orders',
-      details: error.message 
+      details: error.message
     });
   }
 };
