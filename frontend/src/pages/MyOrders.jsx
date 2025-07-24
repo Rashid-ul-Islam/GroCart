@@ -628,6 +628,9 @@ function ReturnProductsModal({ order, onClose }) {
   const [submitting, setSubmitting] = useState(false);
   const [orderItems, setOrderItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [returnWindowExpired, setReturnWindowExpired] = useState(false);
+  const [actualArrival, setActualArrival] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
   const { user } = useAuth();
 
   useEffect(() => {
@@ -639,19 +642,31 @@ function ReturnProductsModal({ order, onClose }) {
   const fetchOrderItems = async () => {
     try {
       setLoading(true);
+      setErrorMessage("");
       const orderId = order.order_id.replace("ORD-", "");
       const response = await fetch(
         `http://localhost:3000/api/order/return-items/${orderId}?user_id=${user.user_id}`
       );
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setOrderItems(data.data.items);
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setOrderItems(data.data.items);
+        setReturnWindowExpired(data.data.returnWindowExpired || false);
+        setActualArrival(data.data.actualArrival);
+      } else {
+        // Handle case where return window has expired
+        if (data.data?.returnWindowExpired) {
+          setReturnWindowExpired(true);
+          setActualArrival(data.data.actualArrival);
+          setErrorMessage(data.message || "Return window has expired");
+        } else {
+          setErrorMessage(data.message || "Failed to load order items");
         }
       }
     } catch (error) {
       console.error("Error fetching order items:", error);
+      setErrorMessage("Failed to load order items");
     } finally {
       setLoading(false);
     }
@@ -750,6 +765,40 @@ function ReturnProductsModal({ order, onClose }) {
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
               <p className="text-gray-600 mt-2">Loading order items...</p>
+            </div>
+          ) : returnWindowExpired || errorMessage ? (
+            <div className="text-center py-8">
+              <div className="mb-4">
+                <Ban className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-red-700 mb-2">
+                  {returnWindowExpired
+                    ? "Return Window Expired"
+                    : "Cannot Process Return"}
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  {returnWindowExpired
+                    ? "Returns are only allowed within 7 days of delivery."
+                    : errorMessage}
+                </p>
+                {actualArrival && (
+                  <p className="text-sm text-gray-500">
+                    Delivered on:{" "}
+                    {new Date(actualArrival).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                )}
+              </div>
+              <Button
+                onClick={onClose}
+                className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-bold"
+              >
+                Close
+              </Button>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -1313,6 +1362,39 @@ export default function MyOrders() {
     }
   };
 
+  const formatDeliveryTime = (estimatedArrival, actualArrival, status) => {
+    // If order is completed and we have actual arrival time
+    if (
+      actualArrival &&
+      (status === "delivery_completed" ||
+        status === "delivered" ||
+        status === "payment_received")
+    ) {
+      return `Delivered on ${formatDate(actualArrival)}`;
+    }
+
+    // If order is active and we have estimated arrival time
+    if (estimatedArrival && status !== "cancelled") {
+      const now = new Date();
+      const estimated = new Date(estimatedArrival);
+
+      // Check if the estimated time has passed
+      if (estimated < now) {
+        return `Expected ${formatDate(estimatedArrival)} (Overdue)`;
+      } else {
+        return `Expected ${formatDate(estimatedArrival)}`;
+      }
+    }
+
+    // For cancelled orders
+    if (status === "cancelled") {
+      return "Order cancelled";
+    }
+
+    // For pending/incomplete orders without estimated time
+    return "Delivery time pending";
+  };
+
   // ======= SAFE SEARCH LOGIC (NO UNDEFINED ERROR) =======
   const filteredOrders = orders.filter((order) => {
     // Comprehensive null checks
@@ -1355,11 +1437,53 @@ export default function MyOrders() {
               <h3 className="text-lg font-bold text-gray-800 mb-1">
                 {order.order_id || "Unknown Order"}
               </h3>
-              <p className="text-sm text-gray-600 font-medium">
-                {order.order_date
-                  ? formatDate(order.order_date)
-                  : "Date not available"}
-              </p>
+              <div className="flex items-center gap-1 text-sm font-medium mb-1">
+                <Package className="w-3 h-3 text-blue-600" />
+                <span className="text-gray-600">
+                  Ordered:{" "}
+                  {order.order_date
+                    ? formatDate(order.order_date)
+                    : "Date not available"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 text-sm font-medium">
+                <Truck
+                  className={`w-3 h-3 ${
+                    order.actual_arrival &&
+                    (order.status === "delivery_completed" ||
+                      order.status === "delivered" ||
+                      order.status === "payment_received")
+                      ? "text-green-600"
+                      : order.status === "cancelled"
+                      ? "text-red-600"
+                      : order.estimated_arrival &&
+                        new Date(order.estimated_arrival) < new Date()
+                      ? "text-orange-600"
+                      : "text-purple-600"
+                  }`}
+                />
+                <span
+                  className={`${
+                    order.actual_arrival &&
+                    (order.status === "delivery_completed" ||
+                      order.status === "delivered" ||
+                      order.status === "payment_received")
+                      ? "text-green-600"
+                      : order.status === "cancelled"
+                      ? "text-red-600"
+                      : order.estimated_arrival &&
+                        new Date(order.estimated_arrival) < new Date()
+                      ? "text-orange-600"
+                      : "text-gray-600"
+                  }`}
+                >
+                  {formatDeliveryTime(
+                    order.estimated_arrival,
+                    order.actual_arrival,
+                    order.status
+                  )}
+                </span>
+              </div>
             </div>
             <div
               className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 ${getStatusColor(
@@ -1462,10 +1586,22 @@ export default function MyOrders() {
               order.status === "payment_received") && (
               <Button
                 onClick={() => handleReturnProducts(order)}
-                className="px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 font-bold flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+                disabled={order.return_window_expired}
+                className={`px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 font-bold flex items-center gap-2 ${
+                  order.return_window_expired
+                    ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                    : "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+                }`}
+                title={
+                  order.return_window_expired
+                    ? "Return window has expired (7 days limit)"
+                    : "Return products from this order"
+                }
               >
                 <RotateCcw className="w-4 h-4" />
-                Return Products
+                {order.return_window_expired
+                  ? "Return Expired"
+                  : "Return Products"}
               </Button>
             )}
           </div>

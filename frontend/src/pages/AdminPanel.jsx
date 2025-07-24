@@ -14,6 +14,7 @@ import {
   X,
   CheckCircle,
   RotateCcw,
+  Ticket,
 } from "lucide-react";
 import { Button } from "../components/ui/button.jsx";
 import { Link, useNavigate } from "react-router-dom";
@@ -386,9 +387,7 @@ export default function AdminPanel() {
 
         {/* Main Action Buttons */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            Product Management
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Admin panel</h2>
           <div className="flex flex-wrap gap-4">
             <Link to="/admin/add-product">
               <Button className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3">
@@ -424,6 +423,12 @@ export default function AdminPanel() {
               <Button className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3">
                 <RotateCcw className="w-6 h-6" />
                 Return Requests
+              </Button>
+            </Link>
+            <Link to="/admin/coupons">
+              <Button className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3">
+                <Ticket className="w-6 h-6" />
+                Coupons
               </Button>
             </Link>
             {/* <Link to="/admin/approvals">

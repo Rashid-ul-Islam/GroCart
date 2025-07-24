@@ -26,6 +26,7 @@ import MyOrders from "./pages/MyOrders.jsx";
 import ReturnRequests from "./pages/ReturnRequests.jsx";
 import SearchResults from "./pages/SearchResults.jsx";
 import Wallet from "./pages/Wallet.jsx";
+import CouponManagement from "./pages/CouponManagement.jsx";
 
 export default function App() {
   return (
@@ -49,6 +50,7 @@ export default function App() {
           />
           <Route path="/admin/approvals" element={<Approvals />} />
           <Route path="/admin/return-requests" element={<ReturnRequests />} />
+          <Route path="/admin/coupons" element={<CouponManagement />} />
           <Route path="/delivery" element={<DeliveryBoy />} />
           <Route path="favorites" element={<FavoriteProducts />} />
           <Route path="/checkout" element={<CheckoutPage />} />

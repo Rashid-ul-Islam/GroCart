@@ -373,6 +373,8 @@ export const getUserOrders = async (req, res) => {
         o.discount_total,
         o.payment_method,
         d.address_id,
+        d.estimated_arrival,
+        d.actual_arrival,
         a.address as delivery_address,
         (SELECT COUNT(*) FROM "OrderItem" oi WHERE oi.order_id = o.order_id) as item_count,
         (
@@ -382,6 +384,13 @@ export const getUserOrders = async (req, res) => {
           ORDER BY sh.updated_at DESC
           LIMIT 1
         ) as status,
+        -- Check if return window has expired (7 days from actual_arrival)
+        CASE 
+          WHEN d.actual_arrival IS NOT NULL 
+            AND EXTRACT(EPOCH FROM (NOW() - d.actual_arrival)) > (7 * 24 * 60 * 60)
+          THEN true
+          ELSE false
+        END as return_window_expired,
         -- Get coupon info if used
         oc.coupon_id,
         c.code as coupon_code
@@ -415,6 +424,9 @@ export const getUserOrders = async (req, res) => {
           ...order,
           order_id: `ORD-${String(order.order_id).padStart(6, '0')}`,
           items: itemsResult.rows,
+          estimated_arrival: order.estimated_arrival,
+          actual_arrival: order.actual_arrival,
+          return_window_expired: order.return_window_expired,
           // Add reorder data structure
           reorder_data: {
             user_id: parseInt(user_id),
@@ -942,6 +954,8 @@ export const getActiveOrders = async (req, res) => {
         o.discount_total,
         o.payment_method,
         d.address_id,
+        d.estimated_arrival,
+        d.actual_arrival,
         a.address AS delivery_address,
         (SELECT COUNT(*) FROM "OrderItem" oi WHERE oi.order_id = o.order_id) AS item_count,
         (
@@ -989,6 +1003,8 @@ export const getActiveOrders = async (req, res) => {
           ...order,
           order_id: `ORD-${String(order.order_id).padStart(6, '0')}`,
           items: itemsResult.rows,
+          estimated_arrival: order.estimated_arrival,
+          actual_arrival: order.actual_arrival,
           reorder_data: {
             user_id: parseInt(user_id),
             items: itemsResult.rows.map(item => ({
@@ -1035,6 +1051,8 @@ export const getCompletedOrders = async (req, res) => {
         o.discount_total,
         o.payment_method,
         d.address_id,
+        d.estimated_arrival,
+        d.actual_arrival,
         a.address AS delivery_address,
         (SELECT COUNT(*) FROM "OrderItem" oi WHERE oi.order_id = o.order_id) AS item_count,
         (
@@ -1044,6 +1062,13 @@ export const getCompletedOrders = async (req, res) => {
           ORDER BY sh.updated_at DESC
           LIMIT 1
         ) AS status,
+        -- Check if return window has expired (7 days from actual_arrival)
+        CASE 
+          WHEN d.actual_arrival IS NOT NULL 
+            AND EXTRACT(EPOCH FROM (NOW() - d.actual_arrival)) > (7 * 24 * 60 * 60)
+          THEN true
+          ELSE false
+        END as return_window_expired,
         oc.coupon_id,
         c.code as coupon_code
       FROM "Order" o
@@ -1084,6 +1109,9 @@ export const getCompletedOrders = async (req, res) => {
           ...order,
           order_id: `ORD-${String(order.order_id).padStart(6, '0')}`,
           items: itemsResult.rows,
+          estimated_arrival: order.estimated_arrival,
+          actual_arrival: order.actual_arrival,
+          return_window_expired: order.return_window_expired,
           reorder_data: {
             user_id: parseInt(user_id),
             items: itemsResult.rows.map(item => ({
@@ -1126,6 +1154,8 @@ export const getCancelledOrders = async (req, res) => {
         o.order_date,
         o.total_amount,
         d.address_id,
+        d.estimated_arrival,
+        d.actual_arrival,
         a.address AS delivery_address,
         (SELECT COUNT(*) FROM "OrderItem" oi WHERE oi.order_id = o.order_id) AS item_count,
         (
@@ -1154,6 +1184,8 @@ export const getCancelledOrders = async (req, res) => {
       ...order,
       order_id: `ORD-${String(order.order_id).padStart(6, '0')}`,
       items: Array(parseInt(order.item_count, 10)).fill({}),
+      estimated_arrival: order.estimated_arrival,
+      actual_arrival: order.actual_arrival,
     }));
 
     res.json({ success: true, data: orders });
@@ -1227,9 +1259,9 @@ export const getOrderItemsForReturn = async (req, res) => {
       });
     }
 
-    // First verify the order belongs to the user and is completed
+    // First verify the order belongs to the user and is completed, and get delivery actual_arrival
     const orderQuery = `
-      SELECT o.order_id, o.user_id,
+      SELECT o.order_id, o.user_id, d.actual_arrival,
         (
           SELECT sh.status
           FROM "StatusHistory" sh
@@ -1238,6 +1270,7 @@ export const getOrderItemsForReturn = async (req, res) => {
           LIMIT 1
         ) as status
       FROM "Order" o
+      LEFT JOIN "Delivery" d ON o.order_id = d.order_id
       WHERE o.order_id = $1 AND o.user_id = $2
     `;
 
@@ -1257,6 +1290,21 @@ export const getOrderItemsForReturn = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Return requests can only be made for completed orders'
+      });
+    }
+
+    // Check if return window (7 days) has expired
+    const isReturnWindowExpired = order.actual_arrival &&
+      new Date() - new Date(order.actual_arrival) > (7 * 24 * 60 * 60 * 1000);
+
+    if (isReturnWindowExpired) {
+      return res.status(400).json({
+        success: false,
+        message: 'Return window has expired. Returns are only allowed within 7 days of delivery.',
+        data: {
+          returnWindowExpired: true,
+          actualArrival: order.actual_arrival
+        }
       });
     }
 
@@ -1286,6 +1334,8 @@ export const getOrderItemsForReturn = async (req, res) => {
       data: {
         order_id: order_id,
         status: order.status,
+        actualArrival: order.actual_arrival,
+        returnWindowExpired: isReturnWindowExpired,
         items: itemsResult.rows
       }
     });
@@ -1318,7 +1368,7 @@ export const createReturnRequest = async (req, res) => {
 
     // Verify order belongs to user and is completed
     const orderQuery = `
-      SELECT o.order_id, o.user_id,
+      SELECT o.order_id, o.user_id, d.actual_arrival,
         (
           SELECT sh.status
           FROM "StatusHistory" sh
@@ -1327,6 +1377,7 @@ export const createReturnRequest = async (req, res) => {
           LIMIT 1
         ) as status
       FROM "Order" o
+      LEFT JOIN "Delivery" d ON o.order_id = d.order_id
       WHERE o.order_id = $1 AND o.user_id = $2
     `;
 
@@ -1348,6 +1399,22 @@ export const createReturnRequest = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Return requests can only be made for completed orders'
+      });
+    }
+
+    // Check if return window (7 days) has expired
+    const isReturnWindowExpired = order.actual_arrival &&
+      new Date() - new Date(order.actual_arrival) > (7 * 24 * 60 * 60 * 1000);
+
+    if (isReturnWindowExpired) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'Return window has expired. Returns are only allowed within 7 days of delivery.',
+        data: {
+          returnWindowExpired: true,
+          actualArrival: order.actual_arrival
+        }
       });
     }
 

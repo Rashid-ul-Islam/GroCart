@@ -33,6 +33,7 @@ import stockRoute from "./routes/stockRoute.js";
 import adminReturnRoute from "./routes/adminReturnRoute.js";
 import walletRoute from "./routes/walletRoute.js";
 import deliveryAnalyticsRoute from "./routes/deliveryAnalyticsRoute.js";
+import couponRoute from "./routes/couponRoute.js";
 
 const app = express();
 app.use(cors());
@@ -75,6 +76,7 @@ app.use("/api/reviews", reviewRoute);
 app.use("/api/stock", stockRoute);
 app.use("/api/wallet", walletRoute);
 app.use("/api/delivery-analytics", deliveryAnalyticsRoute);
+app.use("/api/coupons", couponRoute);
 
 app.listen(port, () => {
   console.log(`Server running on ${port}`);
