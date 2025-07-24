@@ -1,47 +1,180 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card.jsx";
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card.jsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs.jsx";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select.jsx";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, TrendingDown, Package, Clock, Star, AlertTriangle, BarChart3, Users, MapPin } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select.jsx";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
+import {
+  TrendingUp,
+  TrendingDown,
+  Package,
+  Clock,
+  Star,
+  AlertTriangle,
+  BarChart3,
+  Users,
+  MapPin,
+  Loader2,
+} from "lucide-react";
 
 export const DeliveryAnalytics = () => {
-  const [timeRange, setTimeRange] = useState("7d");
+  const [timeRange, setTimeRange] = useState("30"); // Default to 30 days
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Sample data for charts
-  const dailyDeliveryData = [
-    { date: 'Mon', delivered: 32, failed: 3, onTime: 29 },
-    { date: 'Tue', delivered: 28, failed: 2, onTime: 26 },
-    { date: 'Wed', delivered: 35, failed: 4, onTime: 31 },
-    { date: 'Thu', delivered: 42, failed: 2, onTime: 38 },
-    { date: 'Fri', delivered: 48, failed: 5, onTime: 43 },
-    { date: 'Sat', delivered: 55, failed: 3, onTime: 52 },
-    { date: 'Sun', delivered: 38, failed: 2, onTime: 36 }
-  ];
+  // State for API data
+  const [metrics, setMetrics] = useState({
+    totalDeliveries: 0,
+    failedDeliveries: 0,
+    onTimeRate: 0,
+    customerRating: 0,
+    changes: {
+      totalDeliveries: 0,
+      failedDeliveries: 0,
+      onTimeRate: 0,
+    },
+  });
+  const [dailyTrends, setDailyTrends] = useState([]);
+  const [regionalDistribution, setRegionalDistribution] = useState([]);
+  const [performanceTrends, setPerformanceTrends] = useState([]);
+  const [topPerformers, setTopPerformers] = useState([]);
 
-  const regionData = [
-    { name: 'Dhaka', value: 45, color: '#8884d8' },
-    { name: 'Chittagong', value: 30, color: '#82ca9d' },
-    { name: 'Sylhet', value: 15, color: '#ffc658' },
-    { name: 'Rajshahi', value: 10, color: '#ff7300' }
-  ];
+  // API base URL
+  const API_BASE = "http://localhost:3000/api/delivery-analytics";
 
-  const performanceData = [
-    { month: 'Jan', onTimeRate: 92, customerSatisfaction: 4.2, deliveries: 1245 },
-    { month: 'Feb', onTimeRate: 94, customerSatisfaction: 4.3, deliveries: 1389 },
-    { month: 'Mar', onTimeRate: 91, customerSatisfaction: 4.1, deliveries: 1456 },
-    { month: 'Apr', onTimeRate: 96, customerSatisfaction: 4.5, deliveries: 1578 },
-    { month: 'May', onTimeRate: 93, customerSatisfaction: 4.4, deliveries: 1623 },
-    { month: 'Jun', onTimeRate: 95, customerSatisfaction: 4.6, deliveries: 1789 }
-  ];
+  // Fetch all analytics data
+  const fetchAnalyticsData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  const topPerformers = [
-    { name: 'Ahmed Hassan', deliveries: 89, onTimeRate: 96.2, rating: 4.8 },
-    { name: 'Rahim Khan', deliveries: 76, onTimeRate: 94.5, rating: 4.6 },
-    { name: 'Karim Ahmed', deliveries: 72, onTimeRate: 92.8, rating: 4.5 },
-    { name: 'Nasir Uddin', deliveries: 68, onTimeRate: 89.3, rating: 4.3 },
-    { name: 'Fazlu Rahman', deliveries: 65, onTimeRate: 91.1, rating: 4.4 }
-  ];
+      const [metricsRes, trendsRes, regionsRes, performanceRes, performersRes] =
+        await Promise.all([
+          fetch(`${API_BASE}/metrics?timeRange=${timeRange}`),
+          fetch(`${API_BASE}/daily-trends?timeRange=${timeRange}`),
+          fetch(`${API_BASE}/regional-distribution?timeRange=${timeRange}`),
+          fetch(
+            `${API_BASE}/performance-trends?timeRange=${
+              timeRange === "7d" ? "7d" : "6months"
+            }`
+          ),
+          fetch(`${API_BASE}/top-performers?timeRange=${timeRange}&limit=5`),
+        ]);
+
+      if (
+        !metricsRes.ok ||
+        !trendsRes.ok ||
+        !regionsRes.ok ||
+        !performanceRes.ok ||
+        !performersRes.ok
+      ) {
+        throw new Error("Failed to fetch analytics data");
+      }
+
+      const [
+        metricsData,
+        trendsData,
+        regionsData,
+        performanceData,
+        performersData,
+      ] = await Promise.all([
+        metricsRes.json(),
+        trendsRes.json(),
+        regionsRes.json(),
+        performanceRes.json(),
+        performersRes.json(),
+      ]);
+
+      if (metricsData.success) setMetrics(metricsData.data);
+      if (trendsData.success) setDailyTrends(trendsData.data);
+      if (regionsData.success) setRegionalDistribution(regionsData.data);
+      if (performanceData.success) setPerformanceTrends(performanceData.data);
+      if (performersData.success) setTopPerformers(performersData.data);
+    } catch (error) {
+      console.error("Error fetching analytics data:", error);
+      setError("Failed to load analytics data. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch data on component mount and when timeRange changes
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, [timeRange]);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-xl p-12">
+            <div className="flex items-center justify-center">
+              <div className="text-center">
+                <Loader2 className="h-16 w-16 animate-spin text-purple-600 mx-auto mb-4" />
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                  Loading Analytics...
+                </h3>
+                <p className="text-gray-600">
+                  Fetching delivery performance data
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-xl p-12">
+            <div className="text-center">
+              <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                Error Loading Data
+              </h3>
+              <p className="text-gray-600 mb-6">{error}</p>
+              <button
+                onClick={fetchAnalyticsData}
+                className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 font-bold"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const getRankColor = (index) => {
     switch (index) {
@@ -91,13 +224,31 @@ export const DeliveryAnalytics = () => {
               <div className="bg-blue-100 rounded-full p-3">
                 <Package className="h-6 w-6 text-blue-600" />
               </div>
-              <TrendingUp className="h-5 w-5 text-green-500" />
+              {metrics.changes.totalDeliveries >= 0 ? (
+                <TrendingUp className="h-5 w-5 text-green-500" />
+              ) : (
+                <TrendingDown className="h-5 w-5 text-red-500" />
+              )}
             </div>
-            <div className="text-3xl font-bold text-gray-800 mb-1">1,234</div>
-            <p className="text-sm font-medium text-gray-600 mb-2">Total Deliveries</p>
-            <p className="text-xs text-green-600 font-semibold flex items-center">
-              <TrendingUp className="inline h-3 w-3 mr-1" />
-              +15% from last period
+            <div className="text-3xl font-bold text-gray-800 mb-1">
+              {metrics.totalDeliveries.toLocaleString()}
+            </div>
+            <p className="text-sm font-medium text-gray-600 mb-2">
+              Total Deliveries
+            </p>
+            <p
+              className={`text-xs font-semibold flex items-center ${
+                metrics.changes.totalDeliveries >= 0
+                  ? "text-green-600"
+                  : "text-red-600"
+              }`}
+            >
+              {metrics.changes.totalDeliveries >= 0 ? (
+                <TrendingUp className="inline h-3 w-3 mr-1" />
+              ) : (
+                <TrendingDown className="inline h-3 w-3 mr-1" />
+              )}
+              {Math.abs(metrics.changes.totalDeliveries)}% from last period
             </p>
           </div>
 
@@ -106,13 +257,31 @@ export const DeliveryAnalytics = () => {
               <div className="bg-green-100 rounded-full p-3">
                 <Clock className="h-6 w-6 text-green-600" />
               </div>
-              <TrendingUp className="h-5 w-5 text-green-500" />
+              {metrics.changes.onTimeRate >= 0 ? (
+                <TrendingUp className="h-5 w-5 text-green-500" />
+              ) : (
+                <TrendingDown className="h-5 w-5 text-red-500" />
+              )}
             </div>
-            <div className="text-3xl font-bold text-gray-800 mb-1">94.2%</div>
-            <p className="text-sm font-medium text-gray-600 mb-2">On-Time Rate</p>
-            <p className="text-xs text-green-600 font-semibold flex items-center">
-              <TrendingUp className="inline h-3 w-3 mr-1" />
-              +2.1% from last period
+            <div className="text-3xl font-bold text-gray-800 mb-1">
+              {metrics.onTimeRate}%
+            </div>
+            <p className="text-sm font-medium text-gray-600 mb-2">
+              On-Time Rate
+            </p>
+            <p
+              className={`text-xs font-semibold flex items-center ${
+                metrics.changes.onTimeRate >= 0
+                  ? "text-green-600"
+                  : "text-red-600"
+              }`}
+            >
+              {metrics.changes.onTimeRate >= 0 ? (
+                <TrendingUp className="inline h-3 w-3 mr-1" />
+              ) : (
+                <TrendingDown className="inline h-3 w-3 mr-1" />
+              )}
+              {Math.abs(metrics.changes.onTimeRate)}% from last period
             </p>
           </div>
 
@@ -123,11 +292,14 @@ export const DeliveryAnalytics = () => {
               </div>
               <TrendingUp className="h-5 w-5 text-green-500" />
             </div>
-            <div className="text-3xl font-bold text-gray-800 mb-1">4.6/5</div>
-            <p className="text-sm font-medium text-gray-600 mb-2">Customer Rating</p>
-            <p className="text-xs text-green-600 font-semibold flex items-center">
-              <TrendingUp className="inline h-3 w-3 mr-1" />
-              +0.3 from last period
+            <div className="text-3xl font-bold text-gray-800 mb-1">
+              {metrics.customerRating.toFixed(1)}/5
+            </div>
+            <p className="text-sm font-medium text-gray-600 mb-2">
+              Customer Rating
+            </p>
+            <p className="text-xs text-gray-600 font-semibold">
+              Based on recent reviews
             </p>
           </div>
 
@@ -136,13 +308,31 @@ export const DeliveryAnalytics = () => {
               <div className="bg-red-100 rounded-full p-3">
                 <AlertTriangle className="h-6 w-6 text-red-600" />
               </div>
-              <TrendingDown className="h-5 w-5 text-green-500" />
+              {metrics.changes.failedDeliveries <= 0 ? (
+                <TrendingDown className="h-5 w-5 text-green-500" />
+              ) : (
+                <TrendingUp className="h-5 w-5 text-red-500" />
+              )}
             </div>
-            <div className="text-3xl font-bold text-gray-800 mb-1">21</div>
-            <p className="text-sm font-medium text-gray-600 mb-2">Failed Deliveries</p>
-            <p className="text-xs text-green-600 font-semibold flex items-center">
-              <TrendingDown className="inline h-3 w-3 mr-1" />
-              -5% from last period
+            <div className="text-3xl font-bold text-gray-800 mb-1">
+              {metrics.failedDeliveries}
+            </div>
+            <p className="text-sm font-medium text-gray-600 mb-2">
+              Failed Deliveries
+            </p>
+            <p
+              className={`text-xs font-semibold flex items-center ${
+                metrics.changes.failedDeliveries <= 0
+                  ? "text-green-600"
+                  : "text-red-600"
+              }`}
+            >
+              {metrics.changes.failedDeliveries <= 0 ? (
+                <TrendingDown className="inline h-3 w-3 mr-1" />
+              ) : (
+                <TrendingUp className="inline h-3 w-3 mr-1" />
+              )}
+              {Math.abs(metrics.changes.failedDeliveries)}% from last period
             </p>
           </div>
         </div>
@@ -152,29 +342,29 @@ export const DeliveryAnalytics = () => {
           <Tabs defaultValue="overview" className="w-full">
             <div className="p-6 border-b border-gray-200">
               <TabsList className="grid w-full grid-cols-4 bg-gray-100 rounded-xl p-1 h-14">
-                <TabsTrigger 
-                  value="overview" 
+                <TabsTrigger
+                  value="overview"
                   className="flex items-center justify-center py-3 px-4 rounded-lg text-gray-700 font-semibold transition-all duration-200 hover:bg-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg"
                 >
                   <BarChart3 className="w-4 h-4 mr-2" />
                   Overview
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="performance" 
+                <TabsTrigger
+                  value="performance"
                   className="flex items-center justify-center py-3 px-4 rounded-lg text-gray-700 font-semibold transition-all duration-200 hover:bg-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg"
                 >
                   <TrendingUp className="w-4 h-4 mr-2" />
                   Performance
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="regions" 
+                <TabsTrigger
+                  value="regions"
                   className="flex items-center justify-center py-3 px-4 rounded-lg text-gray-700 font-semibold transition-all duration-200 hover:bg-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-green-600 data-[state=active]:text-white data-[state=active]:shadow-lg"
                 >
                   <MapPin className="w-4 h-4 mr-2" />
                   Regions
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="top-performers" 
+                <TabsTrigger
+                  value="top-performers"
                   className="flex items-center justify-center py-3 px-4 rounded-lg text-gray-700 font-semibold transition-all duration-200 hover:bg-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg"
                 >
                   <Users className="w-4 h-4 mr-2" />
@@ -188,56 +378,93 @@ export const DeliveryAnalytics = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                     <div className="mb-6">
-                      <h3 className="text-xl font-bold text-gray-800 mb-2">Daily Delivery Trends</h3>
-                      <p className="text-gray-600">Delivery success and failure rates over time</p>
+                      <h3 className="text-xl font-bold text-gray-800 mb-2">
+                        Daily Delivery Trends
+                      </h3>
+                      <p className="text-gray-600">
+                        Delivery success and failure rates over time
+                      </p>
                     </div>
                     <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={dailyDeliveryData}>
+                      <BarChart data={dailyTrends}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis dataKey="date" stroke="#6b7280" />
-                        <YAxis stroke="#6b7280" />
-                        <Tooltip 
-                          contentStyle={{
-                            backgroundColor: 'white',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '8px',
-                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                        <XAxis
+                          dataKey="delivery_date"
+                          stroke="#6b7280"
+                          tickFormatter={(value) => {
+                            const date = new Date(value);
+                            return `${date.getMonth() + 1}/${date.getDate()}`;
                           }}
                         />
-                        <Bar dataKey="delivered" fill="#3b82f6" name="Delivered" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="failed" fill="#ef4444" name="Failed" radius={[4, 4, 0, 0]} />
+                        <YAxis stroke="#6b7280" />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "white",
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "8px",
+                            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                          }}
+                          labelFormatter={(value) => {
+                            const date = new Date(value);
+                            return date.toLocaleDateString();
+                          }}
+                        />
+                        <Bar
+                          dataKey="successful_deliveries"
+                          fill="#3b82f6"
+                          name="Delivered"
+                          radius={[4, 4, 0, 0]}
+                        />
+                        <Bar
+                          dataKey="failed_deliveries"
+                          fill="#ef4444"
+                          name="Failed"
+                          radius={[4, 4, 0, 0]}
+                        />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
 
                   <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                     <div className="mb-6">
-                      <h3 className="text-xl font-bold text-gray-800 mb-2">Delivery Distribution by Region</h3>
-                      <p className="text-gray-600">Breakdown of deliveries across different regions</p>
+                      <h3 className="text-xl font-bold text-gray-800 mb-2">
+                        Delivery Distribution by Region
+                      </h3>
+                      <p className="text-gray-600">
+                        Breakdown of deliveries across different regions
+                      </p>
                     </div>
                     <ResponsiveContainer width="100%" height={300}>
                       <PieChart>
                         <Pie
-                          data={regionData}
+                          data={regionalDistribution}
                           cx="50%"
                           cy="50%"
                           innerRadius={60}
                           outerRadius={120}
                           paddingAngle={5}
-                          dataKey="value"
+                          dataKey="delivery_count"
                         >
-                          {regionData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          {regionalDistribution.map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={`hsl(${(index * 137.5) % 360}, 70%, 50%)`}
+                            />
                           ))}
                         </Pie>
-                        <Tooltip 
+                        <Tooltip
                           contentStyle={{
-                            backgroundColor: 'white',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '8px',
-                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                            backgroundColor: "white",
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "8px",
+                            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
                           }}
+                          formatter={(value, name, props) => [
+                            `${value} deliveries`,
+                            props.payload.region_name || "Unknown Region",
+                          ]}
                         />
+                        <Legend />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -247,37 +474,60 @@ export const DeliveryAnalytics = () => {
               <TabsContent value="performance" className="space-y-6 mt-0">
                 <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                   <div className="mb-6">
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Performance Trends</h3>
-                    <p className="text-gray-600">Monthly performance metrics and trends</p>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">
+                      Performance Trends
+                    </h3>
+                    <p className="text-gray-600">
+                      Monthly performance metrics and trends
+                    </p>
                   </div>
                   <ResponsiveContainer width="100%" height={400}>
-                    <LineChart data={performanceData}>
+                    <LineChart data={performanceTrends}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="month" stroke="#6b7280" />
-                      <YAxis stroke="#6b7280" />
-                      <Tooltip 
-                        contentStyle={{
-                          backgroundColor: 'white',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      <XAxis
+                        dataKey="time_period"
+                        stroke="#6b7280"
+                        tickFormatter={(value) => {
+                          const date = new Date(value);
+                          return `${date.getMonth() + 1}/${date.getDate()}`;
                         }}
                       />
-                      <Line 
-                        type="monotone" 
-                        dataKey="onTimeRate" 
-                        stroke="#3b82f6" 
-                        strokeWidth={3}
-                        name="On-Time Rate %" 
-                        dot={{ fill: '#3b82f6', strokeWidth: 2, r: 6 }}
+                      <YAxis stroke="#6b7280" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "white",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "8px",
+                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                        }}
+                        labelFormatter={(value) => {
+                          const date = new Date(value);
+                          return date.toLocaleDateString();
+                        }}
                       />
-                      <Line 
-                        type="monotone" 
-                        dataKey="customerSatisfaction" 
-                        stroke="#10b981" 
+                      <Line
+                        type="monotone"
+                        dataKey="avg_completion_time"
+                        stroke="#3b82f6"
                         strokeWidth={3}
-                        name="Customer Rating" 
-                        dot={{ fill: '#10b981', strokeWidth: 2, r: 6 }}
+                        name="Avg Completion Time (min)"
+                        dot={{ fill: "#3b82f6", strokeWidth: 2, r: 6 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="on_time_percentage"
+                        stroke="#10b981"
+                        strokeWidth={3}
+                        name="On-Time Rate %"
+                        dot={{ fill: "#10b981", strokeWidth: 2, r: 6 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="avg_customer_rating"
+                        stroke="#f59e0b"
+                        strokeWidth={3}
+                        name="Customer Rating"
+                        dot={{ fill: "#f59e0b", strokeWidth: 2, r: 6 }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -286,20 +536,36 @@ export const DeliveryAnalytics = () => {
 
               <TabsContent value="regions" className="space-y-6 mt-0">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {regionData.map((region, index) => (
-                    <div key={region.name} className="bg-gray-50 rounded-xl p-6 border border-gray-200 hover:shadow-lg transition duration-200">
+                  {regionalDistribution.map((region, index) => (
+                    <div
+                      key={region.region_name || `region-${index}`}
+                      className="bg-gray-50 rounded-xl p-6 border border-gray-200 hover:shadow-lg transition duration-200"
+                    >
                       <div className="flex items-center justify-between mb-4">
                         <div className="bg-blue-100 rounded-full p-3">
                           <MapPin className="h-6 w-6 text-blue-700" />
                         </div>
-                        <div 
-                          className="w-4 h-4 rounded-full" 
-                          style={{ backgroundColor: region.color }}
+                        <div
+                          className="w-4 h-4 rounded-full"
+                          style={{
+                            backgroundColor: `hsl(${
+                              (index * 137.5) % 360
+                            }, 70%, 50%)`,
+                          }}
                         ></div>
                       </div>
-                      <h3 className="text-xl font-bold text-gray-800 mb-2">{region.name}</h3>
-                      <div className="text-3xl font-bold text-gray-800 mb-1">{region.value}%</div>
-                      <p className="text-sm text-gray-600">of total deliveries</p>
+                      <h3 className="text-xl font-bold text-gray-800 mb-2">
+                        {region.region_name || "Unknown Region"}
+                      </h3>
+                      <div className="text-3xl font-bold text-gray-800 mb-1">
+                        {region.delivery_count}
+                      </div>
+                      <p className="text-sm text-gray-600">total deliveries</p>
+                      {region.percentage && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {region.percentage}% of all deliveries
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -308,32 +574,57 @@ export const DeliveryAnalytics = () => {
               <TabsContent value="top-performers" className="space-y-6 mt-0">
                 <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                   <div className="mb-6">
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Top Performing Delivery Boys</h3>
-                    <p className="text-gray-600">Monthly rankings based on deliveries and performance</p>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">
+                      Top Performing Delivery Boys
+                    </h3>
+                    <p className="text-gray-600">
+                      Monthly rankings based on deliveries and performance
+                    </p>
                   </div>
                   <div className="space-y-4">
                     {topPerformers.map((performer, index) => (
-                      <div key={performer.name} className="flex items-center justify-between p-6 bg-white border border-gray-200 rounded-xl hover:shadow-md transition duration-200">
+                      <div
+                        key={performer.delivery_boy_id}
+                        className="flex items-center justify-between p-6 bg-white border border-gray-200 rounded-xl hover:shadow-md transition duration-200"
+                      >
                         <div className="flex items-center space-x-4">
-                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold ${getRankColor(index)}`}>
+                          <div
+                            className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold ${getRankColor(
+                              index
+                            )}`}
+                          >
                             {index + 1}
                           </div>
                           <div>
-                            <p className="font-bold text-gray-800 text-lg">{performer.name}</p>
-                            <p className="text-sm text-gray-600">{performer.deliveries} deliveries completed</p>
+                            <p className="font-bold text-gray-800 text-lg">
+                              {performer.delivery_boy_name}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              {performer.total_deliveries} deliveries completed
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-6">
                           <div className="text-center">
-                            <p className="text-lg font-bold text-gray-800">{performer.onTimeRate}%</p>
-                            <p className="text-xs text-gray-600">On-time Rate</p>
+                            <p className="text-lg font-bold text-gray-800">
+                              {performer.on_time_percentage}%
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              On-time Rate
+                            </p>
                           </div>
                           <div className="text-center">
                             <div className="flex items-center justify-center">
                               <Star className="w-4 h-4 text-yellow-500 mr-1" />
-                              <p className="text-lg font-bold text-gray-800">{performer.rating}</p>
+                              <p className="text-lg font-bold text-gray-800">
+                                {performer.avg_rating
+                                  ? performer.avg_rating.toFixed(1)
+                                  : "N/A"}
+                              </p>
                             </div>
-                            <p className="text-xs text-gray-600">Customer Rating</p>
+                            <p className="text-xs text-gray-600">
+                              Customer Rating
+                            </p>
                           </div>
                         </div>
                       </div>

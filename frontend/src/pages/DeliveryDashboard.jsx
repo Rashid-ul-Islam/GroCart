@@ -24,7 +24,6 @@ import {
 } from "../components/ui/select.jsx";
 import {
   Truck,
-  MapPin,
   Clock,
   Users,
   Package,
@@ -36,7 +35,6 @@ import { DeliveryOverview } from "../components/Delivery/DeliveryOverview.jsx";
 import { ActiveDeliveries } from "../components/Delivery/ActiveDelivery.jsx";
 import { DeliveryBoyManagement } from "../components/Delivery/DeliveryBoyManagement.jsx";
 import { DeliveryAnalytics } from "../components/Delivery/DeliveryAnalytics.jsx";
-import { RouteOptimization } from "../components/Delivery/RouteOptimization.jsx";
 
 const rootStyles = {
   // CSS Custom Properties (Design System)
@@ -188,7 +186,7 @@ const componentStyles = {
     color: "hsl(var(--muted-foreground))",
     width: "100%",
     display: "grid",
-    gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
   },
 
   tabsTrigger: {
@@ -269,13 +267,12 @@ const DeliveryDashboard = () => {
             onValueChange={setActiveTab}
             className="space-y-6"
           >
-            <TabsList className="grid w-full grid-cols-5 bg-slate-200 rounded-md p-1">
+            <TabsList className="grid w-full grid-cols-4 bg-slate-200 rounded-md p-1">
               {[
                 { value: "overview", label: "Overview", icon: TrendingUp },
                 { value: "active", label: "Active Deliveries", icon: Truck },
                 { value: "delivery-boys", label: "Delivery Boys", icon: Users },
                 { value: "analytics", label: "Analytics", icon: Package },
-                { value: "routes", label: "Route Optimization", icon: MapPin },
               ].map(({ value, label, icon: Icon }) => (
                 <TabsTrigger
                   key={value}
@@ -312,10 +309,6 @@ const DeliveryDashboard = () => {
 
             <TabsContent value="analytics" className="space-y-6">
               <DeliveryAnalytics />
-            </TabsContent>
-
-            <TabsContent value="routes" className="space-y-6">
-              <RouteOptimization />
             </TabsContent>
           </Tabs>
         </div>

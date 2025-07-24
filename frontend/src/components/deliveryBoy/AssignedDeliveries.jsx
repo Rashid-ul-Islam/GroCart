@@ -113,7 +113,13 @@ export const AssignedDeliveries = () => {
       console.log("Deliveries API response:", data);
 
       if (data.success) {
-        setDeliveries(data.data || []);
+        // Filter out cancelled deliveries from the dashboard
+        const activeDeliveries = (data.data || []).filter((delivery) => {
+          const status =
+            delivery.currentStatus || delivery.status || "assigned";
+          return status !== "cancelled";
+        });
+        setDeliveries(activeDeliveries);
       } else {
         throw new Error(data.message || "Failed to fetch deliveries");
       }
@@ -311,7 +317,8 @@ export const AssignedDeliveries = () => {
           key: "products_fetched",
           label: "Products Fetched",
           icon: Package,
-          color: "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800",
+          color:
+            "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800",
           handler: handleProductsFetched,
         });
         break;
@@ -322,7 +329,8 @@ export const AssignedDeliveries = () => {
           key: "delivery_completed",
           label: "Delivery Completed",
           icon: CheckCircle,
-          color: "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800",
+          color:
+            "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800",
           handler: handleDeliveryCompleted,
         });
         break;
@@ -335,7 +343,8 @@ export const AssignedDeliveries = () => {
           key: "rate_customer",
           label: "Rate Customer",
           icon: User,
-          color: "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800",
+          color:
+            "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800",
           handler: handleRateCustomer,
         });
         break;
@@ -375,12 +384,16 @@ export const AssignedDeliveries = () => {
           <div className="bg-blue-100 rounded-full p-3">
             <Calendar className="h-6 w-6 text-blue-600" />
           </div>
-          <h3 className="text-2xl font-bold text-gray-800">📦 Today's Assigned Deliveries</h3>
+          <h3 className="text-2xl font-bold text-gray-800">
+            📦 Today's Assigned Deliveries
+          </h3>
         </div>
         <div className="flex items-center justify-center h-32">
           <div className="text-center">
             <RefreshCw className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-4" />
-            <span className="text-gray-600 font-semibold">Loading deliveries...</span>
+            <span className="text-gray-600 font-semibold">
+              Loading deliveries...
+            </span>
           </div>
         </div>
       </div>
@@ -395,12 +408,14 @@ export const AssignedDeliveries = () => {
           <div className="bg-red-100 rounded-full p-3">
             <AlertTriangle className="h-6 w-6 text-red-600" />
           </div>
-          <h3 className="text-2xl font-bold text-gray-800">❌ Error Loading Deliveries</h3>
+          <h3 className="text-2xl font-bold text-gray-800">
+            ❌ Error Loading Deliveries
+          </h3>
         </div>
         <div className="text-center py-8">
           <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <p className="text-red-600 mb-4 font-semibold">{error}</p>
-          <Button 
+          <Button
             onClick={() => fetchDeliveries()}
             className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 font-bold"
           >
@@ -421,21 +436,25 @@ export const AssignedDeliveries = () => {
             <Truck className="h-6 w-6 text-blue-600" />
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-gray-800">📦 Today's Assigned Deliveries</h3>
+            <h3 className="text-2xl font-bold text-gray-800">
+              📦 Today's Assigned Deliveries
+            </h3>
             <p className="text-gray-600">Manage your delivery tasks</p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-4 py-2 rounded-full font-bold text-lg">
             {deliveries.length} deliveries
           </Badge>
-          <Button 
+          <Button
             onClick={handleRefresh}
             disabled={refreshing}
             className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 font-bold flex items-center gap-2"
           >
-            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
         </div>
@@ -446,45 +465,65 @@ export const AssignedDeliveries = () => {
         {deliveries.length === 0 ? (
           <div className="text-center py-12 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl">
             <CheckCircle className="w-20 h-20 text-green-500 mx-auto mb-6" />
-            <p className="text-gray-700 mb-2 text-xl font-semibold">🎉 No deliveries assigned for today</p>
-            <p className="text-gray-500 font-medium">Check back later for new assignments</p>
+            <p className="text-gray-700 mb-2 text-xl font-semibold">
+              🎉 No deliveries assigned for today
+            </p>
+            <p className="text-gray-500 font-medium">
+              Check back later for new assignments
+            </p>
           </div>
         ) : (
           deliveries.map((delivery) => (
-            <div 
-              key={delivery.id} 
+            <div
+              key={delivery.id}
               className="bg-white border-2 border-gray-200 rounded-xl p-6 hover:shadow-xl hover:border-blue-300 hover:scale-102 transition-all duration-300 cursor-pointer"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <span className="text-xl font-bold text-gray-800">#{delivery.id}</span>
-                    <Badge className={`${getPriorityColor(delivery.priority)} px-3 py-1 rounded-full font-semibold`}>
+                    <span className="text-xl font-bold text-gray-800">
+                      #{delivery.id}
+                    </span>
+                    <Badge
+                      className={`${getPriorityColor(
+                        delivery.priority
+                      )} px-3 py-1 rounded-full font-semibold`}
+                    >
                       🔥 {delivery.priority}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-2 text-gray-700 mb-2">
                     <User className="h-5 w-5 text-blue-600" />
-                    <span className="font-semibold text-lg">{delivery.customerName}</span>
+                    <span className="font-semibold text-lg">
+                      {delivery.customerName}
+                    </span>
                   </div>
-                  
+
                   {/* Customer contact info */}
                   {delivery.customerPhone && (
                     <div className="flex items-center gap-2 text-gray-600 mb-1">
                       <Phone className="h-4 w-4 text-green-600" />
-                      <span className="font-medium">📞 {delivery.customerPhone}</span>
+                      <span className="font-medium">
+                        📞 {delivery.customerPhone}
+                      </span>
                     </div>
                   )}
-                  
+
                   {delivery.customerEmail && (
                     <div className="flex items-center gap-2 text-gray-600">
                       <Mail className="h-4 w-4 text-purple-600" />
-                      <span className="font-medium">📧 {delivery.customerEmail}</span>
+                      <span className="font-medium">
+                        📧 {delivery.customerEmail}
+                      </span>
                     </div>
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                  <Badge className={`${getStatusColor(delivery.currentStatus || "assigned")} px-4 py-2 rounded-full font-bold text-lg`}>
+                  <Badge
+                    className={`${getStatusColor(
+                      delivery.currentStatus || "assigned"
+                    )} px-4 py-2 rounded-full font-bold text-lg`}
+                  >
                     {getStatusDisplay(delivery.currentStatus || "assigned")}
                   </Badge>
                   <Badge className="bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold">
@@ -492,26 +531,32 @@ export const AssignedDeliveries = () => {
                   </Badge>
                 </div>
               </div>
-              
+
               <div className="bg-gray-50 rounded-xl p-4 mb-4 space-y-3">
                 <p className="text-gray-700 font-medium">
-                  <strong className="text-gray-800">📍 Address:</strong> {delivery.address}
+                  <strong className="text-gray-800">📍 Address:</strong>{" "}
+                  {delivery.address}
                 </p>
                 <p className="text-gray-600 font-medium">
-                  <strong className="text-gray-800">📦 Items:</strong> {delivery.items?.join(", ") || "No items listed"}
+                  <strong className="text-gray-800">📦 Items:</strong>{" "}
+                  {delivery.items?.join(", ") || "No items listed"}
                 </p>
                 <div className="flex items-center gap-2 text-gray-700 font-medium">
                   <Clock className="h-5 w-5 text-orange-600" />
-                  <span><strong>⏰ ETA:</strong> {delivery.estimatedTime}</span>
+                  <span>
+                    <strong>⏰ ETA:</strong> {delivery.estimatedTime}
+                  </span>
                 </div>
                 {delivery.totalAmount && (
                   <p className="text-gray-700 font-medium">
-                    <strong className="text-gray-800">💰 Total:</strong> ${delivery.totalAmount.toFixed(2)}
+                    <strong className="text-gray-800">💰 Total:</strong> $
+                    {delivery.totalAmount.toFixed(2)}
                   </p>
                 )}
                 {delivery.paymentStatus && (
                   <p className="text-gray-700 font-medium">
-                    <strong className="text-gray-800">💳 Payment:</strong> {delivery.paymentStatus}
+                    <strong className="text-gray-800">💳 Payment:</strong>{" "}
+                    {delivery.paymentStatus}
                   </p>
                 )}
               </div>
@@ -521,11 +566,13 @@ export const AssignedDeliveries = () => {
                 <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-l-4 border-yellow-500 rounded-xl p-4 mb-4">
                   <div className="flex items-center gap-2 text-yellow-800">
                     <Clock className="h-5 w-5" />
-                    <span className="font-bold">⏳ Waiting for payment confirmation...</span>
+                    <span className="font-bold">
+                      ⏳ Waiting for payment confirmation...
+                    </span>
                   </div>
                 </div>
               )}
-              
+
               <div className="flex gap-4">
                 {getAvailableActions(delivery).map((action) => (
                   <Button

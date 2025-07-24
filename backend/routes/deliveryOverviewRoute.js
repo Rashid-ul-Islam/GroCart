@@ -7,6 +7,6 @@ import {
 const router = express.Router();
 
 router.get("/stats", getDeliveryStats);
-router.get("/recent-orders", getRecentOrders);  
+router.get("/recent-orders", getRecentOrders);
 
 export default router;

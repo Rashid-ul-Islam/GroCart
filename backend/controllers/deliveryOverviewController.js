@@ -3,205 +3,220 @@ import pool from '../db.js';
 // Get delivery overview statistics
 export const getDeliveryStats = async (req, res) => {
   try {
+    console.log('Fetching delivery overview statistics...');
+
+    // Get current date for today's calculations
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
     const client = await pool.connect();
 
-    // Get total deliveries (all time)
-    const totalDeliveriesQuery = `
-      SELECT COUNT(*) as total_deliveries FROM "Delivery"
-    `;
-
-    // Get active deliveries (not delivered yet)
-    const activeDeliveriesQuery = `
-      SELECT COUNT(*) as active_deliveries 
-      FROM "Delivery" d
-      JOIN "StatusHistory" sh ON d.order_id = sh.entity_id
-      WHERE sh.entity_type = 'order' 
-        AND sh.status NOT IN ('delivered', 'cancelled')
-        AND sh.updated_at = (
-          SELECT MAX(updated_at) 
-          FROM "StatusHistory" 
-          WHERE entity_id = d.order_id AND entity_type = 'order'
-        )
-    `;
-
-    // Get completed today
-    const completedTodayQuery = `
-      SELECT COUNT(*) as completed_today
-      FROM "Delivery" d
-      JOIN "StatusHistory" sh ON d.order_id = sh.entity_id
-      WHERE sh.entity_type = 'order' 
-        AND sh.status = 'delivered'
-        AND DATE(sh.updated_at) = CURRENT_DATE
-        AND sh.updated_at = (
-          SELECT MAX(updated_at) 
-          FROM "StatusHistory" 
-          WHERE entity_id = d.order_id AND entity_type = 'order'
-        )
-    `;
-
-    // Get on-time delivery rate
-    // Get on-time delivery rate
-    const onTimeRateQuery = `
-      SELECT
-      ROUND(
-      COALESCE(
-        (COUNT(CASE WHEN dp.delivered_on_time = true THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0)), 
-        0
-      ), 1
-      ) as on_time_rate
-      FROM "DeliveryPerformance" dp
-      WHERE dp.recorded_at >= CURRENT_DATE - INTERVAL '30 days'
-    `;
-
-
-    // Get available and busy delivery boys
-    const deliveryBoysQuery = `
+    // Combined query for all statistics using proper schema
+    const statsQuery = `
+      WITH daily_stats AS (
+        SELECT 
+          COUNT(*) as total_deliveries,
+          COUNT(CASE WHEN sh.status IN ('assigned', 'in_transit', 'out_for_delivery') THEN 1 END) as active_deliveries,
+          COUNT(CASE WHEN sh.status = 'delivered' AND DATE(sh.updated_at) = $1 THEN 1 END) as completed_today,
+          COUNT(CASE WHEN sh.status = 'delivered' AND DATE(sh.updated_at) = $2 THEN 1 END) as completed_yesterday,
+          COUNT(CASE WHEN sh.status IN ('pending', 'order_placed', 'confirmed') THEN 1 END) as pending_assignments
+        FROM "Delivery" d
+        LEFT JOIN "StatusHistory" sh ON d.delivery_id = sh.entity_id AND sh.entity_type = 'delivery'
+        WHERE d.created_at >= NOW() - INTERVAL '30 days'
+          AND sh.updated_at = (
+            SELECT MAX(sh2.updated_at) 
+            FROM "StatusHistory" sh2 
+            WHERE sh2.entity_id = d.delivery_id AND sh2.entity_type = 'delivery'
+          )
+      ),
+      on_time_stats AS (
+        SELECT 
+          COUNT(*) as total_completed,
+          COUNT(CASE WHEN d.actual_arrival <= d.estimated_arrival THEN 1 END) as on_time_deliveries
+        FROM "Delivery" d
+        LEFT JOIN "StatusHistory" sh ON d.delivery_id = sh.entity_id AND sh.entity_type = 'delivery'
+        WHERE sh.status = 'delivered' 
+          AND d.actual_arrival IS NOT NULL 
+          AND d.estimated_arrival IS NOT NULL
+          AND d.created_at >= NOW() - INTERVAL '30 days'
+          AND sh.updated_at = (
+            SELECT MAX(sh2.updated_at) 
+            FROM "StatusHistory" sh2 
+            WHERE sh2.entity_id = d.delivery_id AND sh2.entity_type = 'delivery'
+          )
+      ),
+      delivery_boy_stats AS (
+        SELECT 
+          COUNT(*) as total_delivery_boys,
+          COUNT(CASE WHEN db.availability_status = 'available' THEN 1 END) as available_delivery_boys,
+          COUNT(CASE WHEN db.availability_status = 'busy' THEN 1 END) as busy_delivery_boys
+        FROM "DeliveryBoy" db
+      )
       SELECT 
-        COUNT(CASE WHEN availability_status = 'available' THEN 1 END) as available_delivery_boys,
-        COUNT(CASE WHEN availability_status = 'busy' THEN 1 END) as busy_delivery_boys
-      FROM "DeliveryBoy"
+        ds.total_deliveries,
+        ds.active_deliveries,
+        ds.completed_today,
+        ds.completed_yesterday,
+        ds.pending_assignments,
+        CASE 
+          WHEN ots.total_completed > 0 
+          THEN ROUND((ots.on_time_deliveries::DECIMAL / ots.total_completed * 100), 1)
+          ELSE 0 
+        END as on_time_rate,
+        dbs.available_delivery_boys,
+        dbs.busy_delivery_boys
+      FROM daily_stats ds
+      CROSS JOIN on_time_stats ots
+      CROSS JOIN delivery_boy_stats dbs
     `;
 
-    // Get pending assignments (orders without delivery assignment)
-    const pendingAssignmentsQuery = `
-      SELECT COUNT(*) as pending_assignments
-      FROM "Order" o
-      LEFT JOIN "Delivery" d ON o.order_id = d.order_id
-      JOIN "StatusHistory" sh ON o.order_id = sh.entity_id
-      WHERE d.delivery_id IS NULL
-        AND sh.entity_type = 'order'
-        AND sh.status NOT IN ('cancelled', 'delivered')
-        AND sh.updated_at = (
-          SELECT MAX(updated_at) 
-          FROM "StatusHistory" 
-          WHERE entity_id = o.order_id AND entity_type = 'order'
-        )
-    `;
+    const result = await client.query(statsQuery, [today, yesterday]);
+    
+    if (result.rows.length === 0) {
+      client.release();
+      return res.json({
+        totalDeliveries: 0,
+        activeDeliveries: 0,
+        completedToday: 0,
+        onTimeRate: 0,
+        availableDeliveryBoys: 0,
+        busyDeliveryBoys: 0,
+        pendingAssignments: 0
+      });
+    }
 
-    const results = await Promise.all([
-      client.query(totalDeliveriesQuery),
-      client.query(activeDeliveriesQuery),
-      client.query(completedTodayQuery),
-      client.query(onTimeRateQuery),
-      client.query(deliveryBoysQuery),
-      client.query(pendingAssignmentsQuery)
-    ]);
-
-    const stats = {
-      totalDeliveries: parseInt(results[0].rows[0].total_deliveries) || 0,
-      activeDeliveries: parseInt(results[1].rows[0].active_deliveries) || 0,
-      completedToday: parseInt(results[2].rows[0].completed_today) || 0,
-      onTimeRate: parseFloat(results[3].rows[0].on_time_rate) || 0,
-      availableDeliveryBoys: parseInt(results[4].rows[0].available_delivery_boys) || 0,
-      busyDeliveryBoys: parseInt(results[4].rows[0].busy_delivery_boys) || 0,
-      pendingAssignments: parseInt(results[5].rows[0].pending_assignments) || 0
-    };
-
+    const stats = result.rows[0];
+    
+    console.log('Delivery overview stats fetched successfully:', stats);
+    
     client.release();
-    res.json(stats);
+    res.json({
+      totalDeliveries: parseInt(stats.total_deliveries) || 0,
+      activeDeliveries: parseInt(stats.active_deliveries) || 0,
+      completedToday: parseInt(stats.completed_today) || 0,
+      onTimeRate: parseFloat(stats.on_time_rate) || 0,
+      availableDeliveryBoys: parseInt(stats.available_delivery_boys) || 0,
+      busyDeliveryBoys: parseInt(stats.busy_delivery_boys) || 0,
+      pendingAssignments: parseInt(stats.pending_assignments) || 0
+    });
+
   } catch (error) {
-    console.error('Error fetching delivery stats:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error fetching delivery overview stats:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch delivery statistics',
+      details: error.message 
+    });
   }
 };
 
 // Get recent orders with delivery information
 export const getRecentOrders = async (req, res) => {
   try {
+    console.log('Fetching recent orders...');
+    
     const { searchTerm, filterRegion, limit = 10 } = req.query;
     const client = await pool.connect();
+    
+    let whereConditions = ['d.created_at >= NOW() - INTERVAL \'7 days\''];
+    let queryParams = [];
+    let paramIndex = 1;
 
-    let query = `
+    // Add search term filter
+    if (searchTerm && searchTerm.trim()) {
+      whereConditions.push(`(
+        o.order_id::TEXT ILIKE $${paramIndex} OR 
+        CONCAT(u.first_name, ' ', u.last_name) ILIKE $${paramIndex} OR 
+        a.address ILIKE $${paramIndex}
+      )`);
+      queryParams.push(`%${searchTerm.trim()}%`);
+      paramIndex++;
+    }
+
+    // Add region filter
+    if (filterRegion && filterRegion.trim()) {
+      whereConditions.push(`dr.name ILIKE $${paramIndex}`);
+      queryParams.push(`%${filterRegion.trim()}%`);
+      paramIndex++;
+    }
+
+    // Add limit parameter
+    queryParams.push(parseInt(limit));
+
+    const recentOrdersQuery = `
       SELECT 
-        o.order_id,
+        d.delivery_id,
+        d.order_id,
         CONCAT(u.first_name, ' ', u.last_name) as customer_name,
         a.address,
         sh.status,
-        CASE 
-          WHEN d.delivery_boy_id IS NOT NULL THEN CONCAT(db_user.first_name, ' ', db_user.last_name)
-          ELSE 'Unassigned'
-        END as delivery_boy,
-        CASE 
-          WHEN d.estimated_arrival IS NOT NULL THEN 
-            EXTRACT(EPOCH FROM (d.estimated_arrival - NOW())) / 60
-          ELSE NULL
-        END as estimated_minutes,
         CASE 
           WHEN o.total_amount > 1000 THEN 'high'
           WHEN o.total_amount > 500 THEN 'normal'
           ELSE 'low'
         END as priority,
-        r.name as region_name
-      FROM "Order" o
-      JOIN "User" u ON o.user_id = u.user_id
-      LEFT JOIN "Delivery" d ON o.order_id = d.order_id
+        d.estimated_arrival as expected_delivery_time,
+        d.created_at,
+        dr.name as region_name,
+        CONCAT(db_user.first_name, ' ', db_user.last_name) as delivery_boy_name,
+        CASE 
+          WHEN d.estimated_arrival IS NOT NULL 
+          THEN EXTRACT(EPOCH FROM (d.estimated_arrival - NOW())) / 3600
+          ELSE NULL 
+        END as hours_until_delivery
+      FROM "Delivery" d
+      LEFT JOIN "Order" o ON d.order_id = o.order_id
+      LEFT JOIN "User" u ON o.user_id = u.user_id
       LEFT JOIN "Address" a ON d.address_id = a.address_id
       LEFT JOIN "Region" r ON a.region_id = r.region_id
+      LEFT JOIN "DeliveryRegion" dr ON r.delivery_region_id = dr.delivery_region_id
       LEFT JOIN "DeliveryBoy" db ON d.delivery_boy_id = db.user_id
       LEFT JOIN "User" db_user ON db.user_id = db_user.user_id
-      JOIN "StatusHistory" sh ON o.order_id = sh.entity_id
-      WHERE sh.entity_type = 'order'
-        AND sh.updated_at = (
-          SELECT MAX(updated_at) 
-          FROM "StatusHistory" 
-          WHERE entity_id = o.order_id AND entity_type = 'order'
-        )
+      LEFT JOIN "StatusHistory" sh ON d.delivery_id = sh.entity_id AND sh.entity_type = 'delivery'
+      WHERE ${whereConditions.join(' AND ')}
         AND sh.status NOT IN ('delivered', 'cancelled')
+        AND sh.updated_at = (
+          SELECT MAX(sh2.updated_at) 
+          FROM "StatusHistory" sh2 
+          WHERE sh2.entity_id = d.delivery_id AND sh2.entity_type = 'delivery'
+        )
+      ORDER BY d.created_at DESC, 
+               CASE 
+                 WHEN o.total_amount > 1000 THEN 1 
+                 WHEN o.total_amount > 500 THEN 2 
+                 ELSE 3 
+               END
+      LIMIT $${paramIndex}
     `;
 
-    const queryParams = [];
-    let paramIndex = 1;
+    const result = await client.query(recentOrdersQuery, queryParams);
 
-    if (searchTerm) {
-      query += ` AND (
-        CONCAT(u.first_name, ' ', u.last_name) ILIKE $${paramIndex}
-        OR o.order_id::text ILIKE $${paramIndex}
-        OR a.address ILIKE $${paramIndex}
-      )`;
-      queryParams.push(`%${searchTerm}%`);
-      paramIndex++;
-    }
-
-    if (filterRegion) {
-      query += ` AND r.name ILIKE $${paramIndex}`;
-      queryParams.push(`%${filterRegion}%`);
-      paramIndex++;
-    }
-
-    query += ` ORDER BY o.created_at DESC LIMIT $${paramIndex}`;
-    queryParams.push(limit);
-
-    const result = await client.query(query, queryParams);
-
-    const orders = result.rows.map(row => ({
-      orderId: `ORD-${row.order_id}`,
-      customerName: row.customer_name || 'Unknown Customer',
-      address: row.address || 'Address not specified',
-      status: mapOrderStatus(row.status),
-      deliveryBoy: row.delivery_boy || 'Unassigned',
-      estimatedTime: row.estimated_minutes ? `${Math.round(row.estimated_minutes)} mins` : 'N/A',
-      priority: row.priority,
-      region: row.region_name
+    const orders = result.rows.map(order => ({
+      orderId: order.order_id,
+      deliveryId: order.delivery_id,
+      customerName: order.customer_name || 'Unknown Customer',
+      address: order.address || 'Address not provided',
+      status: order.status || 'pending',
+      priority: order.priority || 'normal',
+      regionName: order.region_name,
+      deliveryBoyName: order.delivery_boy_name,
+      expectedDeliveryTime: order.expected_delivery_time,
+      createdAt: order.created_at,
+      estimatedTime: order.hours_until_delivery 
+        ? `${Math.abs(Math.round(order.hours_until_delivery))}h ${order.hours_until_delivery < 0 ? 'overdue' : 'remaining'}`
+        : 'Time not set'
     }));
 
+    console.log(`Recent orders fetched successfully: ${orders.length} orders`);
+    
     client.release();
     res.json(orders);
+
   } catch (error) {
     console.error('Error fetching recent orders:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ 
+      error: 'Failed to fetch recent orders',
+      details: error.message 
+    });
   }
 };
 
-// Helper function to map database status to frontend status
-const mapOrderStatus = (dbStatus) => {
-  const statusMap = {
-    'order_placed': 'pending',
-    'confirmed': 'assigned',
-    'preparing': 'assigned',
-    'ready_for_delivery': 'assigned',
-    'out_for_delivery': 'in_transit',
-    'delivered': 'delivered',
-    'cancelled': 'cancelled'
-  };
-  return statusMap[dbStatus] || 'pending';
-};

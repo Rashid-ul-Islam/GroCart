@@ -50,9 +50,9 @@ router.get("/assigned-deliveries-dashboard/:deliveryId", getAssignedDeliveriesFo
 router.get("/dashboard-summary/:delivery_boy_id", getDeliveryDashboardSummary);
 router.get("/schedule/:delivery_boy_id", getDeliverySchedule);
 router.get("/search/:delivery_boy_id", searchDeliveries);
-router.get("/weeklyPerformance/:deliveryId", getWeeklyPerformance);
-router.get("/realTimePerformance/:deliveryId", getRealTimePerformanceMetrics);
-router.get("/performanceByPeriod/:deliveryId", getPerformanceByPeriod);
+router.get("/weeklyPerformance/:delivery_boy_id", getWeeklyPerformance);
+router.get("/realTimePerformance/:delivery_boy_id", getRealTimePerformanceMetrics);
+router.get("/performanceByPeriod/:delivery_boy_id", getPerformanceByPeriod);
 
 // Utility routes
 router.post("/fixDeliveryStatusHistory", fixDeliveryStatusHistory);
