@@ -19,6 +19,7 @@ import {
 import { useAuth } from "../../context/AuthContext.jsx";
 import { WarehouseInventory } from "./WarehouseInventory.jsx";
 import CustomerRatingModal from "./CustomerRatingModal.jsx";
+import DeliveryTimer from "./DeliveryTimer.jsx";
 
 const getStatusColor = (status) => {
   switch (status) {
@@ -532,6 +533,16 @@ export const AssignedDeliveries = () => {
                 </div>
               </div>
 
+              {/* Delivery Timer */}
+              {(delivery.currentStatus === "assigned" || delivery.currentStatus === "left_warehouse" || delivery.currentStatus === "in_transit") && (
+                <div className="flex justify-center mb-4">
+                  <DeliveryTimer 
+                    estimatedTime={delivery.estimatedDateTime || delivery.estimatedTime} 
+                    status={delivery.currentStatus || "assigned"}
+                  />
+                </div>
+              )}
+
               <div className="bg-gray-50 rounded-xl p-4 mb-4 space-y-3">
                 <p className="text-gray-700 font-medium">
                   <strong className="text-gray-800">📍 Address:</strong>{" "}
@@ -544,7 +555,18 @@ export const AssignedDeliveries = () => {
                 <div className="flex items-center gap-2 text-gray-700 font-medium">
                   <Clock className="h-5 w-5 text-orange-600" />
                   <span>
-                    <strong>⏰ ETA:</strong> {delivery.estimatedTime}
+                    <strong>⏰ ETA:</strong> {
+                      delivery.estimatedDateTime 
+                        ? new Date(delivery.estimatedDateTime).toLocaleString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
+                          })
+                        : delivery.estimatedTime || 'TBD'
+                    }
                   </span>
                 </div>
                 {delivery.totalAmount && (
