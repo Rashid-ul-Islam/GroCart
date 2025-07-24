@@ -32,7 +32,31 @@ export const getProductsByCategory = async (req, res) => {
 
     const { rows } = await pool.query(query, [categoryId]);
 
-    res.status(200).json(rows);
+    // Transform the data to match frontend expectations (consistent with favorites API)
+    const transformedRows = rows.map(row => ({
+      id: row.product_id,
+      product_id: row.product_id,
+      name: row.product_name,
+      product_name: row.product_name,
+      price: row.price,
+      quantity: row.quantity,
+      unit_measure: row.unit_measure,
+      unit: row.unit_measure,
+      origin: row.origin,
+      description: row.description,
+      is_refundable: row.is_refundable,
+      is_available: row.is_available,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      category_name: row.category_name,
+      rating: parseFloat(row.avg_rating) || 0,
+      reviews: parseInt(row.review_count) || 0,
+      // Keep original fields for backward compatibility
+      avg_rating: parseFloat(row.avg_rating) || 0,
+      review_count: parseInt(row.review_count) || 0
+    }));
+
+    res.status(200).json(transformedRows);
   } catch (error) {
     console.error("Error fetching products by category:", error);
     res.status(500).json({ message: "Failed to fetch products by category" });

@@ -304,9 +304,7 @@ export const DeliveryOverview = ({ searchTerm, filterRegion }) => {
         {/* Recent Orders */}
         <div className="bg-white rounded-2xl shadow-xl p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">
-              Recent Orders
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-800">Recent Orders</h2>
             <div className="bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-full text-sm font-semibold">
               {stats.pendingAssignments} pending
             </div>

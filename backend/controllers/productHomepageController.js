@@ -144,9 +144,17 @@ export const getProductsForHomepage = async (req, res) => {
 
     const fallbackProducts = await getProductsWithDetails(fallbackQuery);
 
-    // Prepare response data - remove created_at from final response
+    // Prepare response data - remove created_at and transform review data for consistency
     const cleanupProducts = (products) =>
-      products.map(({ created_at, ...product }) => product);
+      products.map(({ created_at, avg_rating, review_count, ...product }) => ({
+        ...product,
+        // Transform review data to match ProductCard expectations
+        rating: parseFloat(avg_rating) || 0,
+        reviews: parseInt(review_count) || 0,
+        // Keep original fields for backward compatibility
+        avg_rating: parseFloat(avg_rating) || 0,
+        review_count: parseInt(review_count) || 0
+      }));
 
     const homepageData = {
       mostPopular: cleanupProducts(mostPopular.length > 0 ? mostPopular : fallbackProducts.slice(0, 8)),
@@ -345,6 +353,17 @@ export const getProductsBySection = async (req, res) => {
       getProductsWithDetails(countQuery, countParams)
     ]);
 
+    // Transform products for consistency
+    const transformedProducts = products.map(({ avg_rating, review_count, ...product }) => ({
+      ...product,
+      // Transform review data to match ProductCard expectations
+      rating: parseFloat(avg_rating) || 0,
+      reviews: parseInt(review_count) || 0,
+      // Keep original fields for backward compatibility
+      avg_rating: parseFloat(avg_rating) || 0,
+      review_count: parseInt(review_count) || 0
+    }));
+
     const total = parseInt(countResult[0]?.total || 0);
     const totalPages = Math.ceil(total / limit);
 
@@ -352,7 +371,7 @@ export const getProductsBySection = async (req, res) => {
       success: true,
       message: 'Products fetched successfully',
       data: {
-        products,
+        products: transformedProducts,
         pagination: {
           currentPage: parseInt(page),
           totalPages,
