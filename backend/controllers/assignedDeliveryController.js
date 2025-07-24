@@ -241,7 +241,7 @@ export const markDeliveryCompleted = async (req, res) => {
     // Update order status using consolidated StatusHistory table
     const updateOrderStatusQuery = `
       INSERT INTO "StatusHistory" (entity_type, entity_id, status, updated_at, updated_by)
-      VALUES ('order', $1, 'delivered', CURRENT_TIMESTAMP, $2);
+      VALUES ('order', $1, 'delivery_completed', CURRENT_TIMESTAMP, $2);
     `;
 
     await client.query(updateOrderStatusQuery, [order_id, delivery_boy_id]);

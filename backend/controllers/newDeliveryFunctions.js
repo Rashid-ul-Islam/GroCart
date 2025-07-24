@@ -257,17 +257,16 @@ export const markDeliveryCompletedNew = async (req, res) => {
             }
         }
 
-        // Update to "delivery_completed" status
-        await updateOrderStatusHistory(client, orderId, 'delivery_completed', delivery_boy_id);
+        // For cash on delivery, atransition to payment_received
+        await updateOrderStatusHistory(client, orderId, 'payment_received', delivery_boy_id);
 
         // Update delivery table
         await client.query(
             'UPDATE "Delivery" SET actual_arrival = NOW(), updated_at = NOW() WHERE delivery_id = $1',
             [delivery_id]
         );
-
-        // For cash on delivery, automatically transition to payment_received
-        await updateOrderStatusHistory(client, orderId, 'payment_received', delivery_boy_id);
+        // Update order status to delivery_completed
+        await updateOrderStatusHistory(client, orderId, 'delivery_completed', delivery_boy_id);
 
         await client.query('COMMIT');
 

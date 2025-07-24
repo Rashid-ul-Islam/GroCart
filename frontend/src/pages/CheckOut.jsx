@@ -870,7 +870,7 @@ const CheckoutPage = () => {
             <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
               <span className="text-white text-xs font-bold">P</span>
             </div>
-            <span className="font-semibold text-gray-900">PayPal</span>
+            <span className="font-semibold text-gray-900">bKash</span>
           </div>
         </motion.div>
 
