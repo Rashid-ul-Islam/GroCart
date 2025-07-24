@@ -255,7 +255,7 @@ const ReturnRequests = () => {
                   placeholder="Search by product, order ID, or customer..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-80"
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-80 bg-white"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -263,7 +263,7 @@ const ReturnRequests = () => {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                 >
                   <option value="all">All Status</option>
                   <option value="Requested">Pending</option>
@@ -476,7 +476,7 @@ const ReturnRequests = () => {
                       max={selectedRequest.price}
                       value={refundAmount}
                       onChange={(e) => setRefundAmount(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
                       placeholder="Enter refund amount"
                     />
                     <p className="text-xs text-gray-500 mt-1">
@@ -494,7 +494,7 @@ const ReturnRequests = () => {
                       value={rejectReason}
                       onChange={(e) => setRejectReason(e.target.value)}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white"
                       placeholder="Please provide a reason for rejecting this return request..."
                     />
                   </div>

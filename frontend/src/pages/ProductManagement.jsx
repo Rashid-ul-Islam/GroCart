@@ -144,7 +144,7 @@ export default function ProductManagement() {
                 name="categoryId"
                 value={formData.categoryId}
                 onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 ${
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-white ${
                   errors.categoryId ? "border-red-500" : "border-gray-300"
                 }`}
               >
@@ -211,7 +211,7 @@ export default function ProductManagement() {
                 name="unitMeasure"
                 value={formData.unitMeasure}
                 onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 ${
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-white ${
                   errors.unitMeasure ? "border-red-500" : "border-gray-300"
                 }`}
               >
@@ -254,7 +254,7 @@ export default function ProductManagement() {
                 onChange={handleInputChange}
                 placeholder="Product description (optional)"
                 rows="3"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
               />
             </div>
 
@@ -268,7 +268,7 @@ export default function ProductManagement() {
                 name="isRefundable"
                 value={formData.isRefundable}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
               >
                 <option value="true">Yes</option>
                 <option value="false">No</option>
@@ -285,7 +285,7 @@ export default function ProductManagement() {
                 name="isAvailable"
                 value={formData.isAvailable}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
               >
                 <option value="true">Yes</option>
                 <option value="false">No</option>

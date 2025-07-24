@@ -188,7 +188,7 @@ export default function Wallet() {
                   value={addBalanceAmount}
                   onChange={(e) => setAddBalanceAmount(e.target.value)}
                   placeholder="Enter amount to add"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
                   required
                 />
               </div>

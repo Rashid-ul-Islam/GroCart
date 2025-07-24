@@ -433,7 +433,7 @@ const EnhancedSearchResults = () => {
                   onChange={(e) =>
                     handleFilterChange("category", e.target.value)
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white"
                 >
                   <option value="">All Categories</option>
                   <option value="1">Fruits</option>
@@ -456,7 +456,7 @@ const EnhancedSearchResults = () => {
                   onChange={(e) =>
                     handleFilterChange("minPrice", e.target.value)
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white"
                 />
               </div>
 
@@ -471,7 +471,7 @@ const EnhancedSearchResults = () => {
                   onChange={(e) =>
                     handleFilterChange("maxPrice", e.target.value)
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white"
                 />
               </div>
 
@@ -483,7 +483,7 @@ const EnhancedSearchResults = () => {
                 <select
                   value={filters.rating}
                   onChange={(e) => handleFilterChange("rating", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white"
                 >
                   <option value="">Any Rating</option>
                   <option value="4">4+ Stars</option>

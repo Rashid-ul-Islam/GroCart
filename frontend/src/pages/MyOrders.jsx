@@ -434,7 +434,7 @@ function DeliveryReviewModal({ order, onClose }) {
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
                 placeholder="Share your delivery experience..."
               />
             </div>
@@ -554,7 +554,7 @@ function ProductReviewModal({ order, onClose }) {
                   );
                   setSelectedProduct(product);
                 }}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white"
               >
                 <option value="">Choose a product...</option>
                 {order.items?.map((item) => (
@@ -595,7 +595,7 @@ function ProductReviewModal({ order, onClose }) {
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white"
                 placeholder="Tell us about this product..."
               />
             </div>
@@ -821,7 +821,7 @@ function ReturnProductsModal({ order, onClose }) {
                   onChange={(e) => setReason(e.target.value)}
                   rows={3}
                   required
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 bg-white"
                   placeholder="Please explain why you want to return these items..."
                 />
               </div>
@@ -899,7 +899,7 @@ const CancelOrderModal = React.memo(
                 onChange={handleReasonChange}
                 onKeyDown={handleKeyDown}
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 bg-white"
                 placeholder="Please tell us why you want to cancel this order..."
                 required
                 autoFocus
