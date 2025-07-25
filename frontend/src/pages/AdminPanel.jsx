@@ -431,6 +431,12 @@ export default function AdminPanel() {
                 Coupons
               </Button>
             </Link>
+            <Link to="/admin/stats">
+              <Button className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3">
+                <BarChart3 className="w-6 h-6" />
+                Stats
+              </Button>
+            </Link>
             {/* <Link to="/admin/approvals">
               <Button className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-3">
                 <CheckCircle className="w-6 h-6" />

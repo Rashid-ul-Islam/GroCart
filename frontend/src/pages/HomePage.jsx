@@ -63,103 +63,48 @@ const ProductSection = ({
   onShowLoginModal,
   sectionKey,
 }) => {
+  const PRODUCTS_PER_BATCH = 5;
   const [isAnimating, setIsAnimating] = useState(false);
-  const [currentProducts, setCurrentProducts] = useState(products);
-  const [expandedProducts, setExpandedProducts] = useState([]);
+  const [currentBatch, setCurrentBatch] = useState(1);
   const [showingMore, setShowingMore] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 1,
-    hasNextPage: false,
-    hasPrevPage: false,
-  });
+  const [allProducts, setAllProducts] = useState([]);
 
-  // Update current products when props change
+  // Initialize products when props change
   useEffect(() => {
-    if (!showingMore) {
-      setCurrentProducts(products);
+    if (products && products.length > 0) {
+      setAllProducts(products);
+      setCurrentBatch(1);
+      setShowingMore(false);
     }
-  }, [products, showingMore]);
+  }, [products]);
 
-  const fetchMoreProducts = async () => {
-    setLoadingMore(true);
-    try {
-      const response = await fetch(
-        `http://localhost:3000/api/home/section/${sectionKey}?page=${
-          pagination.currentPage + 1
-        }&limit=20`
-      );
+  // Calculate products to show for current batch (slice of 5 products)
+  const startIndex = (currentBatch - 1) * PRODUCTS_PER_BATCH;
+  const endIndex = startIndex + PRODUCTS_PER_BATCH;
+  const currentProducts = allProducts.slice(startIndex, endIndex);
+  const hasMoreProducts = endIndex < allProducts.length;
+  const hasPreviousProducts = currentBatch > 1;
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        const transformedProducts = (data.data?.products || []).map(
-          transformProduct
-        );
-        setExpandedProducts(transformedProducts);
-        setPagination(data.data?.pagination || pagination);
-        return transformedProducts;
-      }
-    } catch (error) {
-      console.error("Error fetching more products:", error);
-      return [];
-    } finally {
-      setLoadingMore(false);
+  const handleViewMore = () => {
+    if (hasMoreProducts) {
+      setIsAnimating(true);
+      setTimeout(() => {
+        setCurrentBatch((prev) => prev + 1);
+        setShowingMore(true);
+        setIsAnimating(false);
+      }, 300);
     }
   };
 
-  const transformProduct = (apiProduct) => ({
-    id: apiProduct.product_id,
-    name: apiProduct.product_name || apiProduct.name,
-    price: `৳${apiProduct.price}`,
-    unit: apiProduct.unit_measure || "kg",
-    origin: apiProduct.origin || "Local",
-    description: apiProduct.description,
-    image: apiProduct.image_url || "https://via.placeholder.com/300x200",
-    isAvailable: apiProduct.is_available,
-    isRefundable: apiProduct.is_refundable,
-    // Handle both transformed and raw database fields
-    rating: parseFloat(apiProduct.rating || apiProduct.avg_rating) || 4,
-    reviews: parseInt(apiProduct.reviews || apiProduct.review_count) || 0,
-    category: apiProduct.category_name,
-  });
-
-  const handleViewMore = async () => {
-    if (showingMore) {
-      // If already showing more, go back to original with slide animation
-      setIsAnimating(true);
-
-      // First slide out current products
-      setTimeout(() => {
-        setCurrentProducts(products);
+  const handleShowLess = () => {
+    setIsAnimating(true);
+    setTimeout(() => {
+      setCurrentBatch((prev) => prev - 1);
+      if (currentBatch - 1 === 1) {
         setShowingMore(false);
-
-        // Then slide in original products
-        setTimeout(() => {
-          setIsAnimating(false);
-        }, 50);
-      }, 300);
-    } else {
-      // Fetch and show more products with slide animation
-      setIsAnimating(true);
-      const moreProducts = await fetchMoreProducts();
-
-      // Slide out current products
-      setTimeout(() => {
-        setCurrentProducts(moreProducts);
-        setShowingMore(true);
-
-        // Slide in new products
-        setTimeout(() => {
-          setIsAnimating(false);
-        }, 50);
-      }, 300);
-    }
+      }
+      setIsAnimating(false);
+    }, 300);
   };
 
   return (
@@ -170,33 +115,26 @@ const ProductSection = ({
           <div className="w-20 h-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
         </div>
         <div className="flex items-center space-x-4">
-          {showingMore && (
+          {hasPreviousProducts && (
             <button
-              onClick={handleViewMore}
-              disabled={isAnimating || loadingMore}
+              onClick={handleShowLess}
+              disabled={isAnimating}
               className="flex items-center space-x-2 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-6 py-3 rounded-full font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-5 h-5" />
-              <span>Show Less</span>
+              <span>Previous</span>
             </button>
           )}
-          <button
-            onClick={handleViewMore}
-            disabled={isAnimating || loadingMore}
-            className="flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 rounded-full font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loadingMore ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Loading...</span>
-              </>
-            ) : (
-              <>
-                <span>{showingMore ? "Load More" : "View More"}</span>
-                <ArrowRight className="w-5 h-5" />
-              </>
-            )}
-          </button>
+          {hasMoreProducts && (
+            <button
+              onClick={handleViewMore}
+              disabled={isAnimating}
+              className="flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 rounded-full font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span>View More</span>
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -210,7 +148,7 @@ const ProductSection = ({
           }`}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-            {loading || loadingMore
+            {loading
               ? [...Array(5)].map((_, index) => (
                   <ProductCardSkeleton key={index} />
                 ))
@@ -237,7 +175,7 @@ const ProductSection = ({
             }}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-              {(showingMore ? products : expandedProducts).map((product) => (
+              {currentProducts.map((product) => (
                 <ProductCard
                   key={product.id}
                   product={product}
@@ -252,7 +190,7 @@ const ProductSection = ({
       </div>
 
       {/* Inject CSS for animations */}
-      <style jsx>{slideAnimationCSS}</style>
+      <style>{slideAnimationCSS}</style>
     </div>
   );
 };
@@ -393,18 +331,18 @@ const HomePage = () => {
           ).map(transformProduct);
 
           transformedData = {
-            mostPopular: allProducts.slice(0, 5),
+            mostPopular: allProducts.slice(0, 20),
             freshFromFarm: allProducts
               .filter(
                 (p) =>
                   p.category && p.category.toLowerCase().includes("vegetable")
               )
-              .slice(0, 5),
+              .slice(0, 20),
             trendingNow: allProducts
               .filter(
                 (p) => p.category && p.category.toLowerCase().includes("fruit")
               )
-              .slice(0, 5),
+              .slice(0, 20),
             dairyAndMeatProducts: allProducts
               .filter(
                 (p) =>
@@ -413,7 +351,7 @@ const HomePage = () => {
                     p.category.toLowerCase().includes("milk") ||
                     p.category.toLowerCase().includes("cheese"))
               )
-              .slice(0, 5),
+              .slice(0, 20),
             dealsCantMiss: allProducts
               .filter(
                 (p) =>
@@ -423,7 +361,7 @@ const HomePage = () => {
                     p.category.toLowerCase().includes("beef") ||
                     p.category.toLowerCase().includes("fish"))
               )
-              .slice(0, 5),
+              .slice(0, 20),
             beverages: allProducts
               .filter(
                 (p) =>
@@ -432,13 +370,13 @@ const HomePage = () => {
                     p.category.toLowerCase().includes("drink") ||
                     p.category.toLowerCase().includes("juice"))
               )
-              .slice(0, 5),
+              .slice(0, 20),
           };
 
           // Fill empty categories with random products
           Object.keys(transformedData).forEach((key) => {
             if (key !== "mostPopular" && transformedData[key].length === 0) {
-              transformedData[key] = allProducts.slice(0, 5);
+              transformedData[key] = allProducts.slice(0, 20);
             }
           });
         }

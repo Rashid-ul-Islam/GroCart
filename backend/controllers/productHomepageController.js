@@ -41,7 +41,6 @@ export const getProductsForHomepage = async (req, res) => {
     const mostPopularQuery = `
       ${baseQuery}
       ORDER BY COALESCE(AVG(r.rating), 4.0) DESC, COALESCE(COUNT(r.review_id), 0) DESC
-      LIMIT 8
     `;
 
     // Get fresh vegetables (Fresh From Farm section)
@@ -49,7 +48,6 @@ export const getProductsForHomepage = async (req, res) => {
       ${baseQuery}
       HAVING LOWER(c.name) LIKE '%vegetable%' OR LOWER(c.name) LIKE '%fresh%' OR LOWER(c.name) LIKE '%organic%'
       ORDER BY p.created_at DESC
-      LIMIT 8
     `;
 
     // Get fruits (Trending Now section) - using a subquery approach for randomization
@@ -72,7 +70,6 @@ export const getProductsForHomepage = async (req, res) => {
         HAVING LOWER(c.name) LIKE '%fruit%' OR LOWER(c.name) LIKE '%berry%'
       ) AS fruits_subquery
       ORDER BY RANDOM()
-      LIMIT 8
     `;
 
     // Get dairy and milk products
@@ -81,7 +78,6 @@ export const getProductsForHomepage = async (req, res) => {
       HAVING LOWER(c.name) LIKE '%dairy%' OR LOWER(c.name) LIKE '%milk%' OR 
              LOWER(c.name) LIKE '%cheese%' OR LOWER(c.name) LIKE '%yogurt%'
       ORDER BY price ASC
-      LIMIT 8
     `;
 
     // Get meat products for deals section
@@ -91,7 +87,6 @@ export const getProductsForHomepage = async (req, res) => {
              LOWER(c.name) LIKE '%beef%' OR LOWER(c.name) LIKE '%fish%' OR
              LOWER(c.name) LIKE '%seafood%'
       ORDER BY price DESC
-      LIMIT 8
     `;
 
     // Get beverages
@@ -100,7 +95,6 @@ export const getProductsForHomepage = async (req, res) => {
       HAVING LOWER(c.name) LIKE '%beverage%' OR LOWER(c.name) LIKE '%drink%' OR 
              LOWER(c.name) LIKE '%juice%' OR LOWER(c.name) LIKE '%water%'
       ORDER BY COALESCE(AVG(r.rating), 4.0) DESC
-      LIMIT 8
     `;
 
     // Execute all queries
@@ -139,7 +133,6 @@ export const getProductsForHomepage = async (req, res) => {
         ${baseQuery}
       ) AS fallback_subquery
       ORDER BY RANDOM()
-      LIMIT 8
     `;
 
     const fallbackProducts = await getProductsWithDetails(fallbackQuery);
@@ -157,12 +150,12 @@ export const getProductsForHomepage = async (req, res) => {
       }));
 
     const homepageData = {
-      mostPopular: cleanupProducts(mostPopular.length > 0 ? mostPopular : fallbackProducts.slice(0, 8)),
-      freshFromFarm: cleanupProducts(freshFromFarm.length > 0 ? freshFromFarm : fallbackProducts.slice(0, 8)),
-      trendingNow: cleanupProducts(trendingNow.length > 0 ? trendingNow : fallbackProducts.slice(0, 8)),
-      dairyAndMeatProducts: cleanupProducts(dairyAndMeatProducts.length > 0 ? dairyAndMeatProducts : fallbackProducts.slice(0, 8)),
-      dealsCantMiss: cleanupProducts(dealsCantMiss.length > 0 ? dealsCantMiss : fallbackProducts.slice(0, 8)),
-      beverages: cleanupProducts(beverages.length > 0 ? beverages : fallbackProducts.slice(0, 8))
+      mostPopular: cleanupProducts(mostPopular.length > 0 ? mostPopular : fallbackProducts.slice(0, 20)),
+      freshFromFarm: cleanupProducts(freshFromFarm.length > 0 ? freshFromFarm : fallbackProducts.slice(0, 20)),
+      trendingNow: cleanupProducts(trendingNow.length > 0 ? trendingNow : fallbackProducts.slice(0, 20)),
+      dairyAndMeatProducts: cleanupProducts(dairyAndMeatProducts.length > 0 ? dairyAndMeatProducts : fallbackProducts.slice(0, 20)),
+      dealsCantMiss: cleanupProducts(dealsCantMiss.length > 0 ? dealsCantMiss : fallbackProducts.slice(0, 20)),
+      beverages: cleanupProducts(beverages.length > 0 ? beverages : fallbackProducts.slice(0, 20))
     };
 
     res.status(200).json({

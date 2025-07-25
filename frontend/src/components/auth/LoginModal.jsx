@@ -227,25 +227,6 @@ const LoginModal = ({ isOpen, onClose, onLoginSuccess, currentPath }) => {
               </div>
             </div>
 
-            {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between mb-6">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 text-green-600 bg-white border-gray-300 rounded focus:ring-green-500 focus:ring-2"
-                  disabled={isLoading}
-                />
-                <span className="ml-2 text-sm text-gray-600">Remember me</span>
-              </label>
-              <button
-                type="button"
-                className="text-sm text-green-600 hover:text-green-800 font-medium transition-colors duration-200"
-                disabled={isLoading}
-              >
-                Forgot password?
-              </button>
-            </div>
-
             {/* Submit Button */}
             <button
               type="submit"
