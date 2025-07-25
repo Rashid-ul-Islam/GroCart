@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import useNotification from "../hooks/useNotification";
+import Notification from "../components/ui/Notification";
 import {
   ArrowLeft,
   Save,
@@ -20,6 +22,7 @@ import { Input } from "../components/ui/input.jsx";
 import { Link } from "react-router-dom";
 
 export default function AddProduct() {
+  const { notification, showSuccess, showError, showWarning, hideNotification } = useNotification();
   const [formData, setFormData] = useState({
     productName: "",
     categoryId: "",
@@ -287,13 +290,14 @@ export default function AddProduct() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        alert(
+        showError(
+          "Product Addition Failed",
           `Failed to add product: ${errorData.message || response.statusText}`
         );
         return;
       }
 
-      alert("Product added successfully!");
+      showSuccess("Product Added Successfully!", "Your product has been added to the catalog successfully!");
       setFormData({
         productName: "",
         categoryId: "",
@@ -310,7 +314,7 @@ export default function AddProduct() {
       setErrors({});
       resetCategorySelection();
     } catch (error) {
-      alert(`Error: ${error.message}`);
+      showError("Network Error", `Error: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -894,6 +898,15 @@ export default function AddProduct() {
             </div>
           </div>
         </form>
+        
+        {/* Notification Component */}
+        <Notification
+          show={notification.show}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+          onClose={hideNotification}
+        />
       </div>
     </div>
   );

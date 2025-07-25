@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import useNotification from "../hooks/useNotification";
+import Notification from "../components/ui/Notification";
 import {
   CheckCircle,
   XCircle,
@@ -17,6 +19,7 @@ import {
 import { Button } from "../components/ui/button.jsx";
 
 export default function Approvals() {
+  const { notification, showSuccess, showError, showWarning, hideNotification } = useNotification();
   const [activeTab, setActiveTab] = useState("products");
   const [productApprovals, setProductApprovals] = useState([]);
   const [warehouseTransfers, setWarehouseTransfers] = useState([]);
@@ -83,13 +86,13 @@ export default function Approvals() {
               !(item.deliveryId === deliveryId && item.productId === productId)
           )
         );
-        alert(`Product fetch ${action}d successfully!`);
+        showSuccess(`Product Fetch ${action.charAt(0).toUpperCase() + action.slice(1)}d!`, `Product fetch ${action}d successfully!`);
       } else {
-        alert(`Failed to ${action} product fetch`);
+        showError(`${action.charAt(0).toUpperCase() + action.slice(1)} Failed`, `Failed to ${action} product fetch`);
       }
     } catch (error) {
       console.error(`Error ${action}ing product fetch:`, error);
-      alert(`Error ${action}ing product fetch`);
+      showError("Network Error", `Error ${action}ing product fetch`);
     }
   };
 
@@ -112,13 +115,13 @@ export default function Approvals() {
         setWarehouseTransfers((prev) =>
           prev.filter((item) => item.transferId !== transferId)
         );
-        alert(`Warehouse transfer ${action}d successfully!`);
+        showSuccess(`Warehouse Transfer ${action.charAt(0).toUpperCase() + action.slice(1)}d!`, `Warehouse transfer ${action}d successfully!`);
       } else {
-        alert(`Failed to ${action} warehouse transfer`);
+        showError(`${action.charAt(0).toUpperCase() + action.slice(1)} Failed`, `Failed to ${action} warehouse transfer`);
       }
     } catch (error) {
       console.error(`Error ${action}ing warehouse transfer:`, error);
-      alert(`Error ${action}ing warehouse transfer`);
+      showError("Network Error", `Error ${action}ing warehouse transfer`);
     }
   };
 
@@ -567,6 +570,15 @@ export default function Approvals() {
             </>
           )}
         </div>
+        
+        {/* Notification Component */}
+        <Notification
+          show={notification.show}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+          onClose={hideNotification}
+        />
       </div>
     </div>
   );

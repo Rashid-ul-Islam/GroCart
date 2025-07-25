@@ -1,10 +1,13 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../hooks/useNotification';
+import Notification from '../components/ui/Notification';
 import { CreditCard, Plus, DollarSign, Clock, CheckCircle, XCircle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 export default function Wallet() {
   const { user, isLoggedIn } = useAuth();
+  const { notification, showSuccess, showError, showWarning, hideNotification } = useNotification();
   const [walletData, setWalletData] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +42,7 @@ export default function Wallet() {
     const amount = parseFloat(addBalanceAmount);
     
     if (!amount || amount <= 0) {
-      alert('Please enter a valid amount');
+      showWarning('Invalid Amount', 'Please enter a valid amount');
       return;
     }
 
@@ -64,14 +67,14 @@ export default function Wallet() {
         setAddBalanceAmount('');
         setShowAddBalance(false);
         fetchWalletData(); // Refresh data
-        alert('Balance added successfully!');
+        showSuccess('Balance Added', 'Balance added successfully!');
       } else {
         const error = await response.json();
-        alert(error.message || 'Failed to add balance');
+        showError('Add Balance Failed', error.message || 'Failed to add balance');
       }
     } catch (error) {
       console.error('Error adding balance:', error);
-      alert('Failed to add balance');
+      showError('Add Balance Failed', 'Failed to add balance');
     } finally {
       setAddingBalance(false);
     }
@@ -274,6 +277,15 @@ export default function Wallet() {
             )}
           </div>
         </div>
+
+        {/* Notification Component */}
+        <Notification
+          show={notification.show}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+          onClose={hideNotification}
+        />
       </div>
     </div>
   );

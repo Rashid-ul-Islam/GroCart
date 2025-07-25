@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
+import useNotification from "../hooks/useNotification";
+import Notification from "../components/ui/Notification";
 import {
   Heart,
   ShoppingCart,
@@ -53,6 +55,7 @@ const ProductDetailsPage = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
   const { user, isLoggedIn } = useAuth();
+  const { notification, showSuccess, showError, showWarning, hideNotification } = useNotification();
   const cartBarRef = useRef(null);
 
   const [product, setProduct] = useState(null);
@@ -229,11 +232,11 @@ const ProductDetailsPage = () => {
         }
       } else {
         console.error("Failed to add item to cart:", data.message);
-        alert(data.message || "Failed to add item to cart");
+        showError("Cart Error", data.message || "Failed to add item to cart");
       }
     } catch (error) {
       console.error("Error adding to cart:", error);
-      alert("Failed to add item to cart. Please try again.");
+      showError("Network Error", "Failed to add item to cart. Please try again.");
     } finally {
       setIsCartLoading(false);
     }
@@ -266,14 +269,14 @@ const ProductDetailsPage = () => {
 
     if (!user || !user.user_id) {
       console.error("User data is not available:", user);
-      alert("Please log in again to manage favorites");
+      showWarning("Login Required", "Please log in again to manage favorites");
       setShowLoginModal(true);
       return;
     }
 
     if (!product || !product.product_id) {
       console.error("Product data is not available:", product);
-      alert("Product information is missing");
+      showError("Product Error", "Product information is missing");
       return;
     }
 
@@ -299,13 +302,14 @@ const ProductDetailsPage = () => {
 
       if (response.ok) {
         setIsFavorite(!isFavorite);
+        showSuccess("Favorites Updated!", isFavorite ? "Removed from favorites" : "Added to favorites");
       } else {
         console.error("Failed to toggle favorite:", data.message);
-        alert(data.message || "Failed to update favorites");
+        showError("Favorites Error", data.message || "Failed to update favorites");
       }
     } catch (error) {
       console.error("Error toggling favorite:", error);
-      alert("Failed to update favorites. Please try again.");
+      showError("Network Error", "Failed to update favorites. Please try again.");
     } finally {
       setIsLikesLoading(false);
     }
@@ -903,6 +907,15 @@ const ProductDetailsPage = () => {
         className="lg:hidden fixed inset-0 bg-black/20 opacity-0 pointer-events-none transition-opacity duration-300 z-30"
         id="sidebar-overlay"
       ></div>
+      
+      {/* Notification Component */}
+      <Notification
+        show={notification.show}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={hideNotification}
+      />
     </div>
   );
 };

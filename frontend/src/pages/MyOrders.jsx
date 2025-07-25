@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import React from "react";
 import { useAuth } from "../context/AuthContext";
+import { useNotification } from "../hooks/useNotification";
+import Notification from "../components/ui/Notification";
 import {
   Package,
   Clock,
@@ -329,6 +331,7 @@ const StatusFlowChart = ({ orderId, currentStatus, paymentMethod }) => {
 
 function DeliveryReviewModal({ order, onClose }) {
   const { user } = useAuth();
+  const { showSuccess, showError, showWarning } = useNotification();
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -338,12 +341,12 @@ function DeliveryReviewModal({ order, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (rating === 0) {
-      alert("Please select a rating");
+      showWarning("Rating Required", "Please select a rating");
       return;
     }
 
     if (!user || !user.user_id) {
-      alert("User not authenticated");
+      showError("Authentication Error", "User not authenticated");
       return;
     }
 
@@ -368,7 +371,7 @@ function DeliveryReviewModal({ order, onClose }) {
       const result = await response.json();
 
       if (result.success) {
-        alert("Delivery review submitted successfully!");
+        showSuccess("Review Submitted", "Delivery review submitted successfully!");
         onClose();
         // Refresh the page to update button states
         window.location.reload();
@@ -377,7 +380,7 @@ function DeliveryReviewModal({ order, onClose }) {
       }
     } catch (error) {
       console.error("Error submitting delivery review:", error);
-      alert(error.message || "Failed to submit review. Please try again.");
+      showError("Review Failed", error.message || "Failed to submit review. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -463,6 +466,7 @@ function DeliveryReviewModal({ order, onClose }) {
 
 function ProductReviewModal({ order, onClose }) {
   const { user } = useAuth();
+  const { showSuccess, showError, showWarning } = useNotification();
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
@@ -473,16 +477,16 @@ function ProductReviewModal({ order, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedProduct) {
-      alert("Please select a product to review");
+      showWarning("Product Required", "Please select a product to review");
       return;
     }
     if (rating === 0) {
-      alert("Please select a rating");
+      showWarning("Rating Required", "Please select a rating");
       return;
     }
 
     if (!user || !user.user_id) {
-      alert("User not authenticated");
+      showError("Authentication Error", "User not authenticated");
       return;
     }
 
@@ -507,7 +511,7 @@ function ProductReviewModal({ order, onClose }) {
       const result = await response.json();
 
       if (result.success) {
-        alert("Product review submitted successfully!");
+        showSuccess("Review Submitted", "Product review submitted successfully!");
         onClose();
         // Refresh the page to update button states
         window.location.reload();
@@ -516,7 +520,7 @@ function ProductReviewModal({ order, onClose }) {
       }
     } catch (error) {
       console.error("Error submitting product review:", error);
-      alert(error.message || "Failed to submit review. Please try again.");
+      showError("Review Failed", error.message || "Failed to submit review. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -623,6 +627,8 @@ function ProductReviewModal({ order, onClose }) {
 }
 
 function ReturnProductsModal({ order, onClose }) {
+  const { user } = useAuth();
+  const { showSuccess, showError, showWarning } = useNotification();
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -631,7 +637,6 @@ function ReturnProductsModal({ order, onClose }) {
   const [returnWindowExpired, setReturnWindowExpired] = useState(false);
   const [actualArrival, setActualArrival] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const { user } = useAuth();
 
   useEffect(() => {
     if (order && order.order_id) {
@@ -688,12 +693,12 @@ function ReturnProductsModal({ order, onClose }) {
     e.preventDefault();
 
     if (selectedItems.size === 0) {
-      alert("Please select at least one item to return");
+      showWarning("Selection Required", "Please select at least one item to return");
       return;
     }
 
     if (!reason.trim()) {
-      alert("Please provide a reason for the return");
+      showWarning("Reason Required", "Please provide a reason for the return");
       return;
     }
 
@@ -724,16 +729,17 @@ function ReturnProductsModal({ order, onClose }) {
       const data = await response.json();
 
       if (data.success) {
-        alert(
+        showSuccess(
+          "Return Request Submitted",
           `Return request submitted successfully for ${selectedItems.size} item(s)`
         );
         onClose();
       } else {
-        alert(data.message || "Failed to submit return request");
+        showError("Request Failed", data.message || "Failed to submit return request");
       }
     } catch (error) {
       console.error("Error submitting return request:", error);
-      alert("Failed to submit return request");
+      showError("Request Failed", "Failed to submit return request");
     } finally {
       setSubmitting(false);
     }
@@ -1082,6 +1088,7 @@ function OrderDetailsModal({ order, onClose }) {
 
 export default function MyOrders() {
   const { user, isLoggedIn } = useAuth();
+  const { notification, showSuccess, showError, showWarning, hideNotification } = useNotification();
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [activeTab, setActiveTab] = useState("all");
@@ -1195,7 +1202,7 @@ export default function MyOrders() {
 
   const confirmCancelOrder = useCallback(async () => {
     if (!cancelReason.trim()) {
-      alert("Please provide a reason for cancellation");
+      showWarning("Reason Required", "Please provide a reason for cancellation");
       return;
     }
 
@@ -1219,17 +1226,17 @@ export default function MyOrders() {
       const data = await response.json();
 
       if (data.success) {
-        alert("Order cancelled successfully");
+        showSuccess("Order Cancelled", "Order cancelled successfully");
         closeCancelModal();
         // Refresh orders
         fetchOrders(activeTab);
         fetchOrderStats();
       } else {
-        alert(data.message || "Failed to cancel order");
+        showError("Cancellation Failed", data.message || "Failed to cancel order");
       }
     } catch (error) {
       console.error("Error cancelling order:", error);
-      alert("Failed to cancel order. Please try again.");
+      showError("Cancellation Failed", "Failed to cancel order. Please try again.");
     } finally {
       setCancelling(false);
     }
@@ -1796,6 +1803,15 @@ export default function MyOrders() {
             cancelling={cancelling}
           />
         </div>
+
+        {/* Notification Component */}
+        <Notification
+          show={notification.show}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+          onClose={hideNotification}
+        />
       </div>
     </div>
   );

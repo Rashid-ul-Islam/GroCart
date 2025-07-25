@@ -15,6 +15,11 @@ export const useNotification = () => {
             title,
             message
         });
+
+        // Auto hide notification after 5 seconds
+        setTimeout(() => {
+            hideNotification();
+        }, 5000);
     };
 
     const hideNotification = () => {
@@ -33,11 +38,23 @@ export const useNotification = () => {
         showNotification('error', title, message);
     };
 
+    const showWarning = (title, message) => {
+        showNotification('warning', title, message);
+    };
+
+    const showInfo = (title, message) => {
+        showNotification('info', title, message);
+    };
+
     return {
         notification,
         showNotification,
         hideNotification,
         showSuccess,
-        showError
+        showError,
+        showWarning,
+        showInfo
     };
 };
+
+export default useNotification;

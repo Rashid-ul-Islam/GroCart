@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card.jsx";
 import { Button } from "../ui/button.jsx";
 import { Badge } from "../ui/badge.jsx";
+import useNotification from "../../hooks/useNotification";
+import Notification from "../ui/Notification";
 import {
   Clock,
   CheckCircle,
@@ -74,6 +76,7 @@ const getPriorityColor = (priority) => {
 
 export const AssignedDeliveries = () => {
   const { user } = useAuth();
+  const { notification, showSuccess, showError, showWarning, hideNotification } = useNotification();
   const [deliveries, setDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -136,7 +139,7 @@ export const AssignedDeliveries = () => {
   // Action 1: Mark products as fetched (transition to left_warehouse)
   const handleProductsFetched = async (delivery) => {
     if (!delivery.delivery_id) {
-      alert("Invalid delivery ID");
+      showError("Invalid Delivery", "Invalid delivery ID provided.");
       return;
     }
 
@@ -169,13 +172,13 @@ export const AssignedDeliveries = () => {
 
       if (data.success) {
         await fetchDeliveries(true);
-        alert("Products marked as fetched successfully!");
+        showSuccess("Products Fetched!", "Products marked as fetched successfully!");
       } else {
         throw new Error(data.message || "Failed to mark products as fetched");
       }
     } catch (error) {
       console.error("Error marking products as fetched:", error);
-      alert(error.message || "Network error. Please try again.");
+      showError("Network Error", error.message || "Network error. Please try again.");
     } finally {
       setProcessingDelivery(null);
     }
@@ -184,7 +187,7 @@ export const AssignedDeliveries = () => {
   // Action 2: Mark delivery as completed
   const handleDeliveryCompleted = async (delivery) => {
     if (!delivery.delivery_id) {
-      alert("Invalid delivery ID");
+      showError("Invalid Delivery", "Invalid delivery ID provided.");
       return;
     }
 
@@ -216,13 +219,13 @@ export const AssignedDeliveries = () => {
 
       if (data.success) {
         await fetchDeliveries(true);
-        alert("Delivery marked as completed successfully!");
+        showSuccess("Delivery Completed!", "Delivery marked as completed successfully!");
       } else {
         throw new Error(data.message || "Failed to mark delivery as completed");
       }
     } catch (error) {
       console.error("Error marking delivery as completed:", error);
-      alert(error.message || "Network error. Please try again.");
+      showError("Network Error", error.message || "Network error. Please try again.");
     } finally {
       setProcessingDelivery(null);
     }
@@ -231,7 +234,7 @@ export const AssignedDeliveries = () => {
   // Action 3: Rate customer (after payment received)
   const handleRateCustomer = async (delivery) => {
     if (!delivery.delivery_id) {
-      alert("Invalid delivery ID");
+      showError("Invalid Delivery", "Invalid delivery ID provided.");
       return;
     }
 
@@ -284,13 +287,13 @@ export const AssignedDeliveries = () => {
           selectedDelivery?.first_name && selectedDelivery?.last_name
             ? `${selectedDelivery.first_name} ${selectedDelivery.last_name}`
             : "Customer";
-        alert(`✅ Rating submitted successfully for ${customerName}!`);
+        showSuccess("Rating Submitted!", `Rating submitted successfully for ${customerName}!`);
       } else {
         throw new Error(data.message || "Failed to submit customer rating");
       }
     } catch (error) {
       console.error("Error submitting customer rating:", error);
-      alert(`Error: ${error.message}`);
+      showError("Error", error.message);
       throw error;
     } finally {
       setProcessingDelivery(null);
@@ -627,6 +630,15 @@ export const AssignedDeliveries = () => {
         }}
         delivery={selectedDelivery}
         onSubmit={handleRatingSubmit}
+      />
+      
+      {/* Notification Component */}
+      <Notification
+        show={notification.show}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={hideNotification}
       />
     </div>
   );

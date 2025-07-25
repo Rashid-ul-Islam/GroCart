@@ -3,8 +3,11 @@ import React, { useState, useEffect } from "react";
 import { Button } from "../components/ui/button.jsx";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, FolderPlus, ChevronDown, AlertCircle } from "lucide-react";
+import useNotification from "../hooks/useNotification";
+import Notification from "../components/ui/Notification";
 
 export default function AddCategory() {
+  const { notification, showSuccess, showError, hideNotification } = useNotification();
   const [formData, setFormData] = useState({
     name: "",
     parent_id: "",
@@ -121,7 +124,7 @@ export default function AddCategory() {
 
       // Success
       const result = await res.json();
-      alert("Category added successfully!");
+      showSuccess("Category Added Successfully!", "Your new category has been added to the system.");
       navigate("/admin");
       
     } catch (error) {
@@ -296,6 +299,15 @@ export default function AddCategory() {
           {loading ? "Adding..." : "Add Category"}
         </Button>
       </form>
+      
+      {/* Notification Component */}
+      <Notification
+        show={notification.show}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={hideNotification}
+      />
     </div>
   );
 }

@@ -4,8 +4,11 @@ import { ArrowLeft, Save, Package, DollarSign, Hash, Scale, MapPin, FileText, Sh
 import { Button } from "../components/ui/button.jsx";
 import { Input } from "../components/ui/input.jsx";
 import { Link } from "react-router-dom";
+import useNotification from "../hooks/useNotification";
+import Notification from "../components/ui/Notification";
 
 export default function ProductManagement() {
+  const { notification, showSuccess, showError, hideNotification } = useNotification();
   const [formData, setFormData] = useState({
     productName: "",
     categoryId: "",
@@ -79,7 +82,7 @@ export default function ProductManagement() {
       };
 
       console.log("Product Data:", productData);
-      alert("Product added successfully! Check console for data.");
+      showSuccess("Product Added Successfully!", "Your product has been added successfully. Check console for detailed data.");
 
       // Reset form
       setFormData({
@@ -305,6 +308,15 @@ export default function ProductManagement() {
           </div>
         </form>
       </div>
+      
+      {/* Notification Component */}
+      <Notification
+        show={notification.show}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={hideNotification}
+      />
     </div>
   );
 }
