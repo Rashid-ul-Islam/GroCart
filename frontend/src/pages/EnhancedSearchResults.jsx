@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import useNotification from "../hooks/useNotification";
+import Notification from "../components/ui/Notification";
 import {
   Search,
   Filter,
@@ -17,6 +19,7 @@ import {
 import { useAuth } from "../context/AuthContext.jsx";
 
 const EnhancedSearchResults = () => {
+  const { notification, showSuccess, showError, showWarning, hideNotification } = useNotification();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -172,7 +175,7 @@ const EnhancedSearchResults = () => {
   // Add to cart function
   const addToCart = async (product) => {
     if (!isLoggedIn) {
-      alert("Please login to add items to cart");
+      showWarning("Login Required", "Please login to add items to cart.");
       return;
     }
 
@@ -191,13 +194,13 @@ const EnhancedSearchResults = () => {
       });
 
       if (response.ok) {
-        alert("Product added to cart successfully!");
+        showSuccess("Added to Cart!", "Product added to cart successfully!");
       } else {
         throw new Error("Failed to add to cart");
       }
     } catch (error) {
       console.error("Add to cart error:", error);
-      alert("Failed to add product to cart");
+      showError("Cart Error", "Failed to add product to cart");
     }
   };
 
@@ -659,6 +662,15 @@ const EnhancedSearchResults = () => {
           </div>
         </div>
       )}
+      
+      {/* Notification Component */}
+      <Notification
+        show={notification.show}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={hideNotification}
+      />
     </div>
   );
 };

@@ -3,8 +3,11 @@ import React, { useState } from "react";
 import { Plus, Edit3, Trash2, Package, Users, BarChart3 } from "lucide-react";
 import { Button } from "../components/ui/button.jsx";
 import { Link } from "react-router-dom";
+import useNotification from "../hooks/useNotification";
+import Notification from "../components/ui/Notification";
 
 export default function AdminDashboard() {
+  const { notification, showSuccess, showError, showWarning, hideNotification } = useNotification();
   const [products] = useState([
     {
       id: 1,
@@ -31,12 +34,12 @@ export default function AdminDashboard() {
   ]);
 
   const handleEditProduct = (productId) => {
-    alert(`Edit Product ID: ${productId}`);
+    showWarning("Edit Product", `Edit Product ID: ${productId} - Feature coming soon!`);
   };
 
   const handleDeleteProduct = (productId) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
-      alert(`Delete Product ID: ${productId}`);
+      showSuccess("Product Deleted", `Product ID: ${productId} has been deleted successfully!`);
     }
   };
 
@@ -158,6 +161,7 @@ export default function AdminDashboard() {
           </tbody>
         </table>
       </div>
+      {notification && <Notification notification={notification} />}
     </div>
   );
 }

@@ -18,9 +18,12 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import LoginModal from "../components/auth/LoginModal";
+import useNotification from "../hooks/useNotification";
+import Notification from "../components/ui/Notification";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const { notification, showSuccess, showError, hideNotification } = useNotification();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -347,15 +350,15 @@ export default function RegisterPage() {
       if (response.ok) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
-        alert("Registration successful! Welcome to GroCart!");
+        showSuccess("Registration Successful!", "Welcome to GroCart! You have been successfully registered.");
         // Navigate to HomePage after successful registration
         navigate("/");
       } else {
-        alert(`Registration failed: ${data.error}`);
+        showError("Registration Failed", data.error || "Please check your information and try again.");
       }
     } catch (error) {
       console.error("Registration failed:", error);
-      alert("Registration failed. Please try again.");
+      showError("Registration Failed", "Something went wrong. Please try again later.");
     } finally {
       setIsLoading(false);
     }
@@ -369,13 +372,6 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400 flex items-center justify-center p-4">
-      {/* Login Modal */}
-      <LoginModal 
-        isOpen={showLoginModal} 
-        onClose={() => setShowLoginModal(false)}
-        onLoginSuccess={handleLoginSuccess}
-      />
-
       <div className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-white/30 overflow-hidden">
         {/* Simplified Header Box */}
         <div className="bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700 p-12 text-center relative overflow-hidden">
@@ -786,6 +782,23 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
+      
+      {/* Login Modal */}
+      {showLoginModal && (
+        <LoginModal
+          onClose={() => setShowLoginModal(false)}
+          onLoginSuccess={handleLoginSuccess}
+        />
+      )}
+      
+      {/* Notification Component */}
+      <Notification
+        show={notification.show}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={hideNotification}
+      />
     </div>
   );
 }

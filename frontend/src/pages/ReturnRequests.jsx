@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import useNotification from "../hooks/useNotification";
+import Notification from "../components/ui/Notification";
 import {
   ArrowLeft,
   Check,
@@ -21,6 +23,7 @@ import {
 const ReturnRequests = () => {
   const navigate = useNavigate();
   const { user } = useAuth(); // Get current logged-in admin user
+  const { notification, showSuccess, showError, showWarning, hideNotification } = useNotification();
   const [returnRequests, setReturnRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -75,12 +78,12 @@ const ReturnRequests = () => {
 
   const submitApproval = async () => {
     if (!refundAmount || parseFloat(refundAmount) <= 0) {
-      alert("Please enter a valid refund amount");
+      showError("Invalid Amount", "Please enter a valid refund amount.");
       return;
     }
 
     if (parseFloat(refundAmount) > parseFloat(selectedRequest.price)) {
-      alert("Refund amount cannot exceed the original price");
+      showError("Amount Too High", "Refund amount cannot exceed the original price.");
       return;
     }
 
@@ -104,16 +107,16 @@ const ReturnRequests = () => {
 
       if (response.ok) {
         const data = await response.json();
-        alert(data.message || "Return request approved successfully");
+        showSuccess("Request Approved!", data.message || "Return request approved successfully");
         fetchReturnRequests(); // Refresh the list
         setShowModal(false);
       } else {
         const errorData = await response.json();
-        alert(errorData.message || "Failed to approve return request");
+        showError("Approval Failed", errorData.message || "Failed to approve return request");
       }
     } catch (error) {
       console.error("Error approving return request:", error);
-      alert("Failed to approve return request");
+      showError("Network Error", "Failed to approve return request");
     } finally {
       setProcessing(null);
     }
@@ -121,7 +124,7 @@ const ReturnRequests = () => {
 
   const submitRejection = async () => {
     if (!rejectReason.trim()) {
-      alert("Please provide a reason for rejection");
+      showWarning("Reason Required", "Please provide a reason for rejection.");
       return;
     }
 
@@ -145,16 +148,16 @@ const ReturnRequests = () => {
 
       if (response.ok) {
         const data = await response.json();
-        alert(data.message || "Return request rejected successfully");
+        showSuccess("Request Rejected", data.message || "Return request rejected successfully");
         fetchReturnRequests(); // Refresh the list
         setShowModal(false);
       } else {
         const errorData = await response.json();
-        alert(errorData.message || "Failed to reject return request");
+        showError("Rejection Failed", errorData.message || "Failed to reject return request");
       }
     } catch (error) {
       console.error("Error rejecting return request:", error);
-      alert("Failed to reject return request");
+      showError("Network Error", "Failed to reject return request");
     } finally {
       setProcessing(null);
     }
@@ -529,6 +532,15 @@ const ReturnRequests = () => {
             </div>
           </div>
         )}
+        
+        {/* Notification Component */}
+        <Notification
+          show={notification.show}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+          onClose={hideNotification}
+        />
       </div>
     </div>
   );

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import useNotification from "../hooks/useNotification";
+import Notification from "../components/ui/Notification";
 import {
   Plus,
   Edit3,
@@ -21,6 +23,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 export default function AdminPanel() {
   const navigate = useNavigate();
+  const { notification, showSuccess, showError, hideNotification } = useNotification();
 
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -275,15 +278,15 @@ export default function AdminPanel() {
         );
 
         if (response.ok) {
-          alert("Product deleted successfully!");
+          showSuccess("Product Deleted!", "Product deleted successfully!");
           fetchProducts(); // Refresh products list
           fetchDashboardStats(); // Refresh stats
         } else {
-          alert("Failed to delete product");
+          showError("Delete Failed", "Failed to delete product");
         }
       } catch (error) {
         console.error("Error deleting product:", error);
-        alert("Error deleting product");
+        showError("Network Error", "Error deleting product");
       }
     }
   };
@@ -895,6 +898,15 @@ export default function AdminPanel() {
             </div>
           </div>
         </div>
+        
+        {/* Notification Component */}
+        <Notification
+          show={notification.show}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+          onClose={hideNotification}
+        />
       </div>
     </div>
   );

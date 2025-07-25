@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { X, Star, MessageSquare, UserCheck, UserX, User } from "lucide-react";
+import useNotification from "../../hooks/useNotification";
+import Notification from "../ui/Notification";
 
 const CustomerRatingModal = ({ isOpen, onClose, delivery, onSubmit }) => {
+  const { notification, showError, hideNotification } = useNotification();
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
@@ -37,7 +40,7 @@ const CustomerRatingModal = ({ isOpen, onClose, delivery, onSubmit }) => {
     e.preventDefault();
 
     if (rating === 0) {
-      alert("Please select a rating");
+      showError("Rating Required", "Please select a rating before submitting.");
       return;
     }
 
@@ -274,6 +277,15 @@ const CustomerRatingModal = ({ isOpen, onClose, delivery, onSubmit }) => {
           </form>
         </div>
       </div>
+      
+      {/* Notification Component */}
+      <Notification
+        show={notification.show}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={hideNotification}
+      />
     </div>
   );
 };
