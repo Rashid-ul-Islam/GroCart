@@ -35,6 +35,11 @@ export default function AddProduct() {
     isRefundable: "true",
   });
 
+  // File upload states
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
+  const [uploadLoading, setUploadLoading] = useState(false);
+
   // Category selection states
   const [categoryLevels, setCategoryLevels] = useState([]);
   const [selectedPath, setSelectedPath] = useState([]);
@@ -265,18 +270,35 @@ export default function AddProduct() {
     }
     setLoading(true);
 
-    const productData = {
-      ...formData,
-      categoryId: parseInt(formData.categoryId),
-      price: parseFloat(formData.price),
-      quantity: parseInt(formData.quantity),
-      isRefundable: formData.isRefundable === "true",
-      warehouseDistribution: showWarehouseDistribution
-        ? warehouseDistribution
-        : null,
-    };
-
     try {
+      // Upload image first if file is selected
+      let imageUrl = formData.imageUrl;
+      if (selectedFile) {
+        setUploadLoading(true);
+        const uploadedImageUrl = await uploadImage(selectedFile);
+        if (uploadedImageUrl) {
+          imageUrl = uploadedImageUrl;
+        } else {
+          showError("Image Upload Failed", "Failed to upload product image. Please try again.");
+          setLoading(false);
+          setUploadLoading(false);
+          return;
+        }
+        setUploadLoading(false);
+      }
+
+      const productData = {
+        ...formData,
+        imageUrl,
+        categoryId: parseInt(formData.categoryId),
+        price: parseFloat(formData.price),
+        quantity: parseInt(formData.quantity),
+        isRefundable: formData.isRefundable === "true",
+        warehouseDistribution: showWarehouseDistribution
+          ? warehouseDistribution
+          : null,
+      };
+
       const response = await fetch(
         "http://localhost:3000/api/products/addProduct",
         {
@@ -309,14 +331,23 @@ export default function AddProduct() {
         imageUrl: "",
         isRefundable: "true",
       });
+      setSelectedFile(null);
+      setFilePreview(null);
       setWarehouseDistribution({});
       setShowWarehouseDistribution(false);
       setErrors({});
       resetCategorySelection();
+      
+      // Reset file input
+      const fileInput = document.getElementById('productImage');
+      if (fileInput) {
+        fileInput.value = '';
+      }
     } catch (error) {
       showError("Network Error", `Error: ${error.message}`);
     } finally {
       setLoading(false);
+      setUploadLoading(false);
     }
   };
 
@@ -334,6 +365,81 @@ export default function AddProduct() {
     "bottle",
     "can",
   ];
+
+  // File upload function
+  const uploadImage = async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('http://localhost:3000/api/products/upload-image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.imageUrl;
+      } else {
+        const errorData = await response.json();
+        console.error('Image upload failed:', errorData);
+        
+        // Show detailed error message to user
+        showError(
+          "Image Upload Failed", 
+          errorData.message || `Failed to upload image: ${response.statusText}`
+        );
+        return null;
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      showError("Network Error", `Error uploading image: ${error.message}`);
+      return null;
+    }
+  };
+
+  // Handle file selection
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        showError("Invalid File Type", "Please select a valid image file (JPEG, PNG, or WebP)");
+        return;
+      }
+
+      // Validate file size (5MB limit)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      if (file.size > maxSize) {
+        showError("File Too Large", "Please select an image smaller than 5MB");
+        return;
+      }
+
+      setSelectedFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setFilePreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+
+      // Clear any existing image URL
+      setFormData(prev => ({ ...prev, imageUrl: "" }));
+    }
+  };
+
+  // Remove selected file
+  const removeSelectedFile = () => {
+    setSelectedFile(null);
+    setFilePreview(null);
+    // Reset file input
+    const fileInput = document.getElementById('productImage');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -659,20 +765,71 @@ export default function AddProduct() {
                 />
               </div>
 
-              {/* Product Image URL */}
+              {/* Product Image Upload */}
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                   <Image className="w-4 h-4 text-pink-500" />
-                  Product Image URL
+                  Product Image
                 </label>
-                <input
-                  type="url"
-                  name="imageUrl"
-                  value={formData.imageUrl}
-                  onChange={handleInputChange}
-                  placeholder="https://example.com/image.jpg"
-                  className="w-full bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5"
-                />
+                
+                {!selectedFile ? (
+                  <div className="relative">
+                    <input
+                      type="file"
+                      id="productImage"
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="productImage"
+                      className="w-full h-32 border-2 border-dashed border-pink-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-pink-400 hover:bg-pink-50 transition-all duration-300 bg-white"
+                    >
+                      <Image className="w-8 h-8 text-pink-400 mb-2" />
+                      <span className="text-sm font-medium text-pink-600">
+                        Click to select image
+                      </span>
+                      <span className="text-xs text-gray-500 mt-1">
+                        JPEG, PNG, WebP (Max 5MB)
+                      </span>
+                    </label>
+                  </div>
+                ) : (
+                  <div className="relative border-2 border-pink-200 rounded-xl p-4 bg-pink-50">
+                    <div className="flex items-start gap-4">
+                      <img
+                        src={filePreview}
+                        alt="Selected Preview"
+                        className="w-20 h-20 object-cover rounded-lg border shadow-md"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {selectedFile.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                        <button
+                          type="button"
+                          onClick={removeSelectedFile}
+                          className="mt-2 text-xs text-red-600 hover:text-red-800 underline"
+                        >
+                          Remove image
+                        </button>
+                      </div>
+                    </div>
+                    {uploadLoading && (
+                      <div className="absolute inset-0 bg-white/80 rounded-xl flex items-center justify-center">
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-pink-600"></div>
+                          <span className="text-sm text-pink-600 font-medium">
+                            Uploading...
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Description */}
@@ -692,7 +849,7 @@ export default function AddProduct() {
               </div>
 
               {/* Image Preview */}
-              {formData.imageUrl && (
+              {(formData.imageUrl || filePreview) && (
                 <div className="space-y-2 lg:col-span-2">
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                     <Image className="w-4 h-4 text-pink-500" />
@@ -700,7 +857,7 @@ export default function AddProduct() {
                   </label>
                   <div className="border-2 border-pink-200 rounded-xl p-4 bg-gray-50">
                     <img
-                      src={formData.imageUrl}
+                      src={filePreview || formData.imageUrl}
                       alt="Product Preview"
                       className="w-32 h-32 object-cover rounded-lg border shadow-md"
                       onError={(e) => {

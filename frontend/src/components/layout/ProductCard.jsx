@@ -27,15 +27,17 @@ const ProductCard = ({
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isLoggedIn && user && user.user_id && product && product.id && showFavoriteButton) {
+    const productId = product?.product_id || product?.id;
+    if (isLoggedIn && user && user.user_id && productId && showFavoriteButton) {
       checkIfLiked();
     }
-  }, [isLoggedIn, user, product.id, showFavoriteButton]);
+  }, [isLoggedIn, user, product?.product_id, product?.id, showFavoriteButton]);
 
   const checkIfLiked = async () => {
+    const productId = product?.product_id || product?.id;
     try {
       const response = await fetch(
-        `http://localhost:3000/api/favorites/check/${user.user_id}/${product.id}`,
+        `http://localhost:3000/api/favorites/check/${user.user_id}/${productId}`,
         {
           headers: {
             Authorization: `Bearer ${sessionStorage.getItem("token")}`,
@@ -64,6 +66,7 @@ const ProductCard = ({
 
     setIsLoading(true);
     try {
+      const productId = product?.product_id || product?.id;
       const response = await fetch(
         "http://localhost:3000/api/cart/addToCart/add",
         {
@@ -74,7 +77,7 @@ const ProductCard = ({
           },
           body: JSON.stringify({
             user_id: user.user_id,
-            product_id: product.id,
+            product_id: productId,
             quantity: quantity,
           }),
         }
@@ -116,7 +119,7 @@ const ProductCard = ({
       return;
     }
 
-    if (!product || !product.id) {
+    if (!product || !(product.id || product.product_id)) {
       console.error("Product data is not available:", product);
       alert("Product information is missing");
       return;
@@ -124,6 +127,7 @@ const ProductCard = ({
 
     setLikesLoading(true);
     try {
+      const productId = product?.product_id || product?.id;
       const endpoint = isLiked
         ? `http://localhost:3000/api/favorites/remove`
         : `http://localhost:3000/api/favorites/add`;
@@ -136,7 +140,7 @@ const ProductCard = ({
         },
         body: JSON.stringify({
           user_id: parseInt(user.user_id),
-          product_id: parseInt(product.id),
+          product_id: parseInt(productId),
         }),
       });
 
@@ -161,7 +165,8 @@ const ProductCard = ({
       onProductClick(product);
     } else {
       // Default behavior - navigate to product details
-      navigate(`/product/${product.id}`);
+      const productId = product?.product_id || product?.id;
+      navigate(`/product/${productId}`);
     }
   };
 
@@ -169,7 +174,7 @@ const ProductCard = ({
     <div className={`bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 overflow-hidden group ${className}`}>
       <div className="relative overflow-hidden">
         <img
-          src={product.image || "https://via.placeholder.com/300x200"}
+          src={product.image_url || product.image || "https://via.placeholder.com/300x200"}
           alt={product.name}
           className={`w-full ${imageHeight} object-cover group-hover:scale-110 transition-transform duration-500 cursor-pointer`}
           onClick={handleProductClick}

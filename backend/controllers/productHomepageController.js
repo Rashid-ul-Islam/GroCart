@@ -141,6 +141,11 @@ export const getProductsForHomepage = async (req, res) => {
     const cleanupProducts = (products) =>
       products.map(({ created_at, avg_rating, review_count, ...product }) => ({
         ...product,
+        // Transform for ProductCard compatibility
+        id: product.product_id,
+        name: product.product_name,
+        unit: product.unit_measure,
+        image: product.image_url, // For backward compatibility
         // Transform review data to match ProductCard expectations
         rating: parseFloat(avg_rating) || 0,
         reviews: parseInt(review_count) || 0,

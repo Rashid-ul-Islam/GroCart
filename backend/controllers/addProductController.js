@@ -1,15 +1,55 @@
 import pool from "../db.js";
+import { uploadImageToSupabase, uploadMultipleImagesToSupabase } from "../utils/supabaseStorage.js";
 
 export const addProduct = async (req, res) => {
   const input = req.body;
   console.log("Received input:", input);
+  console.log("Received files:", req.files);
 
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    // Insert product
+    // Handle image uploads first
+    let mainImageUrl = null;
+    let additionalImageUrls = [];
+
+    // Upload main image if provided
+    if (req.files && req.files.mainImage && req.files.mainImage[0]) {
+      const mainImageFile = req.files.mainImage[0];
+      const uploadResult = await uploadImageToSupabase(
+        mainImageFile.buffer,
+        mainImageFile.originalname,
+        'product-images'
+      );
+
+      if (uploadResult.success) {
+        mainImageUrl = uploadResult.url;
+      } else {
+        throw new Error(`Failed to upload main image: ${uploadResult.error}`);
+      }
+    }
+
+    // Upload additional images if provided
+    if (req.files && req.files.additionalImages && req.files.additionalImages.length > 0) {
+      const imageFiles = req.files.additionalImages.map(file => ({
+        buffer: file.buffer,
+        fileName: file.originalname
+      }));
+
+      const uploadResults = await uploadMultipleImagesToSupabase(imageFiles, 'product-images');
+      
+      if (uploadResults.success) {
+        additionalImageUrls = uploadResults.urls;
+      } else {
+        console.warn('Some additional images failed to upload:', uploadResults.errors);
+        // Continue with successful uploads
+        additionalImageUrls = uploadResults.urls || [];
+      }
+    }
+
+    // Insert product without image URLs (using correct schema)
     const productQuery = `
       INSERT INTO "Product"
       (name, category_id, price, quantity, unit_measure, origin, description, is_refundable, created_at, updated_at)
@@ -31,6 +71,45 @@ export const addProduct = async (req, res) => {
 
     const productResult = await client.query(productQuery, productValues);
     const newProduct = productResult.rows[0];
+
+    // Insert main image into ProductImage table if provided
+    if (mainImageUrl) {
+      const mainImageQuery = `
+        INSERT INTO "ProductImage"
+        (product_id, image_url, is_primary, display_order, created_at)
+        VALUES ($1, $2, true, 1, NOW());
+      `;
+      await client.query(mainImageQuery, [newProduct.product_id, mainImageUrl]);
+    }
+
+    // Insert image from frontend upload (imageUrl field) if provided and no main image
+    if (!mainImageUrl && input.imageUrl) {
+      const imageQuery = `
+        INSERT INTO "ProductImage"
+        (product_id, image_url, is_primary, display_order, created_at)
+        VALUES ($1, $2, true, 1, NOW());
+      `;
+      await client.query(imageQuery, [newProduct.product_id, input.imageUrl]);
+    }
+
+    // Insert additional images into ProductImage table if provided
+    if (additionalImageUrls.length > 0) {
+      const additionalImageInserts = [];
+      additionalImageUrls.forEach((imageUrl, index) => {
+        const additionalImageQuery = `
+          INSERT INTO "ProductImage"
+          (product_id, image_url, is_primary, display_order, created_at)
+          VALUES ($1, $2, false, $3, NOW());
+        `;
+        additionalImageInserts.push(
+          client.query(additionalImageQuery, [newProduct.product_id, imageUrl, index + 2])
+        );
+      });
+      
+      if (additionalImageInserts.length > 0) {
+        await Promise.all(additionalImageInserts);
+      }
+    }
 
     // Handle warehouse distribution - ALWAYS execute this part
     if (input.warehouseDistribution && Object.keys(input.warehouseDistribution).length > 0) {
@@ -260,5 +339,46 @@ export const getAllWarehouses = async (req, res) => {
     } catch (error) {
         console.error("Error fetching warehouses:", error);
         res.status(500).json({ message: "Failed to fetch warehouses" });
+    }
+};
+
+// Add this new function to handle single image upload
+export const uploadSingleImage = async (req, res) => {
+    try {
+        console.log("Received file:", req.file);
+        
+        if (!req.file) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "No image file provided" 
+            });
+        }
+
+        // Upload image to Supabase
+        const uploadResult = await uploadImageToSupabase(
+            req.file.buffer,
+            req.file.originalname,
+            'product-images'
+        );
+
+        if (uploadResult.success) {
+            res.status(200).json({
+                success: true,
+                imageUrl: uploadResult.url,
+                message: "Image uploaded successfully"
+            });
+        } else {
+            console.error("Image upload failed:", uploadResult.error);
+            res.status(500).json({
+                success: false,
+                message: `Failed to upload image: ${uploadResult.error}`
+            });
+        }
+    } catch (error) {
+        console.error("Error in uploadSingleImage:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error during image upload"
+        });
     }
 };

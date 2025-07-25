@@ -345,37 +345,49 @@ export const searchProducts = async (req, res) => {
     const products = productsResult.rows;
     const total = parseInt(countResult.rows[0].total);
 
-    console.log("Results found:", products.length);
+    // Transform products to match frontend expectations
+    const transformedProducts = products.map(product => ({
+      ...product,
+      // Add compatibility fields
+      product_id: product.id,
+      name: product.product_name,
+      unit: product.unit_measure,
+      image: product.image_url, // For backward compatibility
+      rating: parseFloat(product.avg_rating) || 0,
+      reviews: parseInt(product.review_count) || 0
+    }));
+
+    console.log("Results found:", transformedProducts.length);
     console.log("Total matches:", total);
 
     // Debug: Check for duplicate product IDs
-    const productIds = products.map(p => p.id);
+    const productIds = transformedProducts.map(p => p.id);
     const uniqueProductIds = [...new Set(productIds)];
-    console.log(`Unique products: ${uniqueProductIds.length}/${products.length}`);
+    console.log(`Unique products: ${uniqueProductIds.length}/${transformedProducts.length}`);
 
-    if (uniqueProductIds.length !== products.length) {
+    if (uniqueProductIds.length !== transformedProducts.length) {
       console.warn("WARNING: Duplicate product IDs found!");
       const duplicates = productIds.filter((id, index) => productIds.indexOf(id) !== index);
       console.log("Duplicate IDs:", duplicates);
     }
 
-    if (products.length > 0) {
+    if (transformedProducts.length > 0) {
       console.log("Sample result:", {
-        name: products[0].product_name,
-        category: products[0].category_name,
-        category_path: products[0].category_path,
-        relevance_score: products[0].relevance_score,
-        avg_rating: products[0].avg_rating,
-        review_count: products[0].review_count,
-        quantity: products[0].quantity,
-        unit_measure: products[0].unit_measure,
-        is_refundable: products[0].is_refundable,
-        description: products[0].description?.substring(0, 100)
+        name: transformedProducts[0].product_name,
+        category: transformedProducts[0].category_name,
+        category_path: transformedProducts[0].category_path,
+        relevance_score: transformedProducts[0].relevance_score,
+        avg_rating: transformedProducts[0].avg_rating,
+        review_count: transformedProducts[0].review_count,
+        quantity: transformedProducts[0].quantity,
+        unit_measure: transformedProducts[0].unit_measure,
+        is_refundable: transformedProducts[0].is_refundable,
+        description: transformedProducts[0].description?.substring(0, 100)
       });
 
       // Debug: Check if any products have descriptions
-      const productsWithDescriptions = products.filter(p => p.description && p.description.trim() !== '');
-      console.log(`Products with descriptions: ${productsWithDescriptions.length}/${products.length}`);
+      const productsWithDescriptions = transformedProducts.filter(p => p.description && p.description.trim() !== '');
+      console.log(`Products with descriptions: ${productsWithDescriptions.length}/${transformedProducts.length}`);
 
       if (productsWithDescriptions.length > 0) {
         console.log("Sample description:", productsWithDescriptions[0].description.substring(0, 200));
@@ -403,7 +415,7 @@ export const searchProducts = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      products,
+      products: transformedProducts,
       pagination: {
         total,
         limit: limitNum,
@@ -415,7 +427,7 @@ export const searchProducts = async (req, res) => {
         queryTime,
         rawSearchTerm,
         searchPattern: searchTermWithWildcards,
-        descriptionMatches: products.filter(p =>
+        descriptionMatches: transformedProducts.filter(p =>
           p.description && p.description.toLowerCase().includes(rawSearchTerm)
         ).length,
         uniqueProducts: uniqueProductIds.length

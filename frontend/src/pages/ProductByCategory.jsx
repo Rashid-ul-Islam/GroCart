@@ -41,14 +41,7 @@ function ProductsPage() {
       if (response.ok) {
         const data = await response.json();
         console.log("API Response - First product:", data[0]); // Add this line
-        // Transform data to match ProductCard expectations
-        const transformedProducts = data.map(product => ({
-          ...product,
-          id: product.product_id, // Map product_id to id for ProductCard
-          name: product.product_name, // Map product_name to name for ProductCard
-          unit: product.unit_measure // Map unit_measure to unit for ProductCard
-        }));
-        setProducts(transformedProducts);
+        setProducts(data); // Backend now provides properly formatted data
       } else {
         console.error("Failed to fetch products:", response.statusText);
       }

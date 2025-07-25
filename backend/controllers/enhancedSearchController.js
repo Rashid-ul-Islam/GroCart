@@ -362,6 +362,18 @@ export class EnhancedSearchController {
             let products = searchResult.rows;
             let total = parseInt(countResult.rows[0].total);
 
+            // Transform products to match frontend expectations
+            products = products.map(product => ({
+                ...product,
+                // Add compatibility fields
+                id: product.product_id,
+                name: product.product_name,
+                unit: product.unit_measure,
+                image: product.image_url, // For backward compatibility
+                rating: parseFloat(product.avg_rating) || 0,
+                reviews: parseInt(product.review_count) || 0
+            }));
+
             // Fallback search if no results found with expanded terms
             if (products.length === 0 && expandedTerms.length > 1) {
                 console.log('No results with expanded terms, trying original query...');
@@ -431,6 +443,17 @@ export class EnhancedSearchController {
 
                 const fallbackResult = await pool.query(fallbackQuery, fallbackParams);
                 products = fallbackResult.rows;
+
+                // Transform fallback products to match frontend expectations
+                products = products.map(product => ({
+                    ...product,
+                    id: product.product_id,
+                    name: product.product_name,
+                    unit: product.unit_measure,
+                    image: product.image_url,
+                    rating: parseFloat(product.avg_rating) || 0,
+                    reviews: parseInt(product.review_count) || 0
+                }));
 
                 // Update count for fallback
                 if (products.length > 0) {

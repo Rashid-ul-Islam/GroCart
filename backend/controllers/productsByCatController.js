@@ -18,15 +18,17 @@ export const getProductsByCategory = async (req, res) => {
         p.created_at, 
         p.updated_at,
         c.name AS category_name,
+        pi.image_url,
         COALESCE(AVG(r.rating), 0.0) AS avg_rating,
         COALESCE(COUNT(r.review_id), 0) AS review_count
       FROM "Product" p
       LEFT JOIN "Category" c ON p.category_id = c.category_id
+      LEFT JOIN "ProductImage" pi ON p.product_id = pi.product_id AND pi.is_primary = true
       LEFT JOIN "Review" r ON p.product_id = r.product_id
       WHERE p.category_id = $1 AND p.is_available = true
       GROUP BY p.product_id, p.name, p.price, p.quantity, p.unit_measure, 
                p.origin, p.description, p.is_refundable, p.is_available, 
-               p.created_at, p.updated_at, c.name
+               p.created_at, p.updated_at, c.name, pi.image_url
       ORDER BY p.name ASC;
     `;
 
@@ -49,6 +51,8 @@ export const getProductsByCategory = async (req, res) => {
       created_at: row.created_at,
       updated_at: row.updated_at,
       category_name: row.category_name,
+      image_url: row.image_url,
+      image: row.image_url, // For backward compatibility
       rating: parseFloat(row.avg_rating) || 0,
       reviews: parseInt(row.review_count) || 0,
       // Keep original fields for backward compatibility
@@ -116,7 +120,32 @@ export const getProductsByCategoryRecursive = async (req, res) => {
 
     const { rows } = await pool.query(query, [categoryId]);
 
-    res.status(200).json(rows);
+    // Transform the data to match frontend expectations
+    const transformedRows = rows.map(row => ({
+      id: row.product_id,
+      product_id: row.product_id,
+      name: row.product_name,
+      product_name: row.product_name,
+      price: row.price,
+      quantity: row.quantity,
+      unit_measure: row.unit_measure,
+      unit: row.unit_measure,
+      origin: row.origin,
+      description: row.description,
+      is_refundable: row.is_refundable,
+      is_available: row.is_available,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      category_name: row.category_name,
+      image_url: row.image_url,
+      image: row.image_url, // For backward compatibility
+      rating: parseFloat(row.avg_rating) || 0,
+      reviews: parseInt(row.review_count) || 0,
+      avg_rating: parseFloat(row.avg_rating) || 0,
+      review_count: parseInt(row.review_count) || 0
+    }));
+
+    res.status(200).json(transformedRows);
   } catch (error) {
     console.error("Error fetching products by category (recursive):", error);
     res.status(500).json({ message: "Failed to fetch products by category" });
@@ -158,13 +187,36 @@ export const getAllProducts = async (req, res) => {
 
     const { rows } = await pool.query(query, [limit, offset]);
 
+    // Transform the data to match frontend expectations
+    const transformedRows = rows.map(row => ({
+      id: row.product_id,
+      product_id: row.product_id,
+      name: row.product_name,
+      product_name: row.product_name,
+      price: row.price,
+      quantity: row.quantity,
+      unit_measure: row.unit_measure,
+      unit: row.unit_measure,
+      origin: row.origin,
+      description: row.description,
+      is_refundable: row.is_refundable,
+      is_available: row.is_available,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      image_url: row.image_url,
+      image: row.image_url, // For backward compatibility
+      rating: parseFloat(row.avg_rating) || 0,
+      reviews: parseInt(row.review_count) || 0,
+      avg_rating: parseFloat(row.avg_rating) || 0,
+      review_count: parseInt(row.review_count) || 0
+    }));
 
     const countQuery = `SELECT COUNT(*) FROM "Product" WHERE is_available = true`;
     const countResult = await pool.query(countQuery);
     const totalProducts = parseInt(countResult.rows[0].count);
 
     res.status(200).json({
-      products: rows,
+      products: transformedRows,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(totalProducts / limit),
