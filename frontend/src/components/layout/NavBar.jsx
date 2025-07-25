@@ -8,6 +8,7 @@ import { Input } from "../ui/input.jsx";
 import LoginModal from "../auth/LoginModal.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import EnhancedSearchBar from "../common/EnhancedSearchBar.jsx";
+import UserNotification from "../common/UserNotification.jsx";
 
 export default function NavBar() {
   const { user, isLoggedIn, logout: authLogout } = useAuth();
@@ -343,7 +344,10 @@ export default function NavBar() {
                 <PackageSearch className="w-7 h-7" />
               </Link>
             )}
-            
+
+            {/* Notifications - Only show if logged in */}
+            {isLoggedIn && <UserNotification />}
+
             {/* User Menu (on hover) */}
             <div className="relative group">
               <Button
@@ -386,7 +390,7 @@ export default function NavBar() {
                     >
                       My Orders
                     </Link>
-                    
+
                     <Link
                       to="/wallet"
                       className="block hover:bg-yellow-50 px-4 py-2 cursor-pointer transition text-purple-700 hover:text-purple-900"

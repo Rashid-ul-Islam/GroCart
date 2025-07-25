@@ -5,6 +5,9 @@ import pool from "./db.js";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import { handleSocketConnection } from "./socket/socketHandlers.js";
 import addProductRoute from "./routes/addProductRoute.js";
 import addCategoryRoute from "./routes/addCategoryRoute.js";
 import adminPanelRoute from "./routes/adminPanelRoute.js";
@@ -35,8 +38,24 @@ import walletRoute from "./routes/walletRoute.js";
 import deliveryAnalyticsRoute from "./routes/deliveryAnalyticsRoute.js";
 import couponRoute from "./routes/couponRoute.js";
 import statsRoute from "./routes/statsRoute.js";
+import notificationRoute from "./routes/notificationRoute.js";
 
 const app = express();
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:5173", // Your frontend URL
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
+  }
+});
+
+// Initialize Socket.IO handlers
+const { userSockets } = handleSocketConnection(io);
+
+// Make io and userSockets available to routes
+app.set('io', io);
+app.set('userSockets', userSockets);
 app.use(cors());
 app.use(express.json());
 app.use(
@@ -79,7 +98,9 @@ app.use("/api/wallet", walletRoute);
 app.use("/api/delivery-analytics", deliveryAnalyticsRoute);
 app.use("/api/coupons", couponRoute);
 app.use("/api/stats", statsRoute);
+app.use("/api/notifications", notificationRoute);
 
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Server running on ${port}`);
+  console.log(`Socket.IO server ready for real-time notifications`);
 });
