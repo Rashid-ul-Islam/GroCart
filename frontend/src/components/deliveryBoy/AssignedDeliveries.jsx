@@ -17,6 +17,9 @@ import {
   Truck,
   Warehouse,
   ArrowRight,
+  ArrowDown,
+  CreditCard,
+  MapPin,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { WarehouseInventory } from "./WarehouseInventory.jsx";
@@ -71,6 +74,182 @@ const getPriorityColor = (priority) => {
       return "bg-gradient-to-r from-blue-500 to-blue-600 text-white";
     default:
       return "bg-gradient-to-r from-gray-500 to-gray-600 text-white";
+  }
+};
+
+// Flow Diagram Component
+const DeliveryFlowDiagram = ({ delivery, currentStep, onStepClick }) => {
+  const isNonCOD = delivery.paymentMethod && delivery.paymentMethod.toLowerCase() !== 'cod';
+  
+  const steps = [
+    {
+      id: 'payment_initial',
+      label: isNonCOD ? 'Payment Received' : 'Payment Pending',
+      icon: CreditCard,
+      status: isNonCOD ? 'completed' : 'pending',
+      description: isNonCOD ? 'Payment completed online' : 'Cash on delivery'
+    },
+    {
+      id: 'assigned',
+      label: 'Assigned',
+      icon: User,
+      status: currentStep >= 1 ? 'completed' : 'pending',
+      description: 'Delivery assigned to you'
+    },
+    {
+      id: 'fetch_products',
+      label: 'Fetch Products',
+      icon: Package,
+      status: currentStep === 2 ? 'active' : currentStep > 2 ? 'completed' : 'pending',
+      description: 'Collect items from warehouse',
+      actionable: currentStep === 2
+    },
+    {
+      id: 'left_warehouse',
+      label: 'Left Warehouse',
+      icon: Warehouse,
+      status: currentStep >= 3 ? 'completed' : 'pending',
+      description: 'Products collected, en route'
+    },
+    {
+      id: 'in_transit',
+      label: 'In Transit',
+      icon: Truck,
+      status: currentStep >= 4 ? 'completed' : 'pending',
+      description: 'On the way to customer'
+    },
+    {
+      id: 'complete_delivery',
+      label: 'Complete Delivery',
+      icon: MapPin,
+      status: currentStep === 4 || currentStep === 5 ? 'active' : currentStep > 5 ? 'completed' : 'pending',
+      description: 'Deliver to customer',
+      actionable: currentStep === 4 || currentStep === 5
+    },
+    ...(isNonCOD ? [] : [{
+      id: 'payment_cod',
+      label: 'Payment Received',
+      icon: CreditCard,
+      status: currentStep >= 6 ? 'completed' : 'pending',
+      description: 'COD payment collected'
+    }]),
+    {
+      id: 'delivery_completed',
+      label: 'Delivery Completed',
+      icon: CheckCircle,
+      status: currentStep >= (isNonCOD ? 6 : 7) ? 'completed' : 'pending',
+      description: 'Delivery successfully completed'
+    },
+    {
+      id: 'rate_customer',
+      label: 'Rate Customer',
+      icon: User,
+      status: currentStep === (isNonCOD ? 7 : 8) ? 'active' : currentStep > (isNonCOD ? 7 : 8) ? 'completed' : 'pending',
+      description: 'Provide customer feedback',
+      actionable: currentStep === (isNonCOD ? 7 : 8)
+    }
+  ];
+
+  const getStepColor = (status, actionable) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-500 text-white border-green-500 shadow-lg';
+      case 'active':
+        return actionable 
+          ? 'bg-blue-600 text-white border-blue-600 ring-4 ring-blue-200 shadow-xl transform scale-110 animate-pulse' 
+          : 'bg-blue-500 text-white border-blue-500 ring-4 ring-blue-200 shadow-lg';
+      case 'pending':
+        return 'bg-gray-200 text-gray-500 border-gray-300';
+      default:
+        return 'bg-gray-200 text-gray-500 border-gray-300';
+    }
+  };
+
+  return (
+    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-6">
+      <h4 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+        <Truck className="h-5 w-5 text-blue-600" />
+        Delivery Flow Progress
+      </h4>
+      
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        {steps.map((step, index) => (
+          <div key={step.id} className="flex items-center">
+            <div className="flex flex-col items-center">
+              <button
+                onClick={() => {
+                  console.log('Step clicked:', step.id, 'actionable:', step.actionable);
+                  if (step.actionable) {
+                    onStepClick(step);
+                  }
+                }}
+                disabled={!step.actionable}
+                className={`
+                  ${step.actionable ? 'w-16 h-16' : 'w-12 h-12'} 
+                  rounded-full border-2 flex items-center justify-center transition-all duration-300
+                  ${getStepColor(step.status, step.actionable)}
+                  ${step.actionable ? 'hover:scale-125 cursor-pointer shadow-2xl border-4 border-blue-400' : 'cursor-default'}
+                  ${step.actionable ? 'relative' : ''}
+                `}
+              >
+                <step.icon className={step.actionable ? 'h-7 w-7' : 'h-5 w-5'} />
+                {step.actionable && (
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">!</span>
+                  </div>
+                )}
+              </button>
+              <div className="mt-2 text-center">
+                <p className={`text-xs font-semibold ${step.actionable ? 'text-blue-700 font-bold' : 'text-gray-700'}`}>
+                  {step.label}
+                </p>
+                <p className={`text-xs max-w-20 ${step.actionable ? 'text-blue-600 font-medium' : 'text-gray-500'}`}>
+                  {step.description}
+                </p>
+                {step.actionable && (
+                  <p className="text-xs text-red-600 font-bold mt-1 animate-bounce">
+                    Click to proceed!
+                  </p>
+                )}
+              </div>
+            </div>
+            
+            {index < steps.length - 1 && (
+              <ArrowRight className="h-4 w-4 text-gray-400 mx-2 mt-[-30px]" />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Helper function to determine current step
+const getCurrentStep = (delivery) => {
+  const status = delivery.currentStatus || 'assigned';
+  const isNonCOD = delivery.paymentMethod && delivery.paymentMethod.toLowerCase() !== 'cod';
+  
+  console.log('getCurrentStep debug:', {
+    deliveryId: delivery.delivery_id,
+    status: status,
+    paymentMethod: delivery.paymentMethod,
+    isNonCOD: isNonCOD
+  });
+  
+  switch (status) {
+    case 'assigned':
+      return 2; // Ready to fetch products
+    case 'left_warehouse':
+      return 4; // Ready to complete delivery (after fetching products)
+    case 'in_transit':
+      return 5; // Also ready to complete delivery (in case status changes to in_transit)
+    case 'delivery_completed':
+      return isNonCOD ? 7 : 8; // Ready to rate customer
+    case 'payment_received':
+      return isNonCOD ? 8 : 9; // Completed
+    default:
+      console.log('Unknown status, defaulting to step 1:', status);
+      return 1;
   }
 };
 
@@ -143,7 +322,7 @@ export const AssignedDeliveries = () => {
       return;
     }
 
-    setProcessingDelivery(delivery.id);
+    setProcessingDelivery(delivery.id || delivery.delivery_id);
 
     try {
       console.log("Marking products as fetched:", delivery.delivery_id);
@@ -191,7 +370,7 @@ export const AssignedDeliveries = () => {
       return;
     }
 
-    setProcessingDelivery(delivery.id);
+    setProcessingDelivery(delivery.id || delivery.delivery_id);
 
     try {
       console.log("Marking delivery as completed:", delivery.delivery_id);
@@ -248,7 +427,7 @@ export const AssignedDeliveries = () => {
       throw new Error("Invalid delivery ID");
     }
 
-    setProcessingDelivery(selectedDelivery.id);
+    setProcessingDelivery(selectedDelivery.id || selectedDelivery.delivery_id);
 
     try {
       console.log(
@@ -298,72 +477,6 @@ export const AssignedDeliveries = () => {
     } finally {
       setProcessingDelivery(null);
     }
-  };
-
-  // Determine which actions are available based on current status
-  const getAvailableActions = (delivery) => {
-    const status = delivery.currentStatus || "assigned";
-    const actions = [];
-
-    console.log("Delivery status for action buttons:", {
-      delivery_id: delivery.delivery_id,
-      order_id: delivery.order_id,
-      currentStatus: delivery.currentStatus,
-      status: delivery.status,
-      effectiveStatus: status,
-    });
-
-    switch (status) {
-      case "pending":
-      case "confirmed":
-      case "assigned":
-        actions.push({
-          key: "products_fetched",
-          label: "Products Fetched",
-          icon: Package,
-          color:
-            "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800",
-          handler: handleProductsFetched,
-        });
-        break;
-
-      case "left_warehouse":
-      case "in_transit":
-        actions.push({
-          key: "delivery_completed",
-          label: "Delivery Completed",
-          icon: CheckCircle,
-          color:
-            "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800",
-          handler: handleDeliveryCompleted,
-        });
-        break;
-
-      case "delivery_completed":
-        actions.push({
-          key: "rate_customer",
-          label: "Rate Customer",
-          icon: User,
-          color:
-            "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800",
-          handler: handleRateCustomer,
-        });
-        break;
-
-      case "payment_received":
-        // No actions needed after payment is received and customer is rated
-        break;
-
-      default:
-        console.warn("Unknown delivery status, no actions available:", {
-          status,
-          delivery_id: delivery.delivery_id,
-          order_id: delivery.order_id,
-        });
-        break;
-    }
-
-    return actions;
   };
 
   // Manual refresh
@@ -537,6 +650,24 @@ export const AssignedDeliveries = () => {
                 </div>
               </div>
 
+              {/* Add Delivery Flow Diagram after customer info */}
+              <DeliveryFlowDiagram 
+                delivery={delivery}
+                currentStep={getCurrentStep(delivery)}
+                onStepClick={(step) => {
+                  console.log('Flow step clicked:', step);
+                  if (step.id === 'fetch_products') {
+                    handleProductsFetched(delivery);
+                  } else if (step.id === 'complete_delivery') {
+                    handleDeliveryCompleted(delivery);
+                  } else if (step.id === 'rate_customer') {
+                    // Handle rating functionality
+                    console.log('Opening rating modal for delivery:', delivery.id);
+                    handleRateCustomer(delivery);
+                  }
+                }}
+              />
+
               {/* Delivery Timer */}
               {(delivery.currentStatus === "assigned" || delivery.currentStatus === "left_warehouse" || delivery.currentStatus === "in_transit") && (
                 <div className="flex justify-center mb-4">
@@ -556,35 +687,71 @@ export const AssignedDeliveries = () => {
                   <strong className="text-gray-800">📦 Items:</strong>{" "}
                   {delivery.items?.join(", ") || "No items listed"}
                 </p>
+                
+                {/* Time display logic - show actual delivery time if completed, otherwise ETA */}
                 <div className="flex items-center gap-2 text-gray-700 font-medium">
                   <Clock className="h-5 w-5 text-orange-600" />
                   <span>
-                    <strong>⏰ ETA:</strong> {
-                      delivery.estimatedDateTime 
-                        ? new Date(delivery.estimatedDateTime).toLocaleString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: true
-                          })
-                        : delivery.estimatedTime || 'TBD'
+                    {delivery.currentStatus === "delivery_completed" || delivery.currentStatus === "payment_received" ? (
+                      <strong>🎯 Delivered At:</strong>
+                    ) : (
+                      <strong>⏰ ETA:</strong>
+                    )} {
+                      delivery.currentStatus === "delivery_completed" || delivery.currentStatus === "payment_received" ? (
+                        delivery.actual_arrival || delivery.delivered_at 
+                          ? new Date(delivery.actual_arrival || delivery.delivered_at).toLocaleString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true
+                            })
+                          : new Date().toLocaleString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true
+                            })
+                      ) : (
+                        delivery.estimatedDateTime 
+                          ? new Date(delivery.estimatedDateTime).toLocaleString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true
+                            })
+                          : delivery.estimatedTime || 'TBD'
+                      )
                     }
                   </span>
                 </div>
+                
                 {delivery.totalAmount && (
                   <p className="text-gray-700 font-medium">
-                    <strong className="text-gray-800">💰 Total:</strong> $
+                    <strong className="text-gray-800">💰 Total:</strong> ৳
                     {delivery.totalAmount.toFixed(2)}
                   </p>
                 )}
-                {delivery.paymentStatus && (
-                  <p className="text-gray-700 font-medium">
-                    <strong className="text-gray-800">💳 Payment:</strong>{" "}
-                    {delivery.paymentStatus}
-                  </p>
-                )}
+                
+                {/* Payment status logic - show completed for non-COD always, for COD after delivery_completed */}
+                <p className="text-gray-700 font-medium">
+                  <strong className="text-gray-800">💳 Payment:</strong>{" "}
+                  {(() => {
+                    const isCOD = delivery.paymentMethod && delivery.paymentMethod.toLowerCase() === 'cod';
+                    const isDeliveryCompleted = delivery.currentStatus === "delivery_completed" || delivery.currentStatus === "payment_received";
+                    
+                    if (isCOD) {
+                      return isDeliveryCompleted ? "Payment Completed (COD)" : "Cash on Delivery (Pending)";
+                    } else {
+                      return "Payment Completed";
+                    }
+                  })()}
+                </p>
               </div>
 
               {/* Status message for delivery completed */}
@@ -599,23 +766,6 @@ export const AssignedDeliveries = () => {
                 </div>
               )}
 
-              <div className="flex gap-4">
-                {getAvailableActions(delivery).map((action) => (
-                  <Button
-                    key={action.key}
-                    className={`flex-1 ${action.color} text-white py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 font-bold`}
-                    onClick={() => action.handler(delivery)}
-                    disabled={processingDelivery === delivery.id}
-                  >
-                    {processingDelivery === delivery.id ? (
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    ) : (
-                      <action.icon className="h-5 w-5 mr-2" />
-                    )}
-                    {action.label}
-                  </Button>
-                ))}
-              </div>
             </div>
           ))
         )}

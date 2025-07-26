@@ -150,7 +150,7 @@ const DeliveryBoy = () => {
                 </div>
                 <div>
                   <h1 className="text-xl font-bold text-gray-900">
-                    DeliveryPro Dashboard
+                    Delivery Dashboard
                   </h1>
                   <p className="text-sm font-semibold text-gray-700">
                     Welcome back, {user?.first_name || "Driver"}
@@ -171,9 +171,6 @@ const DeliveryBoy = () => {
 
           <div className="mt-4">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">
-                All-in-One Dashboard
-              </h2>
               <p className="text-gray-800 font-medium">
                 Monitor deliveries, performance, schedule and more
               </p>

@@ -87,7 +87,7 @@ const CustomerRatingModal = ({ isOpen, onClose, delivery, onSubmit }) => {
                 ⭐ Rate Customer Experience
               </h2>
               <p className="text-gray-600 font-medium mt-1">
-                Order #{delivery?.order_id}
+                Order #{delivery?.order_id || delivery?.id} | Delivery #{delivery?.delivery_id || delivery?.id}
               </p>
             </div>
             <button
@@ -111,13 +111,19 @@ const CustomerRatingModal = ({ isOpen, onClose, delivery, onSubmit }) => {
                 </div>
                 <div className="flex-1">
                   <p className="font-bold text-gray-800 text-lg">
-                    👤 {delivery?.first_name && delivery?.last_name
-                      ? `${delivery.first_name} ${delivery.last_name}`
-                      : "Customer"}
+                    👤 {delivery?.customerName || 
+                         (delivery?.first_name && delivery?.last_name 
+                           ? `${delivery.first_name} ${delivery.last_name}` 
+                           : delivery?.customer_name || "Customer")}
                   </p>
-                  {delivery?.phone_number && (
+                  {(delivery?.customerPhone || delivery?.phone_number) && (
                     <p className="text-gray-600 font-medium">
-                      📞 {delivery.phone_number}
+                      📞 {delivery?.customerPhone || delivery?.phone_number}
+                    </p>
+                  )}
+                  {(delivery?.customerEmail || delivery?.email) && (
+                    <p className="text-gray-600 font-medium">
+                      📧 {delivery?.customerEmail || delivery?.email}
                     </p>
                   )}
                   {delivery?.address && (
@@ -131,7 +137,7 @@ const CustomerRatingModal = ({ isOpen, onClose, delivery, onSubmit }) => {
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 font-medium">💰 Order Total:</span>
                   <span className="font-bold text-gray-800 text-lg">
-                    ₹{delivery?.total_amount || 0}
+                    ৳{(delivery?.totalAmount || delivery?.total_amount || 0).toFixed(2)}
                   </span>
                 </div>
               </div>

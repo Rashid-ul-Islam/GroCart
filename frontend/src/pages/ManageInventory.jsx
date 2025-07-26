@@ -929,6 +929,7 @@ const InventoryManagement = () => {
                               type="number"
                               placeholder="Min"
                               value={priceRange.min}
+                              min="0"
                               onChange={(e) =>
                                 setPriceRange({
                                   ...priceRange,
@@ -941,6 +942,7 @@ const InventoryManagement = () => {
                               type="number"
                               placeholder="Max"
                               value={priceRange.max}
+                              min="0"
                               onChange={(e) =>
                                 setPriceRange({
                                   ...priceRange,

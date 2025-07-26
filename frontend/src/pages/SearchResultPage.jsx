@@ -104,7 +104,7 @@ function SearchResultsPage() {
                         {product.product_name || product.name}
                       </h3>
                       <p className="text-lg font-bold text-purple-600">
-                        ${product.price}
+                        ৳{product.price}
                       </p>
                       {product.origin && (
                         <p className="text-sm text-gray-500 mt-1">

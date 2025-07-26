@@ -244,7 +244,7 @@ export default function NavBar() {
                             {product.category_name || "Uncategorized"}
                           </div>
                           <div className="text-sm font-semibold text-green-600">
-                            ${parseFloat(product.price)?.toFixed(2) || "N/A"}
+                            ৳{parseFloat(product.price)?.toFixed(2) || "N/A"}
                           </div>
                         </div>
                       </div>

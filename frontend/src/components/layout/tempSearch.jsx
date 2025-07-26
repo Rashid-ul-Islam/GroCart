@@ -537,7 +537,7 @@ const EcommerceSearch = () => {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-2xl font-bold text-purple-700">
-                        ${product.price}
+                        ৳{product.price}
                       </span>
                       <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">
                         Add to Cart

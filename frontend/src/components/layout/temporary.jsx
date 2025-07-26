@@ -17,11 +17,11 @@
                     {product.product_name}
                   </h3>
                   <p className="text-lg font-bold text-blue-600">
-                    ${product.price}
+                    ৳{product.price}
                   </p>
                   {product.original_price && product.original_price > product.price && (
                     <p className="text-sm text-gray-500 line-through">
-                      ${product.original_price}
+                      ৳{product.original_price}
                     </p>
                   )}
                 </div>

@@ -979,7 +979,7 @@ export const getActiveOrders = async (req, res) => {
         WHERE sh.entity_type = 'order' AND sh.entity_id = o.order_id
         ORDER BY sh.updated_at DESC
         LIMIT 1
-      ) NOT IN ('payment_received', 'cancelled')
+      ) NOT IN ('delivery_completed', 'payment_received', 'cancelled')
       ORDER BY o.order_date DESC;
     `;
 
@@ -1083,7 +1083,7 @@ export const getCompletedOrders = async (req, res) => {
         WHERE sh.entity_type = 'order' AND sh.entity_id = o.order_id
         ORDER BY sh.updated_at DESC
         LIMIT 1
-      ) = 'payment_received'
+      ) IN ('payment_received', 'delivery_completed')
       ORDER BY o.order_date DESC;
     `;
 
@@ -1224,7 +1224,7 @@ export const getOrderStats = async (req, res) => {
         SELECT sh.status FROM "StatusHistory" sh
         WHERE sh.entity_type = 'order' AND sh.entity_id = o.order_id
         ORDER BY sh.updated_at DESC LIMIT 1
-      ) NOT IN ('payment_received', 'cancelled')
+      ) NOT IN ('delivery_completed', 'payment_received', 'cancelled')
     `, [user_id]);
     const activeOrders = parseInt(activeOrdersResult.rows[0].count, 10);
 

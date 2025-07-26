@@ -12,22 +12,22 @@ export default function AdminDashboard() {
     {
       id: 1,
       name: "Fresh Apples",
-      price: "$5.99",
+      price: "৳5.99",
       stock: 50,
       category: "Fruits",
     },
     {
       id: 2,
       name: "Organic Carrots",
-      price: "$3.49",
+      price: "৳3.49",
       stock: 30,
       category: "Vegetables",
     },
-    { id: 3, name: "Whole Milk", price: "$4.99", stock: 25, category: "Dairy" },
+    { id: 3, name: "Whole Milk", price: "৳4.99", stock: 25, category: "Dairy" },
     {
       id: 4,
       name: "Chicken Breast",
-      price: "$12.99",
+      price: "৳12.99",
       stock: 15,
       category: "Meat",
     },
@@ -84,7 +84,7 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Sales</p>
-              <p className="text-3xl font-bold text-purple-600">$45,678</p>
+              <p className="text-3xl font-bold text-purple-600">৳45,678</p>
             </div>
             <BarChart3 className="h-12 w-12 text-purple-600" />
           </div>

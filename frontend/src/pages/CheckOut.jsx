@@ -596,7 +596,7 @@ const CheckoutPage = () => {
                 <p className="text-sm text-gray-600">{item.description}</p>
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-lg font-bold text-blue-600">
-                    ${item.price}
+                    ৳{item.price}
                   </span>
                   <div className="flex items-center space-x-2">
                     <motion.button
@@ -1013,7 +1013,7 @@ const CheckoutPage = () => {
           <div className="flex justify-between">
             <span>Order Total:</span>
             <span className="font-semibold">
-              ${calculateTotal().toFixed(2)}
+              ৳{calculateTotal().toFixed(2)}
             </span>
           </div>
           <div className="flex justify-between">
@@ -1064,7 +1064,7 @@ const CheckoutPage = () => {
                 </div>
               </div>
               <span className="font-semibold text-gray-900">
-                ${(item.price * item.quantity).toFixed(2)}
+                ৳{(item.price * item.quantity).toFixed(2)}
               </span>
             </div>
           ))
@@ -1120,7 +1120,7 @@ const CheckoutPage = () => {
         <div className="flex justify-between">
           <span className=" text-green-600">Subtotal</span>
           <span className="font-medium  text-green-600">
-            ${orderData?.subtotal?.toFixed(2) || "0.00"}
+            ৳{orderData?.subtotal?.toFixed(2) || "0.00"}
           </span>
         </div>
         <div className="flex justify-between">
@@ -1171,7 +1171,7 @@ const CheckoutPage = () => {
 
       <div className="flex justify-between items-center text-xl font-bold text-gray-900 mb-6">
         <span>Total</span>
-        <span>${calculateTotal().toFixed(2)}</span>
+        <span>৳{calculateTotal().toFixed(2)}</span>
       </div>
 
       {/* Security Badge - only show when there are items */}

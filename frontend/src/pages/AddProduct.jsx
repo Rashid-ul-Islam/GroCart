@@ -650,7 +650,7 @@ export default function AddProduct() {
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                   <Banknote className="w-4 h-4 text-green-500" />
-                  Price ($) *
+                  Price (৳) *
                 </label>
                 <input
                   type="number"

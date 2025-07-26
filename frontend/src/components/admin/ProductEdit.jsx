@@ -475,7 +475,7 @@ export default function ProductEdit() {
                         Price
                       </span>
                     </div>
-                    <p className="text-gray-800 font-bold">${product.price}</p>
+                    <p className="text-gray-800 font-bold">৳{product.price}</p>
                   </div>
 
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
@@ -605,7 +605,7 @@ export default function ProductEdit() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-2">
                       <label className="block text-sm font-bold text-gray-700">
-                        Price ($)
+                        Price (৳)
                       </label>
                       <input
                         type="number"

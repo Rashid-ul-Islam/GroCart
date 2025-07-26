@@ -213,7 +213,7 @@ export default function AdminPanel() {
 
     if (priceRange.min || priceRange.max) {
       filtered = filtered.filter((product) => {
-        const price = parseFloat(product.price.replace("$", ""));
+        const price = parseFloat(product.price.replace("৳", ""));
         const min = priceRange.min ? parseFloat(priceRange.min) : 0;
         const max = priceRange.max ? parseFloat(priceRange.max) : Infinity;
         return price >= min && price <= max;
@@ -504,7 +504,7 @@ export default function AdminPanel() {
                         {product.name}
                       </h4>
                       <p className="text-green-600 font-bold">
-                        ${product.price}
+                        ৳{product.price}
                       </p>
                       <p className="text-sm text-gray-600">
                         Stock: {product.quantity} {product.unit_measure}
@@ -795,7 +795,7 @@ export default function AdminPanel() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${product.price}
+                        ৳{product.price}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <span

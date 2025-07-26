@@ -456,6 +456,7 @@ const EnhancedSearchResults = () => {
                   type="number"
                   placeholder="₹0"
                   value={filters.minPrice}
+                  min="0"
                   onChange={(e) =>
                     handleFilterChange("minPrice", e.target.value)
                   }
@@ -471,6 +472,7 @@ const EnhancedSearchResults = () => {
                   type="number"
                   placeholder="₹10000"
                   value={filters.maxPrice}
+                  min="0"
                   onChange={(e) =>
                     handleFilterChange("maxPrice", e.target.value)
                   }

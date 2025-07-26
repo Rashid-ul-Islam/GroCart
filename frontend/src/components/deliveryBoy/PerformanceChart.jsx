@@ -16,16 +16,10 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { TrendingUp, Star, Package, RefreshCw, Loader2, AlertTriangle, BarChart3, Activity } from "lucide-react";
+import { TrendingUp, Star, RefreshCw, Loader2, AlertTriangle, BarChart3, Activity } from "lucide-react";
 
 export const PerformanceChart = ({ deliveryBoyId }) => {
   const [performanceData, setPerformanceData] = useState([]);
-  const [summary, setSummary] = useState({
-    totalDeliveries: 0,
-    averageRating: 0,
-    onTimeRate: 0,
-    earnings: 0
-  });
   const [performanceBreakdown, setPerformanceBreakdown] = useState([]);
   const [monthlyData, setMonthlyData] = useState([]);
   const [insights, setInsights] = useState({
@@ -55,11 +49,6 @@ export const PerformanceChart = ({ deliveryBoyId }) => {
       if (!weeklyResponse.ok) throw new Error('Failed to fetch weekly data');
       const weeklyData = await weeklyResponse.json();
 
-      // Fetch performance summary
-      const summaryResponse = await fetch(`http://localhost:3000/api/delivery-performance/summary/${deliveryBoyId}`);
-      if (!summaryResponse.ok) throw new Error('Failed to fetch summary data');
-      const summaryData = await summaryResponse.json();
-
       // Fetch rating distribution
       const ratingResponse = await fetch(`http://localhost:3000/api/delivery-performance/rating-distribution/${deliveryBoyId}`);
       if (!ratingResponse.ok) throw new Error('Failed to fetch rating data');
@@ -77,7 +66,6 @@ export const PerformanceChart = ({ deliveryBoyId }) => {
 
       // Set all the data
       setPerformanceData(weeklyData);
-      setSummary(summaryData);
       setPerformanceBreakdown(ratingData);
       setMonthlyData(monthlyDataFetched);
       setInsights(insightsData);
@@ -131,59 +119,6 @@ export const PerformanceChart = ({ deliveryBoyId }) => {
 
   return (
     <div className="space-y-6">
-      {/* Summary Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Deliveries</p>
-              <p className="text-2xl font-bold text-gray-900">{summary.totalDeliveries || 0}</p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <Package className="h-6 w-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Average Rating</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {summary.averageRating > 0 ? Number(summary.averageRating).toFixed(1) : "N/A"}
-              </p>
-            </div>
-            <div className="bg-green-100 p-3 rounded-full">
-              <Star className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">On-Time Rate</p>
-              <p className="text-2xl font-bold text-gray-900">{summary.onTimeRate || 0}%</p>
-            </div>
-            <div className="bg-purple-100 p-3 rounded-full">
-              <TrendingUp className="h-6 w-6 text-purple-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Earnings</p>
-              <p className="text-2xl font-bold text-gray-900">৳{summary.earnings || 0}</p>
-            </div>
-            <div className="bg-orange-100 p-3 rounded-full">
-              <Activity className="h-6 w-6 text-orange-600" />
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Weekly Performance Line Chart */}
@@ -310,7 +245,7 @@ export const PerformanceChart = ({ deliveryBoyId }) => {
                 dataKey="revenue" 
                 fill="#10B981" 
                 radius={[4, 4, 0, 0]}
-                name="Revenue ($)"
+                name="Revenue (৳)"
               />
             </BarChart>
           </ResponsiveContainer>

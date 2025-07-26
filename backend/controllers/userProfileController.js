@@ -193,6 +193,28 @@ export const addUserAddress = async (req, res) => {
 
         const { user_id, address, region_id, isPrimary } = req.body;
 
+        console.log('Adding user address:', { user_id, address, region_id, isPrimary });
+
+        // Check for duplicate address
+        const duplicateCheck = await client.query(
+            `SELECT address_id, address FROM "Address" 
+             WHERE user_id = $1 AND LOWER(TRIM(address)) = LOWER(TRIM($2)) AND region_id = $3`,
+            [user_id, address, region_id]
+        );
+
+        console.log('Duplicate check result:', duplicateCheck.rows);
+
+        if (duplicateCheck.rows.length > 0) {
+            await client.query('ROLLBACK');
+            console.log('Duplicate address found, rejecting');
+            return res.status(409).json({
+                success: false,
+                message: 'This address already exists for your account'
+            });
+        }
+
+        console.log('No duplicate found, proceeding with insert');
+
         // If this is set as primary, update all other addresses to not primary
         if (isPrimary) {
             await client.query(

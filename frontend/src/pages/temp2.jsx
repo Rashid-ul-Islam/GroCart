@@ -269,7 +269,7 @@ const SearchResults = () => {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <span className="text-xl font-bold text-green-600">
-                ${Number(product.price)?.toFixed(2) || "N/A"}
+                ৳{Number(product.price)?.toFixed(2) || "N/A"}
               </span>
               {product.unit_measure && (
                 <span className="text-sm text-gray-500 ml-1">

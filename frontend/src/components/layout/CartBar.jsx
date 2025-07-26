@@ -452,7 +452,7 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
                   </p>
                   <div className="flex items-center justify-between mt-2">
                     <span className="font-bold text-blue-600 text-lg">
-                      ${item.price.toFixed(2)}
+                      ৳{item.price.toFixed(2)}
                     </span>
 
                     {/* Quantity controls */}
@@ -498,12 +498,12 @@ const CartSidebarLayout = forwardRef(({ children }, ref) => {
             <div className="space-y-2 mb-6">
               <div className="flex justify-between text-gray-600 font-medium">
                 <span>Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>৳{subtotal.toFixed(2)}</span>
               </div>
               <div className="border-t border-gray-200 pt-2">
                 <div className="flex justify-between font-bold text-xl text-gray-800">
                   <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>৳{total.toFixed(2)}</span>
                 </div>
               </div>
             </div>
