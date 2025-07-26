@@ -21,41 +21,21 @@ import { TrendingUp, Star, Package, RefreshCw, Loader2, AlertTriangle, BarChart3
 export const PerformanceChart = ({ deliveryBoyId }) => {
   const [performanceData, setPerformanceData] = useState([]);
   const [summary, setSummary] = useState({
-    totalWeeklyDeliveries: 0,
-    averageWeeklyRating: 0,
+    totalDeliveries: 0,
+    averageRating: 0,
+    onTimeRate: 0,
+    earnings: 0
+  });
+  const [performanceBreakdown, setPerformanceBreakdown] = useState([]);
+  const [monthlyData, setMonthlyData] = useState([]);
+  const [insights, setInsights] = useState({
+    peakDay: '',
+    satisfactionRate: 0,
+    improvementArea: ''
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState("week");
-
-  // Mock data for demonstration - replace with your actual API calls
-  const mockData = [
-    { name: "Mon", deliveries: 12, rating: 4.5, date: "2024-01-01" },
-    { name: "Tue", deliveries: 19, rating: 4.2, date: "2024-01-02" },
-    { name: "Wed", deliveries: 15, rating: 4.7, date: "2024-01-03" },
-    { name: "Thu", deliveries: 22, rating: 4.3, date: "2024-01-04" },
-    { name: "Fri", deliveries: 18, rating: 4.6, date: "2024-01-05" },
-    { name: "Sat", deliveries: 25, rating: 4.4, date: "2024-01-06" },
-    { name: "Sun", deliveries: 16, rating: 4.8, date: "2024-01-07" },
-  ];
-
-  // Performance breakdown data for pie chart
-  const performanceBreakdown = [
-    { name: 'Excellent (5★)', value: 45, fill: '#10B981' },
-    { name: 'Good (4★)', value: 30, fill: '#3B82F6' },
-    { name: 'Average (3★)', value: 20, fill: '#F59E0B' },
-    { name: 'Poor (≤2★)', value: 5, fill: '#EF4444' }
-  ];
-
-  // Monthly comparison data
-  const monthlyData = [
-    { month: 'Jan', deliveries: 450, rating: 4.2, revenue: 2800 },
-    { month: 'Feb', deliveries: 520, rating: 4.4, revenue: 3200 },
-    { month: 'Mar', deliveries: 480, rating: 4.3, revenue: 3000 },
-    { month: 'Apr', deliveries: 590, rating: 4.6, revenue: 3600 },
-    { month: 'May', deliveries: 630, rating: 4.5, revenue: 3900 },
-    { month: 'Jun', deliveries: 570, rating: 4.7, revenue: 3500 }
-  ];
 
   // Fetch performance data
   const fetchPerformanceData = async () => {
@@ -70,15 +50,37 @@ export const PerformanceChart = ({ deliveryBoyId }) => {
       setLoading(true);
       setError(null);
 
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Fetch weekly performance data
+      const weeklyResponse = await fetch(`http://localhost:3000/api/delivery-performance/weekly/${deliveryBoyId}`);
+      if (!weeklyResponse.ok) throw new Error('Failed to fetch weekly data');
+      const weeklyData = await weeklyResponse.json();
 
-      // Use mock data for now - replace with your actual API call
-      setPerformanceData(mockData);
-      setSummary({
-        totalWeeklyDeliveries: mockData.reduce((sum, day) => sum + day.deliveries, 0),
-        averageWeeklyRating: mockData.reduce((sum, day) => sum + day.rating, 0) / mockData.length,
-      });
+      // Fetch performance summary
+      const summaryResponse = await fetch(`http://localhost:3000/api/delivery-performance/summary/${deliveryBoyId}`);
+      if (!summaryResponse.ok) throw new Error('Failed to fetch summary data');
+      const summaryData = await summaryResponse.json();
+
+      // Fetch rating distribution
+      const ratingResponse = await fetch(`http://localhost:3000/api/delivery-performance/rating-distribution/${deliveryBoyId}`);
+      if (!ratingResponse.ok) throw new Error('Failed to fetch rating data');
+      const ratingData = await ratingResponse.json();
+
+      // Fetch monthly performance
+      const monthlyResponse = await fetch(`http://localhost:3000/api/delivery-performance/monthly/${deliveryBoyId}`);
+      if (!monthlyResponse.ok) throw new Error('Failed to fetch monthly data');
+      const monthlyDataFetched = await monthlyResponse.json();
+
+      // Fetch performance insights
+      const insightsResponse = await fetch(`http://localhost:3000/api/delivery-performance/insights/${deliveryBoyId}`);
+      if (!insightsResponse.ok) throw new Error('Failed to fetch insights data');
+      const insightsData = await insightsResponse.json();
+
+      // Set all the data
+      setPerformanceData(weeklyData);
+      setSummary(summaryData);
+      setPerformanceBreakdown(ratingData);
+      setMonthlyData(monthlyDataFetched);
+      setInsights(insightsData);
       
       setError(null);
     } catch (error) {
@@ -135,8 +137,7 @@ export const PerformanceChart = ({ deliveryBoyId }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Deliveries</p>
-              <p className="text-2xl font-bold text-gray-900">{summary.totalWeeklyDeliveries}</p>
-              <p className="text-xs text-green-600">+12% from last week</p>
+              <p className="text-2xl font-bold text-gray-900">{summary.totalDeliveries || 0}</p>
             </div>
             <div className="bg-blue-100 p-3 rounded-full">
               <Package className="h-6 w-6 text-blue-600" />
@@ -149,9 +150,8 @@ export const PerformanceChart = ({ deliveryBoyId }) => {
             <div>
               <p className="text-sm font-medium text-gray-600">Average Rating</p>
               <p className="text-2xl font-bold text-gray-900">
-                {summary.averageWeeklyRating > 0 ? Number(summary.averageWeeklyRating).toFixed(1) : "N/A"}
+                {summary.averageRating > 0 ? Number(summary.averageRating).toFixed(1) : "N/A"}
               </p>
-              <p className="text-xs text-green-600">+0.3 from last week</p>
             </div>
             <div className="bg-green-100 p-3 rounded-full">
               <Star className="h-6 w-6 text-green-600" />
@@ -163,8 +163,7 @@ export const PerformanceChart = ({ deliveryBoyId }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">On-Time Rate</p>
-              <p className="text-2xl font-bold text-gray-900">94%</p>
-              <p className="text-xs text-green-600">+2% from last week</p>
+              <p className="text-2xl font-bold text-gray-900">{summary.onTimeRate || 0}%</p>
             </div>
             <div className="bg-purple-100 p-3 rounded-full">
               <TrendingUp className="h-6 w-6 text-purple-600" />
@@ -176,8 +175,7 @@ export const PerformanceChart = ({ deliveryBoyId }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Earnings</p>
-              <p className="text-2xl font-bold text-gray-900">$1,240</p>
-              <p className="text-xs text-green-600">+18% from last week</p>
+              <p className="text-2xl font-bold text-gray-900">৳{summary.earnings || 0}</p>
             </div>
             <div className="bg-orange-100 p-3 rounded-full">
               <Activity className="h-6 w-6 text-orange-600" />
@@ -329,7 +327,7 @@ export const PerformanceChart = ({ deliveryBoyId }) => {
               <span className="font-semibold text-green-800">Peak Performance</span>
             </div>
             <p className="text-sm text-green-600">
-              Saturday shows highest delivery count with 25 deliveries and excellent ratings.
+              {insights.peakDay || 'Analyzing your best performing day...'}
             </p>
           </div>
           
@@ -339,7 +337,7 @@ export const PerformanceChart = ({ deliveryBoyId }) => {
               <span className="font-semibold text-blue-800">Customer Satisfaction</span>
             </div>
             <p className="text-sm text-blue-600">
-              Consistently maintaining 4.5+ rating with 94% customer satisfaction rate.
+              Maintaining {insights.satisfactionRate || 0}% customer satisfaction rate with excellent service.
             </p>
           </div>
           
@@ -349,7 +347,7 @@ export const PerformanceChart = ({ deliveryBoyId }) => {
               <span className="font-semibold text-purple-800">Improvement Area</span>
             </div>
             <p className="text-sm text-purple-600">
-              Tuesday shows lower performance - consider route optimization strategies.
+              {insights.improvementArea || 'Keep up the excellent work!'}
             </p>
           </div>
         </div>

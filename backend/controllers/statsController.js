@@ -34,25 +34,20 @@ export const getKpiData = async (req, res) => {
         SELECT 
           COALESCE(SUM(o.total_amount), 0) as current_revenue,
           COUNT(DISTINCT o.order_id) as current_orders,
-          COUNT(DISTINCT o.user_id) as current_customers,
-          COALESCE(AVG(r.rating), 0) as current_rating,
-          COUNT(DISTINCT r.review_id) as total_reviews,
           COUNT(DISTINCT CASE WHEN o.payment_status = 'pending' OR o.payment_status = 'processing' THEN o.order_id END) as active_orders
         FROM "Order" o
-        LEFT JOIN "OrderItem" oi ON o.order_id = oi.order_id
-        LEFT JOIN "Review" r ON oi.product_id = r.product_id
         WHERE o.created_at >= $1 AND o.created_at <= $2
       ),
-      previous_period AS (
+      current_reviews AS (
         SELECT 
-          COALESCE(SUM(o.total_amount), 0) as prev_revenue,
-          COUNT(DISTINCT o.order_id) as prev_orders,
-          COUNT(DISTINCT o.user_id) as prev_customers,
-          COALESCE(AVG(r.rating), 0) as prev_rating
-        FROM "Order" o
-        LEFT JOIN "OrderItem" oi ON o.order_id = oi.order_id
-        LEFT JOIN "Review" r ON oi.product_id = r.product_id
-        WHERE o.created_at >= $3 AND o.created_at < $1
+          COALESCE(AVG(r.rating), 0) as current_rating,
+          COUNT(DISTINCT r.review_id) as total_reviews
+        FROM "Review" r
+        WHERE r.review_date >= $1 AND r.review_date <= $2
+      ),
+      total_customers AS (
+        SELECT COUNT(*) as current_customers
+        FROM "User" u
       ),
       new_customers AS (
         SELECT COUNT(*) as new_customer_count
@@ -62,60 +57,34 @@ export const getKpiData = async (req, res) => {
       SELECT 
         cp.current_revenue,
         cp.current_orders,
-        cp.current_customers,
-        cp.current_rating,
-        cp.total_reviews,
+        tc.current_customers,
+        cr.current_rating,
+        cr.total_reviews,
         cp.active_orders,
-        pp.prev_revenue,
-        pp.prev_orders,
-        pp.prev_customers,
-        pp.prev_rating,
         nc.new_customer_count
       FROM current_period cp
-      CROSS JOIN previous_period pp
+      CROSS JOIN current_reviews cr
+      CROSS JOIN total_customers tc
       CROSS JOIN new_customers nc;
     `;
     
-    const prevStartDate = new Date(startDate.getTime() - (endDate.getTime() - startDate.getTime()));
-    
-    const result = await pool.query(kpiQuery, [startDate, endDate, prevStartDate]);
+    const result = await pool.query(kpiQuery, [startDate, endDate]);
     const data = result.rows[0];
-    
-    // Calculate percentage changes
-    const revenueChange = data.prev_revenue > 0 
-      ? ((data.current_revenue - data.prev_revenue) / data.prev_revenue * 100).toFixed(1)
-      : 0;
-      
-    const ordersChange = data.prev_orders > 0 
-      ? ((data.current_orders - data.prev_orders) / data.prev_orders * 100).toFixed(1)
-      : 0;
-      
-    const customersChange = data.prev_customers > 0 
-      ? ((data.current_customers - data.prev_customers) / data.prev_customers * 100).toFixed(1)
-      : 0;
-      
-    const ratingChange = data.prev_rating > 0 
-      ? ((data.current_rating - data.prev_rating) / data.prev_rating * 100).toFixed(1)
-      : 0;
     
     const kpiData = {
       revenue: { 
-        value: parseFloat(data.current_revenue) || 0, 
-        change: parseFloat(revenueChange) 
+        value: parseFloat(data.current_revenue) || 0
       },
       orders: { 
         value: parseInt(data.current_orders) || 0, 
-        change: parseFloat(ordersChange),
         active: parseInt(data.active_orders) || 0
       },
       customers: { 
         value: parseInt(data.current_customers) || 0, 
-        change: parseFloat(customersChange),
         new: parseInt(data.new_customer_count) || 0
       },
       rating: { 
         value: parseFloat(data.current_rating).toFixed(1) || '0.0', 
-        change: parseFloat(ratingChange),
         reviews: parseInt(data.total_reviews) || 0
       }
     };
@@ -364,8 +333,8 @@ export const getInventoryData = async (req, res) => {
     const inventoryQuery = `
       SELECT 
         w.name as warehouse,
-        SUM(CASE WHEN i.quantity_in_stock > i.reorder_level THEN i.quantity_in_stock ELSE 0 END) as inStock,
-        SUM(CASE WHEN i.quantity_in_stock <= i.reorder_level AND i.quantity_in_stock > 0 THEN i.quantity_in_stock ELSE 0 END) as lowStock,
+        COUNT(CASE WHEN i.quantity_in_stock > i.reorder_level THEN 1 END) as inStock,
+        COUNT(CASE WHEN i.quantity_in_stock <= i.reorder_level AND i.quantity_in_stock > 0 THEN 1 END) as lowStock,
         COUNT(CASE WHEN i.quantity_in_stock = 0 THEN 1 END) as outOfStock
       FROM "Warehouse" w
       LEFT JOIN "Inventory" i ON w.warehouse_id = i.warehouse_id
