@@ -1,28 +1,33 @@
-// routes/analytics.js
 import express from 'express';
 import {
-    getRevenueData,
-    getKPIMetrics,
-    getCategoryData,
-    getDeliveryPerformance,
-    getCustomerTiers,
-    getTopProducts,
-    getMonthlyGrowth,
-    getInventoryStatus,
-    getDashboardData
+  getKpiData,
+  getRevenueData,
+  getCategoryData,
+  getDeliveryData,
+  getTierData,
+  getTopProducts,
+  getInventoryData,
+  getGrowthData,
+  getMonthlySales,
+  getOrderTrends,
+  getAllStats
 } from '../controllers/statsController.js';
 
 const router = express.Router();
 
-// Analytics routes
+// Individual stat endpoints
+router.get('/kpi', getKpiData);
 router.get('/revenue-data', getRevenueData);
-router.get('/kpi-metrics', getKPIMetrics);
-router.get('/category-data', getCategoryData);
-router.get('/delivery-performance', getDeliveryPerformance);
-router.get('/customer-tiers', getCustomerTiers);
+router.get('/categories', getCategoryData);
+router.get('/delivery', getDeliveryData);
+router.get('/tiers', getTierData);
 router.get('/top-products', getTopProducts);
-router.get('/monthly-growth', getMonthlyGrowth);
-router.get('/inventory-status', getInventoryStatus);
-router.get('/dashboard', getDashboardData);
+router.get('/inventory', getInventoryData);
+router.get('/growth', getGrowthData);
+router.get('/monthly-sales', getMonthlySales);
+router.get('/order-trends', getOrderTrends);
+
+// Comprehensive endpoint for all stats
+router.get('/all', getAllStats);
 
 export default router;

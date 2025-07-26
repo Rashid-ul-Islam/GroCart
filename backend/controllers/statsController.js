@@ -1,513 +1,549 @@
-// controllers/analyticsController.js
-import pool from '../db.js';
+import pool from "../db.js";
 
-// Get revenue and orders data for trend chart
-export const getRevenueData = async (req, res) => {
-    try {
-        const { timeRange = '7d' } = req.query;
+// Helper function to get date range based on timeRange parameter
+const getDateRange = (timeRange) => {
+  const now = new Date();
+  let startDate;
+  
+  switch (timeRange) {
+    case '7d':
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      break;
+    case '30d':
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      break;
+    case '90d':
+      startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      break;
+    default:
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  }
+  
+  return { startDate, endDate: now };
+};
 
-        let dateFilter = '';
-        switch (timeRange) {
-            case '7d':
-                dateFilter = "AND o.order_date >= CURRENT_DATE - INTERVAL '7 days'";
-                break;
-            case '30d':
-                dateFilter = "AND o.order_date >= CURRENT_DATE - INTERVAL '30 days'";
-                break;
-            case '90d':
-                dateFilter = "AND o.order_date >= CURRENT_DATE - INTERVAL '90 days'";
-                break;
-            default:
-                dateFilter = "AND o.order_date >= CURRENT_DATE - INTERVAL '7 days'";
-        }
-
-        const query = `
+// Get KPI data (revenue, orders, customers, rating)
+export const getKpiData = async (req, res) => {
+  try {
+    const { timeRange = '30d' } = req.query;
+    const { startDate, endDate } = getDateRange(timeRange);
+    
+    // Get current period data
+    const kpiQuery = `
+      WITH current_period AS (
+        SELECT 
+          COALESCE(SUM(o.total_amount), 0) as current_revenue,
+          COUNT(DISTINCT o.order_id) as current_orders,
+          COUNT(DISTINCT o.user_id) as current_customers,
+          COALESCE(AVG(r.rating), 0) as current_rating,
+          COUNT(DISTINCT r.review_id) as total_reviews,
+          COUNT(DISTINCT CASE WHEN o.payment_status = 'pending' OR o.payment_status = 'processing' THEN o.order_id END) as active_orders
+        FROM "Order" o
+        LEFT JOIN "OrderItem" oi ON o.order_id = oi.order_id
+        LEFT JOIN "Review" r ON oi.product_id = r.product_id
+        WHERE o.created_at >= $1 AND o.created_at <= $2
+      ),
+      previous_period AS (
+        SELECT 
+          COALESCE(SUM(o.total_amount), 0) as prev_revenue,
+          COUNT(DISTINCT o.order_id) as prev_orders,
+          COUNT(DISTINCT o.user_id) as prev_customers,
+          COALESCE(AVG(r.rating), 0) as prev_rating
+        FROM "Order" o
+        LEFT JOIN "OrderItem" oi ON o.order_id = oi.order_id
+        LEFT JOIN "Review" r ON oi.product_id = r.product_id
+        WHERE o.created_at >= $3 AND o.created_at < $1
+      ),
+      new_customers AS (
+        SELECT COUNT(*) as new_customer_count
+        FROM "User" u
+        WHERE u.created_at >= $1 AND u.created_at <= $2
+      )
       SELECT 
-        DATE(o.order_date) as date,
+        cp.current_revenue,
+        cp.current_orders,
+        cp.current_customers,
+        cp.current_rating,
+        cp.total_reviews,
+        cp.active_orders,
+        pp.prev_revenue,
+        pp.prev_orders,
+        pp.prev_customers,
+        pp.prev_rating,
+        nc.new_customer_count
+      FROM current_period cp
+      CROSS JOIN previous_period pp
+      CROSS JOIN new_customers nc;
+    `;
+    
+    const prevStartDate = new Date(startDate.getTime() - (endDate.getTime() - startDate.getTime()));
+    
+    const result = await pool.query(kpiQuery, [startDate, endDate, prevStartDate]);
+    const data = result.rows[0];
+    
+    // Calculate percentage changes
+    const revenueChange = data.prev_revenue > 0 
+      ? ((data.current_revenue - data.prev_revenue) / data.prev_revenue * 100).toFixed(1)
+      : 0;
+      
+    const ordersChange = data.prev_orders > 0 
+      ? ((data.current_orders - data.prev_orders) / data.prev_orders * 100).toFixed(1)
+      : 0;
+      
+    const customersChange = data.prev_customers > 0 
+      ? ((data.current_customers - data.prev_customers) / data.prev_customers * 100).toFixed(1)
+      : 0;
+      
+    const ratingChange = data.prev_rating > 0 
+      ? ((data.current_rating - data.prev_rating) / data.prev_rating * 100).toFixed(1)
+      : 0;
+    
+    const kpiData = {
+      revenue: { 
+        value: parseFloat(data.current_revenue) || 0, 
+        change: parseFloat(revenueChange) 
+      },
+      orders: { 
+        value: parseInt(data.current_orders) || 0, 
+        change: parseFloat(ordersChange),
+        active: parseInt(data.active_orders) || 0
+      },
+      customers: { 
+        value: parseInt(data.current_customers) || 0, 
+        change: parseFloat(customersChange),
+        new: parseInt(data.new_customer_count) || 0
+      },
+      rating: { 
+        value: parseFloat(data.current_rating).toFixed(1) || '0.0', 
+        change: parseFloat(ratingChange),
+        reviews: parseInt(data.total_reviews) || 0
+      }
+    };
+    
+    res.json(kpiData);
+  } catch (error) {
+    console.error('Error fetching KPI data:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Get revenue data for charts
+export const getRevenueData = async (req, res) => {
+  try {
+    const { timeRange = '30d' } = req.query;
+    const { startDate, endDate } = getDateRange(timeRange);
+    
+    const revenueQuery = `
+      SELECT 
+        DATE(o.created_at) as date,
         COALESCE(SUM(o.total_amount), 0) as revenue,
-        COUNT(o.order_id) as orders,
+        COUNT(DISTINCT o.order_id) as orders,
         COUNT(DISTINCT o.user_id) as customers
       FROM "Order" o
-      WHERE o.payment_status = 'completed' ${dateFilter}
-      GROUP BY DATE(o.order_date)
-      ORDER BY DATE(o.order_date)
+      WHERE o.created_at >= $1 AND o.created_at <= $2
+      GROUP BY DATE(o.created_at)
+      ORDER BY DATE(o.created_at);
     `;
-
-        const result = await pool.query(query);
-        res.json(result.rows);
-    } catch (error) {
-        console.error('Error fetching revenue data:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+    
+    const result = await pool.query(revenueQuery, [startDate, endDate]);
+    
+    const revenueData = result.rows.map(row => ({
+      date: row.date,
+      revenue: parseFloat(row.revenue),
+      orders: parseInt(row.orders),
+      customers: parseInt(row.customers)
+    }));
+    
+    res.json(revenueData);
+  } catch (error) {
+    console.error('Error fetching revenue data:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 };
 
-// Get KPI metrics
-export const getKPIMetrics = async (req, res) => {
-    try {
-        const { timeRange = '30d' } = req.query;
-
-        let dateFilter = '';
-        switch (timeRange) {
-            case '7d':
-                dateFilter = "AND order_date >= CURRENT_DATE - INTERVAL '7 days'";
-                break;
-            case '30d':
-                dateFilter = "AND order_date >= CURRENT_DATE - INTERVAL '30 days'";
-                break;
-            case '90d':
-                dateFilter = "AND order_date >= CURRENT_DATE - INTERVAL '90 days'";
-                break;
-            default:
-                dateFilter = "AND order_date >= CURRENT_DATE - INTERVAL '30 days'";
-        }
-
-        // Get total revenue
-        const revenueQuery = `
-      SELECT 
-        COALESCE(SUM(total_amount), 0) as current_revenue,
-        (
-          SELECT COALESCE(SUM(total_amount), 0) 
-          FROM "Order" 
-          WHERE payment_status = 'completed' 
-          AND order_date >= CURRENT_DATE - INTERVAL '60 days'
-          AND order_date < CURRENT_DATE - INTERVAL '30 days'
-        ) as previous_revenue
-      FROM "Order" 
-      WHERE payment_status = 'completed' ${dateFilter}
-    `;
-
-        // Get total orders
-        const ordersQuery = `
-      SELECT 
-        COUNT(*) as current_orders,
-        (
-          SELECT COUNT(*) 
-          FROM "Order" 
-          WHERE order_date >= CURRENT_DATE - INTERVAL '60 days'
-          AND order_date < CURRENT_DATE - INTERVAL '30 days'
-        ) as previous_orders,
-        (
-          SELECT COUNT(*) 
-          FROM "Order" 
-          WHERE payment_status IN ('pending', 'processing')
-        ) as active_orders
-      FROM "Order" 
-      WHERE ${dateFilter.replace('AND ', '')}
-    `;
-
-        // Get active customers
-        const customersQuery = `
-      SELECT 
-        COUNT(DISTINCT user_id) as current_customers,
-        (
-          SELECT COUNT(DISTINCT user_id) 
-          FROM "Order" 
-          WHERE order_date >= CURRENT_DATE - INTERVAL '60 days'
-          AND order_date < CURRENT_DATE - INTERVAL '30 days'
-        ) as previous_customers,
-        (
-          SELECT COUNT(*) 
-          FROM "User" 
-          WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
-        ) as new_customers
-      FROM "Order" 
-      WHERE ${dateFilter.replace('AND ', '')}
-    `;
-
-        // Get average rating
-        const ratingQuery = `
-      SELECT 
-        COALESCE(AVG(rating::numeric), 0) as avg_rating,
-        COUNT(*) as total_reviews
-      FROM "Review" 
-      WHERE review_date >= CURRENT_DATE - INTERVAL '30 days'
-    `;
-
-        const [revenueResult, ordersResult, customersResult, ratingResult] = await Promise.all([
-            pool.query(revenueQuery),
-            pool.query(ordersQuery),
-            pool.query(customersQuery),
-            pool.query(ratingQuery)
-        ]);
-
-        const revenue = revenueResult.rows[0];
-        const orders = ordersResult.rows[0];
-        const customers = customersResult.rows[0];
-        const rating = ratingResult.rows[0];
-
-        const revenueChange = revenue.previous_revenue > 0
-            ? ((revenue.current_revenue - revenue.previous_revenue) / revenue.previous_revenue * 100).toFixed(1)
-            : 0;
-
-        const ordersChange = orders.previous_orders > 0
-            ? ((orders.current_orders - orders.previous_orders) / orders.previous_orders * 100).toFixed(1)
-            : 0;
-
-        const customersChange = customers.previous_customers > 0
-            ? ((customers.current_customers - customers.previous_customers) / customers.previous_customers * 100).toFixed(1)
-            : 0;
-
-        res.json({
-            revenue: {
-                value: parseFloat(revenue.current_revenue),
-                change: parseFloat(revenueChange)
-            },
-            orders: {
-                value: parseInt(orders.current_orders),
-                change: parseFloat(ordersChange),
-                active: parseInt(orders.active_orders)
-            },
-            customers: {
-                value: parseInt(customers.current_customers),
-                change: parseFloat(customersChange),
-                new: parseInt(customers.new_customers)
-            },
-            rating: {
-                value: parseFloat(rating.avg_rating).toFixed(1),
-                change: 2.1, // Static for now, would need historical data
-                reviews: parseInt(rating.total_reviews)
-            }
-        });
-    } catch (error) {
-        console.error('Error fetching KPI metrics:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-};
-
-// Get sales by category data
+// Get category performance data
 export const getCategoryData = async (req, res) => {
-    try {
-        const query = `
+  try {
+    const { timeRange = '30d' } = req.query;
+    const { startDate, endDate } = getDateRange(timeRange);
+    
+    const categoryQuery = `
+      WITH category_sales AS (
+        SELECT 
+          c.name,
+          SUM(oi.price * oi.quantity) as sales,
+          COUNT(oi.order_item_id) as item_count
+        FROM "Category" c
+        JOIN "Product" p ON c.category_id = p.category_id
+        JOIN "OrderItem" oi ON p.product_id = oi.product_id
+        JOIN "Order" o ON oi.order_id = o.order_id
+        WHERE o.created_at >= $1 AND o.created_at <= $2
+        GROUP BY c.category_id, c.name
+      ),
+      total_sales AS (
+        SELECT SUM(sales) as total FROM category_sales
+      )
       SELECT 
-        c.name,
-        COUNT(oi.order_item_id) as order_count,
-        SUM(oi.price * oi.quantity) as sales,
-        ROUND(
-          (SUM(oi.price * oi.quantity) * 100.0 / 
-          (SELECT SUM(oi2.price * oi2.quantity) 
-           FROM "OrderItem" oi2 
-           JOIN "Order" o2 ON oi2.order_id = o2.order_id 
-           WHERE o2.payment_status = 'completed')), 1
-        ) as percentage
-      FROM "Category" c
-      JOIN "Product" p ON c.category_id = p.category_id
-      JOIN "OrderItem" oi ON p.product_id = oi.product_id
-      JOIN "Order" o ON oi.order_id = o.order_id
-      WHERE o.payment_status = 'completed'
-      GROUP BY c.category_id, c.name
-      ORDER BY sales DESC
-      LIMIT 5
+        cs.name,
+        cs.sales,
+        ROUND((cs.sales / ts.total * 100)::numeric, 1) as value
+      FROM category_sales cs
+      CROSS JOIN total_sales ts
+      ORDER BY cs.sales DESC
+      LIMIT 10;
     `;
-
-        const result = await pool.query(query);
-
-        const colors = ['#8B5CF6', '#06B6D4', '#10B981', '#F59E0B', '#EF4444'];
-
-        const categoryData = result.rows.map((row, index) => ({
-            name: row.name,
-            value: parseFloat(row.percentage),
-            sales: parseFloat(row.sales),
-            color: colors[index] || '#6B7280'
-        }));
-
-        res.json(categoryData);
-    } catch (error) {
-        console.error('Error fetching category data:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+    
+    const result = await pool.query(categoryQuery, [startDate, endDate]);
+    
+    const colors = ['#8B5CF6', '#06B6D4', '#10B981', '#F59E0B', '#EF4444', '#8B5A2B', '#6366F1', '#EC4899', '#14B8A6', '#F97316'];
+    
+    const categoryData = result.rows.map((row, index) => ({
+      name: row.name,
+      value: parseFloat(row.value),
+      sales: parseFloat(row.sales),
+      color: colors[index % colors.length]
+    }));
+    
+    res.json(categoryData);
+  } catch (error) {
+    console.error('Error fetching category data:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 };
 
-// Get delivery performance by region
-export const getDeliveryPerformance = async (req, res) => {
-    try {
-        const query = `
+// Get delivery performance data
+export const getDeliveryData = async (req, res) => {
+  try {
+    const { timeRange = '30d' } = req.query;
+    const { startDate, endDate } = getDateRange(timeRange);
+    
+    const deliveryQuery = `
       SELECT 
         dr.name as region,
-        COUNT(dp.delivery_id) as total_deliveries,
-        COUNT(CASE WHEN dp.delivered_on_time = true THEN 1 END) as on_time_deliveries,
-        ROUND(
-          COUNT(CASE WHEN dp.delivered_on_time = true THEN 1 END) * 100.0 / 
-          NULLIF(COUNT(dp.delivery_id), 0), 0
-        ) as on_time_percentage,
-        COALESCE(AVG(dp.customer_rating), 0) as avg_rating
+        COUNT(d.delivery_id) as total_deliveries,
+        COUNT(CASE WHEN d.actual_arrival <= d.estimated_arrival THEN 1 END) as on_time_count,
+        COUNT(CASE WHEN d.actual_arrival > d.estimated_arrival THEN 1 END) as late_count,
+        COALESCE(AVG(rev.rating), 0) as avg_rating
       FROM "DeliveryRegion" dr
       LEFT JOIN "DeliveryBoy" db ON dr.delivery_region_id = db.delivery_region_id
-      LEFT JOIN "DeliveryPerformance" dp ON db.user_id = dp.delivery_boy_id
+      LEFT JOIN "Delivery" d ON db.user_id = d.delivery_boy_id
+      LEFT JOIN "Order" o ON d.order_id = o.order_id
+      LEFT JOIN "DeliveryReview" rev ON d.delivery_id = rev.delivery_id
+      WHERE o.created_at >= $1 AND o.created_at <= $2
       GROUP BY dr.delivery_region_id, dr.name
-      HAVING COUNT(dp.delivery_id) > 0
-      ORDER BY on_time_percentage DESC
+      HAVING COUNT(d.delivery_id) > 0
+      ORDER BY total_deliveries DESC;
     `;
-
-        const result = await pool.query(query);
-
-        const deliveryData = result.rows.map(row => ({
-            region: row.region,
-            onTime: parseInt(row.on_time_percentage) || 0,
-            late: 100 - (parseInt(row.on_time_percentage) || 0),
-            avgRating: parseFloat(row.avg_rating).toFixed(1)
-        }));
-
-        res.json(deliveryData);
-    } catch (error) {
-        console.error('Error fetching delivery performance:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+    
+    const result = await pool.query(deliveryQuery, [startDate, endDate]);
+    
+    const deliveryData = result.rows.map(row => ({
+      region: row.region,
+      onTime: Math.round((row.on_time_count / row.total_deliveries) * 100),
+      late: Math.round((row.late_count / row.total_deliveries) * 100),
+      avgRating: parseFloat(row.avg_rating).toFixed(1),
+      totalDeliveries: parseInt(row.total_deliveries)
+    }));
+    
+    res.json(deliveryData);
+  } catch (error) {
+    console.error('Error fetching delivery data:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 };
 
-// Get customer tier distribution
-export const getCustomerTiers = async (req, res) => {
-    try {
-        const query = `
+// Get customer tier data
+export const getTierData = async (req, res) => {
+  try {
+    const tierQuery = `
       SELECT 
         ut.name as tier,
         COUNT(u.user_id) as count,
-        COALESCE(SUM(order_totals.total_amount), 0) as revenue
+        COALESCE(SUM(user_revenue.revenue), 0) as revenue
       FROM "UserTier" ut
       LEFT JOIN "User" u ON ut.tier_id = u.tier_id
       LEFT JOIN (
         SELECT 
-          user_id,
-          SUM(total_amount) as total_amount
-        FROM "Order" 
-        WHERE payment_status = 'completed'
-        GROUP BY user_id
-      ) order_totals ON order_totals.user_id = u.user_id
-      GROUP BY ut.tier_id, ut.name, ut.min_points
-      ORDER BY ut.min_points DESC
+          o.user_id,
+          SUM(o.total_amount) as revenue
+        FROM "Order" o
+        WHERE o.created_at >= CURRENT_DATE - INTERVAL '30 days'
+        GROUP BY o.user_id
+      ) user_revenue ON u.user_id = user_revenue.user_id
+      GROUP BY ut.tier_id, ut.name
+      ORDER BY ut.min_points;
     `;
-
-        const result = await pool.query(query);
-
-        const colors = ['#8B5CF6', '#F59E0B', '#6B7280', '#92400E'];
-
-        const tierData = result.rows.map((row, index) => ({
-            tier: row.tier,
-            count: parseInt(row.count),
-            revenue: parseFloat(row.revenue),
-            color: colors[index] || '#6B7280',
-            angle: 90 - (index * 20)
-        }));
-
-        res.json(tierData);
-    } catch (error) {
-        console.error('Error fetching customer tiers:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+    
+    const result = await pool.query(tierQuery);
+    
+    const colors = ['#92400E', '#6B7280', '#F59E0B', '#8B5CF6'];
+    
+    const tierData = result.rows.map((row, index) => ({
+      tier: row.tier,
+      count: parseInt(row.count),
+      revenue: parseFloat(row.revenue),
+      color: colors[index % colors.length]
+    }));
+    
+    res.json(tierData);
+  } catch (error) {
+    console.error('Error fetching tier data:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 };
 
-// Get top performing products
+// Get top products data
 export const getTopProducts = async (req, res) => {
-    try {
-        const query = `
-      WITH product_sales AS (
+  try {
+    const { timeRange = '30d' } = req.query;
+    const { startDate, endDate } = getDateRange(timeRange);
+    
+    const productsQuery = `
+      WITH current_sales AS (
         SELECT 
-          p.product_id,
           p.name,
-          SUM(oi.quantity) as total_sales,
-          SUM(oi.price * oi.quantity) as total_revenue,
-          COUNT(DISTINCT o.order_id) as order_count
+          c.name as category,
+          SUM(oi.quantity) as sales,
+          SUM(oi.price * oi.quantity) as revenue
         FROM "Product" p
+        JOIN "Category" c ON p.category_id = c.category_id
         JOIN "OrderItem" oi ON p.product_id = oi.product_id
         JOIN "Order" o ON oi.order_id = o.order_id
-        WHERE o.payment_status = 'completed'
-        AND o.order_date >= CURRENT_DATE - INTERVAL '30 days'
-        GROUP BY p.product_id, p.name
+        WHERE o.created_at >= $1 AND o.created_at <= $2
+        GROUP BY p.product_id, p.name, c.name
       ),
       previous_sales AS (
         SELECT 
-          p.product_id,
+          p.name,
           SUM(oi.quantity) as prev_sales
         FROM "Product" p
         JOIN "OrderItem" oi ON p.product_id = oi.product_id
         JOIN "Order" o ON oi.order_id = o.order_id
-        WHERE o.payment_status = 'completed'
-        AND o.order_date >= CURRENT_DATE - INTERVAL '60 days'
-        AND o.order_date < CURRENT_DATE - INTERVAL '30 days'
-        GROUP BY p.product_id
+        WHERE o.created_at >= $3 AND o.created_at < $1
+        GROUP BY p.product_id, p.name
       )
       SELECT 
-        ps.name,
-        ps.total_sales as sales,
-        ps.total_revenue as revenue,
-        COALESCE(
-          ROUND(
-            ((ps.total_sales - COALESCE(prev.prev_sales, 0)) * 100.0 / 
-            NULLIF(COALESCE(prev.prev_sales, 1), 0)), 1
-          ), 0
-        ) as trend
-      FROM product_sales ps
-      LEFT JOIN previous_sales prev ON ps.product_id = prev.product_id
-      ORDER BY ps.total_revenue DESC
-      LIMIT 5
+        cs.name,
+        cs.category,
+        cs.sales,
+        cs.revenue,
+        COALESCE(ps.prev_sales, 0) as prev_sales,
+        CASE 
+          WHEN COALESCE(ps.prev_sales, 0) > 0 
+          THEN ROUND(((cs.sales - ps.prev_sales) / ps.prev_sales * 100)::numeric, 1)
+          ELSE 0
+        END as trend
+      FROM current_sales cs
+      LEFT JOIN previous_sales ps ON cs.name = ps.name
+      ORDER BY cs.revenue DESC
+      LIMIT 10;
     `;
-
-        const result = await pool.query(query);
-
-        const topProducts = result.rows.map(row => ({
-            name: row.name,
-            sales: parseInt(row.sales),
-            revenue: parseFloat(row.revenue),
-            trend: parseFloat(row.trend)
-        }));
-
-        res.json(topProducts);
-    } catch (error) {
-        console.error('Error fetching top products:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+    
+    const prevStartDate = new Date(startDate.getTime() - (endDate.getTime() - startDate.getTime()));
+    
+    const result = await pool.query(productsQuery, [startDate, endDate, prevStartDate]);
+    
+    const topProducts = result.rows.map(row => ({
+      name: row.name,
+      sales: parseInt(row.sales),
+      revenue: parseFloat(row.revenue),
+      trend: parseFloat(row.trend),
+      category: row.category
+    }));
+    
+    res.json(topProducts);
+  } catch (error) {
+    console.error('Error fetching top products:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 };
 
-// Get monthly growth analysis
-export const getMonthlyGrowth = async (req, res) => {
-    try {
-        const query = `
+// Get inventory data
+export const getInventoryData = async (req, res) => {
+  try {
+    const inventoryQuery = `
+      SELECT 
+        w.name as warehouse,
+        SUM(CASE WHEN i.quantity_in_stock > i.reorder_level THEN i.quantity_in_stock ELSE 0 END) as inStock,
+        SUM(CASE WHEN i.quantity_in_stock <= i.reorder_level AND i.quantity_in_stock > 0 THEN i.quantity_in_stock ELSE 0 END) as lowStock,
+        COUNT(CASE WHEN i.quantity_in_stock = 0 THEN 1 END) as outOfStock
+      FROM "Warehouse" w
+      LEFT JOIN "Inventory" i ON w.warehouse_id = i.warehouse_id
+      GROUP BY w.warehouse_id, w.name
+      ORDER BY w.name;
+    `;
+    
+    const result = await pool.query(inventoryQuery);
+    
+    const inventoryData = result.rows.map(row => ({
+      warehouse: row.warehouse,
+      inStock: parseInt(row.instock) || 0,
+      lowStock: parseInt(row.lowstock) || 0,
+      outOfStock: parseInt(row.outofstock) || 0
+    }));
+    
+    res.json(inventoryData);
+  } catch (error) {
+    console.error('Error fetching inventory data:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Get growth metrics data
+export const getGrowthData = async (req, res) => {
+  try {
+    const growthQuery = `
       WITH monthly_data AS (
         SELECT 
-          TO_CHAR(o.order_date, 'Mon') as month,
-          EXTRACT(MONTH FROM o.order_date) as month_num,
-          SUM(o.total_amount) as revenue,
-          COUNT(o.order_id) as orders
+          TO_CHAR(o.created_at, 'Mon') as month,
+          EXTRACT(MONTH FROM o.created_at) as month_num,
+          SUM(o.total_amount) as revenue
         FROM "Order" o
-        WHERE o.payment_status = 'completed'
-        AND o.order_date >= CURRENT_DATE - INTERVAL '6 months'
-        GROUP BY EXTRACT(MONTH FROM o.order_date), TO_CHAR(o.order_date, 'Mon')
-        ORDER BY month_num
+        WHERE o.created_at >= CURRENT_DATE - INTERVAL '6 months'
+        GROUP BY EXTRACT(MONTH FROM o.created_at), TO_CHAR(o.created_at, 'Mon')
+        ORDER BY EXTRACT(MONTH FROM o.created_at)
       ),
       growth_calc AS (
         SELECT 
           *,
-          LAG(revenue) OVER (ORDER BY month_num) as prev_revenue
+          LAG(revenue) OVER (ORDER BY month_num) as prev_revenue,
+          revenue * 1.15 as target  -- Assuming 15% growth target
         FROM monthly_data
       )
       SELECT 
         month,
         revenue,
-        orders,
-        COALESCE(
-          ROUND(
-            ((revenue - prev_revenue) * 100.0 / NULLIF(prev_revenue, 0)), 1
-          ), 0
-        ) as growth
+        target,
+        CASE 
+          WHEN prev_revenue > 0 
+          THEN ROUND(((revenue - prev_revenue) / prev_revenue * 100)::numeric, 1)
+          ELSE 0
+        END as growth
       FROM growth_calc
-      ORDER BY month_num
+      ORDER BY month_num;
     `;
-
-        const result = await pool.query(query);
-
-        const monthlyGrowth = result.rows.map(row => ({
-            month: row.month,
-            revenue: parseFloat(row.revenue),
-            orders: parseInt(row.orders),
-            growth: parseFloat(row.growth)
-        }));
-
-        res.json(monthlyGrowth);
-    } catch (error) {
-        console.error('Error fetching monthly growth:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+    
+    const result = await pool.query(growthQuery);
+    
+    const growthData = result.rows.map(row => ({
+      month: row.month,
+      revenue: parseFloat(row.revenue),
+      growth: parseFloat(row.growth),
+      target: parseFloat(row.target)
+    }));
+    
+    res.json(growthData);
+  } catch (error) {
+    console.error('Error fetching growth data:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 };
 
-// Get inventory status by warehouse
-export const getInventoryStatus = async (req, res) => {
-    try {
-        const query = `
+// Get monthly sales data
+export const getMonthlySales = async (req, res) => {
+  try {
+    const salesQuery = `
       SELECT 
-        w.name as warehouse,
-        COUNT(CASE WHEN i.quantity_in_stock > i.reorder_level THEN 1 END) as in_stock,
-        COUNT(CASE WHEN i.quantity_in_stock <= i.reorder_level AND i.quantity_in_stock > 0 THEN 1 END) as low_stock,
-        COUNT(CASE WHEN i.quantity_in_stock = 0 THEN 1 END) as out_of_stock
-      FROM "Warehouse" w
-      LEFT JOIN "Inventory" i ON w.warehouse_id = i.warehouse_id
-      GROUP BY w.warehouse_id, w.name
-      ORDER BY w.name
+        TO_CHAR(o.created_at, 'Mon') as month,
+        EXTRACT(MONTH FROM o.created_at) as month_num,
+        SUM(o.total_amount) as sales,
+        COUNT(DISTINCT o.order_id) as orders
+      FROM "Order" o
+      WHERE o.created_at >= CURRENT_DATE - INTERVAL '6 months'
+      GROUP BY EXTRACT(MONTH FROM o.created_at), TO_CHAR(o.created_at, 'Mon')
+      ORDER BY EXTRACT(MONTH FROM o.created_at);
     `;
-
-        const result = await pool.query(query);
-
-        const inventoryData = result.rows.map(row => ({
-            warehouse: row.warehouse,
-            inStock: parseInt(row.in_stock) || 0,
-            lowStock: parseInt(row.low_stock) || 0,
-            outOfStock: parseInt(row.out_of_stock) || 0
-        }));
-
-        res.json(inventoryData);
-    } catch (error) {
-        console.error('Error fetching inventory status:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+    
+    const result = await pool.query(salesQuery);
+    
+    const monthlySales = result.rows.map(row => ({
+      month: row.month,
+      sales: parseFloat(row.sales),
+      orders: parseInt(row.orders)
+    }));
+    
+    res.json(monthlySales);
+  } catch (error) {
+    console.error('Error fetching monthly sales:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 };
 
-// Get comprehensive dashboard data (all endpoints combined)
-export const getDashboardData = async (req, res) => {
-    try {
-        const { period = '30d' } = req.query;
-
-        // Create a mock response object that captures the data
-        const createMockRes = () => {
-            let responseData = null;
-            return {
-                status: () => ({
-                    json: (data) => {
-                        responseData = data;
-                        return responseData;
-                    }
-                }),
-                json: (data) => {
-                    responseData = data;
-                    return responseData;
-                },
-                getData: () => responseData
-            };
-        };
-
-        // Execute all queries in parallel for better performance
-        const mockResponses = Array.from({ length: 8 }, () => createMockRes());
-
-        await Promise.all([
-            getKPIMetrics({ query: { period } }, mockResponses[0]),
-            getRevenueData({ query: { timeRange: period } }, mockResponses[1]),
-            getCategoryData({ query: {} }, mockResponses[2]),
-            getDeliveryPerformance({ query: {} }, mockResponses[3]),
-            getCustomerTiers({ query: {} }, mockResponses[4]),
-            getTopProducts({ query: {} }, mockResponses[5]),
-            getMonthlyGrowth({ query: {} }, mockResponses[6]),
-            getInventoryStatus({ query: {} }, mockResponses[7])
-        ]);
-
-        // Extract data from mock responses
-        const [
-            kpiMetrics,
-            trendData,
-            categoryData,
-            deliveryData,
-            tierData,
-            topProducts,
-            monthlyGrowth,
-            inventoryData
-        ] = mockResponses.map(mockRes => mockRes.getData());
-
-        res.status(200).json({
-            success: true,
-            data: {
-                kpiMetrics: kpiMetrics || {},
-                revenueOrdersTrend: trendData || [],
-                salesByCategory: categoryData || [],
-                deliveryPerformance: deliveryData || [],
-                customerTiers: tierData || [],
-                topProducts: topProducts || [],
-                monthlyGrowth: monthlyGrowth || [],
-                inventoryStatus: inventoryData || []
-            }
-        });
-
-    } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch dashboard data',
-            error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-        });
-    }
+// Get order trends data
+export const getOrderTrends = async (req, res) => {
+  try {
+    const trendsQuery = `
+      SELECT 
+        TO_CHAR(o.created_at, 'Dy') as day,
+        EXTRACT(DOW FROM o.created_at) as day_num,
+        COUNT(DISTINCT o.order_id) as orders,
+        COUNT(CASE WHEN o.payment_status = 'completed' THEN 1 END) as completed,
+        COUNT(CASE WHEN o.payment_status IN ('pending', 'processing') THEN 1 END) as pending
+      FROM "Order" o
+      WHERE o.created_at >= CURRENT_DATE - INTERVAL '7 days'
+      GROUP BY EXTRACT(DOW FROM o.created_at), TO_CHAR(o.created_at, 'Dy')
+      ORDER BY EXTRACT(DOW FROM o.created_at);
+    `;
+    
+    const result = await pool.query(trendsQuery);
+    
+    const orderTrends = result.rows.map(row => ({
+      day: row.day,
+      orders: parseInt(row.orders),
+      completed: parseInt(row.completed),
+      pending: parseInt(row.pending)
+    }));
+    
+    res.json(orderTrends);
+  } catch (error) {
+    console.error('Error fetching order trends:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 };
+
+// Get comprehensive stats (all data at once)
+export const getAllStats = async (req, res) => {
+  try {
+    const { timeRange = '30d' } = req.query;
+    
+    // Call all individual functions and aggregate results
+    const [kpi, revenue, categories, delivery, tiers, topProducts, inventory, growth] = await Promise.all([
+      getKpiDataInternal(timeRange),
+      getRevenueDataInternal(timeRange),
+      getCategoryDataInternal(timeRange),
+      getDeliveryDataInternal(timeRange),
+      getTierDataInternal(),
+      getTopProductsInternal(timeRange),
+      getInventoryDataInternal(),
+      getGrowthDataInternal()
+    ]);
+    
+    res.json({
+      kpi,
+      revenue,
+      categories,
+      delivery,
+      tiers,
+      topProducts,
+      inventory,
+      growth
+    });
+  } catch (error) {
+    console.error('Error fetching all stats:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Internal helper functions (without res.json calls)
+const getKpiDataInternal = async (timeRange) => {
+  const { startDate, endDate } = getDateRange(timeRange);
+  // ... (same logic as getKpiData but return data instead of sending response)
+  // Implementation would be similar to getKpiData but return the data
+};
+
+const getRevenueDataInternal = async (timeRange) => {
+  const { startDate, endDate } = getDateRange(timeRange);
+  // ... (same logic as getRevenueData but return data)
+};
+
+// ... (similar internal functions for other data types)

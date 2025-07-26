@@ -10,7 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-table": "^8.21.3",
     "axios": "^1.10.0",
+    "framer-motion": "^12.23.9",
     "lodash": "^4.17.21",
     "lucide-react": "^0.517.0",
     "react": "^19.1.0",

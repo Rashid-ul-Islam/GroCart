@@ -27,7 +27,7 @@ import ReturnRequests from "./pages/ReturnRequests.jsx";
 import SearchResults from "./pages/SearchResults.jsx";
 import Wallet from "./pages/Wallet.jsx";
 import CouponManagement from "./pages/CouponManagement.jsx";
-import Stats from "./pages/Stats.jsx"; // Import the Stats page
+import Stats from "./pages/Stats.jsx"; 
 
 export default function App() {
   return (
