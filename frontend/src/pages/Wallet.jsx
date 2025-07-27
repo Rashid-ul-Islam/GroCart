@@ -1,22 +1,23 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../hooks/useNotification';
+import { useWalletPayment } from '../hooks/useWalletPayment';
 import Notification from '../components/ui/Notification';
 import { CreditCard, Plus, DollarSign, Clock, CheckCircle, XCircle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 export default function Wallet() {
   const { user, isLoggedIn } = useAuth();
-  const { notification, showSuccess, showError, showWarning, hideNotification } = useNotification();
+  const { notification, showError, showWarning, hideNotification } = useNotification();
+  const { initializeWalletPayment, paymentProcessing, paymentError } = useWalletPayment();
   const [walletData, setWalletData] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [addingBalance, setAddingBalance] = useState(false);
   const [addBalanceAmount, setAddBalanceAmount] = useState('');
   const [showAddBalance, setShowAddBalance] = useState(false);
 
   // Fetch wallet data
-  const fetchWalletData = async () => {
+  const fetchWalletData = useCallback(async () => {
     try {
       const response = await fetch(`http://localhost:3000/api/wallet/${user.user_id}`, {
         headers: {
@@ -34,7 +35,7 @@ export default function Wallet() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.user_id]);
 
   // Add balance to wallet
   const handleAddBalance = async (e) => {
@@ -46,37 +47,23 @@ export default function Wallet() {
       return;
     }
 
-    setAddingBalance(true);
-    try {
-      const response = await fetch('http://localhost:3000/api/wallet/topup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          user_id: user.user_id,
-          amount: amount,
-          bkash_transaction_id: `BKASH_${Date.now()}`, // Mock bKash transaction ID
-        }),
-      });
+    if (amount < 1) {
+      showWarning('Minimum Amount', 'Minimum top-up amount is $1.00');
+      return;
+    }
 
-      if (response.ok) {
-        const data = await response.json();
-        setWalletData(data.wallet);
-        setAddBalanceAmount('');
-        setShowAddBalance(false);
-        fetchWalletData(); // Refresh data
-        showSuccess('Balance Added', 'Balance added successfully!');
-      } else {
-        const error = await response.json();
-        showError('Add Balance Failed', error.message || 'Failed to add balance');
+    try {
+      // Initialize payment gateway
+      const result = await initializeWalletPayment(amount, user.user_id);
+      
+      if (!result.success) {
+        showError('Payment Failed', result.error || 'Failed to initialize payment');
       }
+      // If successful, user will be redirected to payment gateway
+      // No need to handle success here as redirect happens automatically
     } catch (error) {
-      console.error('Error adding balance:', error);
-      showError('Add Balance Failed', 'Failed to add balance');
-    } finally {
-      setAddingBalance(false);
+      console.error('Error initializing payment:', error);
+      showError('Payment Failed', 'Failed to initialize payment');
     }
   };
 
@@ -92,7 +79,7 @@ export default function Wallet() {
   };
 
   // Get transaction icon
-  const getTransactionIcon = (type, category) => {
+  const getTransactionIcon = (type) => {
     if (type === 'credit') {
       return <ArrowDownRight className="w-5 h-5 text-green-600" />;
     } else {
@@ -118,7 +105,26 @@ export default function Wallet() {
     if (isLoggedIn && user) {
       fetchWalletData();
     }
-  }, [isLoggedIn, user]);
+  }, [isLoggedIn, user, fetchWalletData]);
+
+  // Effect to show payment errors
+  useEffect(() => {
+    if (paymentError) {
+      showError('Payment Error', paymentError);
+    }
+  }, [paymentError, showError]);
+
+  // Effect to refresh wallet data when page becomes visible (user returns from payment)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isLoggedIn && user) {
+        fetchWalletData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isLoggedIn, user, fetchWalletData]);
 
   if (!isLoggedIn) {
     return (
@@ -197,10 +203,10 @@ export default function Wallet() {
               </div>
               <button
                 type="submit"
-                disabled={addingBalance}
+                disabled={paymentProcessing}
                 className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
               >
-                {addingBalance ? 'Adding...' : 'Add Balance'}
+                {paymentProcessing ? 'Processing...' : 'Add Balance'}
               </button>
               <button
                 type="button"
@@ -238,7 +244,7 @@ export default function Wallet() {
                   >
                     <div className="flex items-center gap-4">
                       <div className="p-2 rounded-full bg-gray-100">
-                        {getTransactionIcon(transaction.transaction_type, transaction.transaction_category)}
+                        {getTransactionIcon(transaction.transaction_type)}
                       </div>
                       <div>
                         <div className="font-semibold text-gray-800 capitalize">
