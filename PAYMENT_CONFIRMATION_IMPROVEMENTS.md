@@ -17,9 +17,12 @@ Enhanced the PaymentConfirmation component to provide better user feedback durin
   - ⏳ Assigning delivery partner
 
 ### 3. Improved User Experience
-- **Extended Processing Time**: Increased display time from 2 to 3 seconds for better UX
+- **Two-Stage Processing**: 
+  - Stage 1: Payment success celebration (2 seconds)
+  - Stage 2: Order creation processing (2 seconds)
 - **Better Messaging**: More descriptive messages explaining what's happening
-- **Gradient Background**: Added subtle gradient background for order creation steps
+- **Gradient Backgrounds**: Different gradients for success vs. processing states
+- **Clear Progression**: Users see distinct stages of the process
 
 ### 4. Animation Enhancements
 - **Rotating Package Icon**: Main status icon rotates during order creation
@@ -33,12 +36,21 @@ Enhanced the PaymentConfirmation component to provide better user feedback durin
 2. User might not understand what's happening
 
 ### After:
-1. Payment verification (with polling animation)
-2. **NEW**: Order creation state (3 seconds with detailed feedback)
-   - Animated package icon
-   - Step-by-step progress indicators
-   - Clear messaging about order processing
-3. Redirect to order success page
+1. **Payment verification** (with polling animation and "Verifying Payment..." message)
+2. **Payment Success Celebration** (2 seconds with green checkmark and confirmation)
+   - "Payment Confirmed Successfully!" message
+   - "Transaction completed securely" indicator
+   - Celebratory green gradient background
+3. **Order Creation Processing** (2 seconds with detailed feedback)
+   - Animated rotating package icon
+   - Step-by-step progress indicators:
+     - ✓ Payment confirmed
+     - ⏳ Creating order record
+     - ⏳ Assigning delivery partner
+   - "Creating Your Order..." message
+4. **Redirect to order success page**
+
+**Total Experience**: ~4+ seconds of clear, engaging feedback vs. 2 seconds of unclear processing
 
 ## Technical Details
 

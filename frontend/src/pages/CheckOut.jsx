@@ -855,11 +855,11 @@ const CheckoutPage = () => {
           </div>
         </motion.div>
 
-        {/* PayPal Option */}
+        {/* bKash Option */}
         <motion.div
-          onClick={() => setPaymentMethod("paypal")}
+          onClick={() => setPaymentMethod("bkash")}
           className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
-            paymentMethod === "paypal"
+            paymentMethod === "bkash"
               ? "border-blue-600 bg-blue-50"
               : "border-gray-200 hover:border-gray-300"
           }`}
@@ -867,8 +867,8 @@ const CheckoutPage = () => {
           whileTap={{ scale: 0.98 }}
         >
           <div className="flex items-center space-x-3">
-            <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
-              <span className="text-white text-xs font-bold">P</span>
+            <div className="w-6 h-6 bg-pink-600 rounded flex items-center justify-center">
+              <span className="text-white text-xs font-bold">bK</span>
             </div>
             <span className="font-semibold text-gray-900">bKash</span>
           </div>

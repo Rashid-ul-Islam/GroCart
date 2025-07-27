@@ -28,6 +28,7 @@ import MyOrders from "./pages/MyOrders.jsx";
 import ReturnRequests from "./pages/ReturnRequests.jsx";
 import SearchResults from "./pages/SearchResults.jsx";
 import Wallet from "./pages/Wallet.jsx";
+import WalletPaymentConfirmation from "./pages/WalletPaymentConfirmation.jsx";
 import CouponManagement from "./pages/CouponManagement.jsx";
 import Stats from "./pages/Stats.jsx"; 
 
@@ -69,6 +70,7 @@ export default function App() {
           <Route path="/profile" element={<UserProfile />} />
           <Route path="/orders" element={<MyOrders />} />
           <Route path="/wallet" element={<Wallet />} />
+          <Route path="/wallet-payment-confirmation" element={<WalletPaymentConfirmation />} />
           {/* Add more routes as needed */}
         </Routes>
       </Router>

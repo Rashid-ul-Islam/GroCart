@@ -179,6 +179,9 @@ export const createOrder = async (req, res) => {
     const calculatedShippingCost = parseFloat(deliveryInfo.shipping_cost);
     const estimatedDeliveryDays = deliveryInfo.delivery_days;
 
+    // Determine payment status based on payment method
+    const paymentStatus = payment_method === 'bkash' ? 'completed' : 'pending';
+
     // NOW create the order (only after ensuring delivery boy is available)
     const orderQuery = `
       INSERT INTO "Order" (
@@ -186,12 +189,12 @@ export const createOrder = async (req, res) => {
         shipping_total, discount_total, payment_method, payment_status,
         transaction_id, created_at, updated_at
       )
-      VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4, $5, $6, $7, 'pending', $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING order_id;
     `;
     const orderResult = await client.query(orderQuery, [
       user_id, total_amount, product_total || 0, tax_total || 0,
-      shipping_total || calculatedShippingCost, discount_total || 0, payment_method, transaction_id || null
+      shipping_total || calculatedShippingCost, discount_total || 0, payment_method, paymentStatus, transaction_id || null
     ]);
     const order_id = orderResult.rows[0].order_id;
 
@@ -233,8 +236,15 @@ export const createOrder = async (req, res) => {
       await client.query(updateCouponQuery, [coupon_id]);
     }
 
-    // Create initial order status
-    await updateOrderStatus(order_id, 'pending', user_id, 'Order created', client);
+    // Create initial order status based on payment method
+    if (payment_method === 'bkash') {
+      // For bKash, payment is already completed, so start with confirmed status
+      await updateOrderStatus(order_id, 'payment_received', user_id, 'bKash payment completed', client);
+      await updateOrderStatus(order_id, 'confirmed', user_id, 'Order confirmed after payment', client);
+    } else {
+      // For COD and other methods, start with pending
+      await updateOrderStatus(order_id, 'pending', user_id, 'Order created', client);
+    }
 
     // Clear user's cart
     const clearCartQuery = `
@@ -274,15 +284,20 @@ export const createOrder = async (req, res) => {
     await client.query('COMMIT');
 
     // Success response
+    const responseMessage = payment_method === 'bkash' 
+      ? 'Order created with confirmed payment and delivery boy assigned successfully'
+      : 'Order created and delivery boy assigned successfully';
+    
     res.status(201).json({
       success: true,
-      message: 'Order created and delivery boy assigned successfully',
+      message: responseMessage,
       data: {
         order_id,
         delivery_id,
         delivery_boy_id,
         total_amount,
         payment_method,
+        payment_status: paymentStatus,
         status: 'assigned',
         shipping_cost: calculatedShippingCost,
         estimated_delivery_days: estimatedDeliveryDays,
