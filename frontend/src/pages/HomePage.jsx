@@ -262,6 +262,7 @@ const HomePage = () => {
     id: apiProduct.product_id,
     name: apiProduct.product_name || apiProduct.name,
     price: `৳${apiProduct.price}`,
+    quantity: apiProduct.quantity || "",
     unit: apiProduct.unit_measure || "kg",
     origin: apiProduct.origin || "Local",
     description: apiProduct.description,

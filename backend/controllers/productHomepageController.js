@@ -18,6 +18,7 @@ export const getProductsForHomepage = async (req, res) => {
         p.product_id,
         p.name AS product_name,
         p.price,
+        p.quantity,
         p.unit_measure,
         p.origin,
         p.description,
@@ -33,7 +34,7 @@ export const getProductsForHomepage = async (req, res) => {
       LEFT JOIN "ProductImage" pi ON p.product_id = pi.product_id AND pi.is_primary = true
       LEFT JOIN "Review" r ON p.product_id = r.product_id
       WHERE p.is_available = true
-      GROUP BY p.product_id, p.name, p.price, p.unit_measure, p.origin, 
+      GROUP BY p.product_id, p.name, p.price, p.quantity, p.unit_measure, p.origin, 
                p.description, p.is_available, p.is_refundable, c.name, pi.image_url, p.created_at
     `;
 
@@ -120,6 +121,7 @@ export const getProductsForHomepage = async (req, res) => {
         product_id,
         product_name,
         price,
+        quantity,
         unit_measure,
         origin,
         description,
@@ -209,6 +211,7 @@ export const getProductsBySection = async (req, res) => {
         p.product_id,
         p.name AS product_name,
         p.price,
+        p.quantity,
         p.unit_measure,
         p.origin,
         p.description,
@@ -282,7 +285,7 @@ export const getProductsBySection = async (req, res) => {
 
     // Complete the query
     baseQuery += `
-      GROUP BY p.product_id, p.name, p.price, p.unit_measure, p.origin, 
+      GROUP BY p.product_id, p.name, p.price, p.quantity, p.unit_measure, p.origin, 
                p.description, p.is_available, p.is_refundable, c.name, pi.image_url
       ${havingClause}
     `;
@@ -451,6 +454,7 @@ export const getProductById = async (req, res) => {
         p.product_id,
         p.name AS product_name,
         p.price,
+        p.quantity,
         p.unit_measure,
         p.origin,
         p.description,
@@ -465,7 +469,7 @@ export const getProductById = async (req, res) => {
       LEFT JOIN "Category" c ON p.category_id = c.category_id
       LEFT JOIN "Review" r ON p.product_id = r.product_id
       WHERE p.product_id = $1 AND p.is_available = true
-      GROUP BY p.product_id, p.name, p.price, p.unit_measure, p.origin, 
+      GROUP BY p.product_id, p.name, p.price, p.quantity, p.unit_measure, p.origin, 
                p.description, p.is_available, p.is_refundable, c.name, c.category_id, p.created_at
     `;
 
@@ -556,6 +560,7 @@ export const searchProducts = async (req, res) => {
         p.product_id,
         p.name AS product_name,
         p.price,
+        p.quantity,
         p.unit_measure,
         p.origin,
         p.description,
@@ -608,7 +613,7 @@ export const searchProducts = async (req, res) => {
     }
 
     baseQuery += `
-      GROUP BY p.product_id, p.name, p.price, p.unit_measure, p.origin, 
+      GROUP BY p.product_id, p.name, p.price, p.quantity, p.unit_measure, p.origin, 
                p.description, p.is_available, p.is_refundable, c.name, pi.image_url
     `;
 
