@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle, XCircle, Loader2, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Clock, Package } from 'lucide-react';
 import { checkoutService } from '../services/checkoutService';
 
 const PaymentConfirmation = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [paymentStatus, setPaymentStatus] = useState('pending'); // pending, completed, failed
+  const [paymentStatus, setPaymentStatus] = useState('pending'); // pending, completed, failed, creating_order
   const [orderData, setOrderData] = useState(null);
   const [transactionId, setTransactionId] = useState(null);
   const [error, setError] = useState(null);
@@ -56,19 +56,23 @@ const PaymentConfirmation = () => {
             setPaymentStatus('completed');
             setIsPolling(false);
             
+            // Show creating order state
+            setPaymentStatus('creating_order');
+            
             // Create the order now that payment is confirmed
             if (orderData) {
               try {
                 const orderResult = await checkoutService.createOrder(orderData);
                 if (orderResult.success !== false) {
-                  // Redirect to order confirmation or success page
+                  // Wait a moment for user to see the "Creating order" message
                   setTimeout(() => {
                     navigate(`/order-success?orderId=${orderResult.data.order_id}`);
-                  }, 2000);
+                  }, 3000); // Increased to 3 seconds for better UX
                 }
               } catch (orderError) {
                 console.error('Error creating order:', orderError);
                 setError('Payment successful but order creation failed');
+                setPaymentStatus('failed');
               }
             }
           } else if (status === 'FAILED' || status === 'CANCELLED') {
@@ -121,6 +125,16 @@ const PaymentConfirmation = () => {
     switch (paymentStatus) {
       case 'completed':
         return <CheckCircle className="w-16 h-16 text-green-500" />;
+      case 'creating_order':
+        return (
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="w-16 h-16 text-blue-600 mx-auto"
+          >
+            <Package className="w-16 h-16" />
+          </motion.div>
+        );
       case 'failed':
         return <XCircle className="w-16 h-16 text-red-500" />;
       default:
@@ -132,6 +146,8 @@ const PaymentConfirmation = () => {
     switch (paymentStatus) {
       case 'completed':
         return 'Payment Successful!';
+      case 'creating_order':
+        return 'Creating Your Order...';
       case 'failed':
         return 'Payment Failed';
       default:
@@ -143,6 +159,8 @@ const PaymentConfirmation = () => {
     switch (paymentStatus) {
       case 'completed':
         return 'Your payment has been processed successfully. Creating your order...';
+      case 'creating_order':
+        return 'Payment confirmed! We are now creating your order and preparing it for delivery. This will only take a moment...';
       case 'failed':
         return error || 'Your payment could not be processed. Please try again.';
       default:
@@ -223,6 +241,47 @@ const PaymentConfirmation = () => {
               <Clock className="w-4 h-4" />
               <span className="text-sm">Checking payment status...</span>
             </div>
+          )}
+
+          {paymentStatus === 'creating_order' && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-4 mb-6"
+            >
+              <div className="flex items-center justify-center space-x-2 text-green-600 mb-2">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                >
+                  <Package className="w-5 h-5" />
+                </motion.div>
+                <span className="text-sm font-medium">Processing your order...</span>
+              </div>
+              <div className="space-y-1 text-xs text-gray-600">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  ✓ Payment confirmed
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1 }}
+                >
+                  ⏳ Creating order record
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1.5 }}
+                >
+                  ⏳ Assigning delivery partner
+                </motion.div>
+              </div>
+            </motion.div>
           )}
 
           {paymentStatus === 'failed' && (
