@@ -17,7 +17,8 @@ export const createOrder = async (req, res) => {
       tax_total,
       shipping_total,
       discount_total,
-      coupon_id
+      coupon_id,
+      transaction_id
     } = req.body;
 
     // Validate required fields
@@ -183,14 +184,14 @@ export const createOrder = async (req, res) => {
       INSERT INTO "Order" (
         user_id, order_date, total_amount, product_total, tax_total,
         shipping_total, discount_total, payment_method, payment_status,
-        created_at, updated_at
+        transaction_id, created_at, updated_at
       )
-      VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4, $5, $6, $7, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4, $5, $6, $7, 'pending', $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING order_id;
     `;
     const orderResult = await client.query(orderQuery, [
       user_id, total_amount, product_total || 0, tax_total || 0,
-      shipping_total || calculatedShippingCost, discount_total || 0, payment_method
+      shipping_total || calculatedShippingCost, discount_total || 0, payment_method, transaction_id || null
     ]);
     const order_id = orderResult.rows[0].order_id;
 
