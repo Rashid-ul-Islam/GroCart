@@ -87,7 +87,7 @@ export const useCheckout = () => {
 
     try {
       const response = await checkoutService.updateCartItem(itemId, newQuantity);
-      
+
       if (response.ok !== false) {
         const updatedItems = orderData.items.map((item) =>
           item.id === itemId ? { ...item, quantity: newQuantity } : item
@@ -256,10 +256,10 @@ export const useCheckout = () => {
 
     setPaymentProcessing(true);
     setPaymentError(null);
-    
+
     try {
       const totalAmount = calculationUtils.calculateTotal(orderData);
-      
+
       // Create transaction with third-party API
       const response = await fetch('https://test-project-production-bf2e.up.railway.app/api/create-trx', {
         method: 'POST',
@@ -277,7 +277,7 @@ export const useCheckout = () => {
 
       if (transactionResult.valid && transactionResult.transactionid) {
         setTransactionId(transactionResult.transactionid);
-        
+
         // Encode order data for the redirect URL
         const user = authUtils.getCurrentUser();
         const orderPayload = {
@@ -299,9 +299,9 @@ export const useCheckout = () => {
         const redirectURL = encodeURIComponent(
           `${window.location.origin}/payment-confirmation?transactionId=${transactionResult.transactionid}&orderData=${encodedOrderData}`
         );
-        
+
         const gatewayURL = `https://tpg-six.vercel.app/gateway?transactionid=${transactionResult.transactionid}&redirectURL=${redirectURL}`;
-        
+
         // Redirect to payment gateway
         window.location.href = gatewayURL;
       } else {
@@ -320,11 +320,11 @@ export const useCheckout = () => {
   const processOrder = useCallback(async (orderPayload = null) => {
     setIsProcessingOrder(true);
     setPaymentError(null);
-    
+
     try {
       const user = authUtils.getCurrentUser();
       const totalAmount = calculationUtils.calculateTotal(orderData);
-      
+
       // Create order payload - wallet payment will be handled by the backend
       const payload = orderPayload || {
         user_id: user.user_id,

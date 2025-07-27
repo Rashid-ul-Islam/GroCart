@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Wallet, Gift, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
+import {
+  Wallet,
+  Gift,
+  CheckCircle,
+  AlertCircle,
+  RefreshCw,
+} from "lucide-react";
 
 const PaymentStep = ({
   paymentMethod,
@@ -19,34 +25,37 @@ const PaymentStep = ({
 
   // Function to fetch wallet balance
   const fetchWalletBalance = async () => {
-    const user = JSON.parse(localStorage.getItem('user'));
+    const user = JSON.parse(localStorage.getItem("user"));
     if (!user) {
-      console.log('No user found in localStorage');
+      console.log("No user found in localStorage");
       return;
     }
 
     setIsLoadingBalance(true);
     try {
-      console.log('Fetching wallet balance for user:', user.user_id);
-      const response = await fetch(`http://localhost:3000/api/wallet/${user.user_id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      console.log("Fetching wallet balance for user:", user.user_id);
+      const response = await fetch(
+        `http://localhost:3000/api/wallet/${user.user_id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
       const data = await response.json();
-      
-      console.log('Wallet API response:', data);
-      
+
+      console.log("Wallet API response:", data);
+
       if (data.success && data.wallet) {
         const balance = parseFloat(data.wallet.balance);
         setWalletBalance(balance);
-        console.log('Wallet balance set to:', balance);
+        console.log("Wallet balance set to:", balance);
       } else {
-        console.error('Wallet API error:', data);
+        console.error("Wallet API error:", data);
         setWalletBalance(0);
       }
     } catch (error) {
-      console.error('Error fetching wallet balance:', error);
+      console.error("Error fetching wallet balance:", error);
       setWalletBalance(0);
     } finally {
       setIsLoadingBalance(false);
@@ -59,10 +68,10 @@ const PaymentStep = ({
   }, []);
 
   const handlePaymentClick = async () => {
-    if (paymentMethod === 'cod') {
+    if (paymentMethod === "cod") {
       // For COD, directly process the order
       await processOrder();
-    } else if (paymentMethod === 'wallet') {
+    } else if (paymentMethod === "wallet") {
       // For wallet payment, process the order with wallet payment
       await processOrder();
     } else {
@@ -95,13 +104,13 @@ const PaymentStep = ({
             <div className="flex items-center space-x-3">
               <Wallet className="w-6 h-6 text-blue-600" />
               <div>
-                <span className="font-semibold text-gray-900">GroCart Balance</span>
+                <span className="font-semibold text-gray-900">
+                  GroCart Balance
+                </span>
                 <div className="text-sm text-gray-600">
-                  {isLoadingBalance ? (
-                    "Loading balance..."
-                  ) : (
-                    `Available: ৳${walletBalance.toFixed(2)}`
-                  )}
+                  {isLoadingBalance
+                    ? "Loading balance..."
+                    : `Available: ৳${walletBalance.toFixed(2)}`}
                 </div>
               </div>
             </div>
@@ -116,7 +125,9 @@ const PaymentStep = ({
               whileTap={{ scale: 0.9 }}
               title="Refresh balance"
             >
-              <RefreshCw className={`w-4 h-4 ${isLoadingBalance ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`w-4 h-4 ${isLoadingBalance ? "animate-spin" : ""}`}
+              />
             </motion.button>
           </div>
         </motion.div>
@@ -191,7 +202,7 @@ const PaymentStep = ({
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
-          {(isProcessingOrder || paymentProcessing) ? (
+          {isProcessingOrder || paymentProcessing ? (
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -200,8 +211,11 @@ const PaymentStep = ({
           ) : (
             <>
               <span>
-                {paymentMethod === 'cod' ? 'Place Order' : 
-                 paymentMethod === 'wallet' ? 'Pay with Balance' : 'Pay Now'}
+                {paymentMethod === "cod"
+                  ? "Place Order"
+                  : paymentMethod === "wallet"
+                  ? "Pay with Balance"
+                  : "Pay Now"}
               </span>
               <CheckCircle className="w-5 h-5" />
             </>

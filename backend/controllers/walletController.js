@@ -132,7 +132,7 @@ export const getUserWalletWithTransactions = async (req, res) => {
         `;
 
         const transactionsResult = await pool.query(transactionsQuery, [wallet.wallet_id]);
-        
+
         // Convert amount values to float
         const transactions = transactionsResult.rows.map(transaction => ({
             ...transaction,
@@ -160,10 +160,10 @@ export const getUserWalletWithTransactions = async (req, res) => {
 // Add balance to wallet (topup)
 export const addWalletBalance = async (req, res) => {
     const client = await pool.connect();
-    
+
     try {
         await client.query('BEGIN');
-        
+
         const { user_id, amount, bkash_transaction_id, description } = req.body;
 
         if (!user_id || !amount || amount <= 0) {
@@ -189,7 +189,7 @@ export const addWalletBalance = async (req, res) => {
             `;
             walletResult = await client.query(createWalletQuery, [user_id]);
         }
-        
+
         wallet = walletResult.rows[0];
         const currentBalance = parseFloat(wallet.balance);
         const addAmount = parseFloat(amount);
@@ -202,7 +202,7 @@ export const addWalletBalance = async (req, res) => {
             WHERE wallet_id = $2
             RETURNING wallet_id, user_id, balance, created_at, updated_at
         `;
-        
+
         const updatedWalletResult = await client.query(updateWalletQuery, [newBalance, wallet.wallet_id]);
         const updatedWallet = updatedWalletResult.rows[0];
         updatedWallet.balance = parseFloat(updatedWallet.balance);
@@ -300,7 +300,7 @@ export const processWalletPayment = async (req, res) => {
             `;
             const newWalletResult = await client.query(createWalletQuery, [user_id]);
             const newWallet = newWalletResult.rows[0];
-            
+
             // Check if new wallet has sufficient balance (it won't)
             if (parseFloat(newWallet.balance) < parseFloat(amount)) {
                 await client.query('ROLLBACK');
@@ -338,7 +338,7 @@ export const processWalletPayment = async (req, res) => {
             WHERE wallet_id = $2
             RETURNING wallet_id, user_id, balance, created_at, updated_at
         `;
-        
+
         const updatedWalletResult = await client.query(updateWalletQuery, [newBalance, wallet.wallet_id]);
         const updatedWallet = updatedWalletResult.rows[0];
         updatedWallet.balance = parseFloat(updatedWallet.balance);

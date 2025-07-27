@@ -52,9 +52,13 @@ const ConfirmationStep = ({
           <div className="flex justify-between">
             <span>Payment Method:</span>
             <span className="capitalize">
-              {paymentMethod === 'wallet' ? 'GroCart Balance' : 
-               paymentMethod === 'cod' ? 'Cash on Delivery' : 
-               paymentMethod === 'bkash' ? 'bKash' : paymentMethod}
+              {paymentMethod === "wallet"
+                ? "GroCart Balance"
+                : paymentMethod === "cod"
+                ? "Cash on Delivery"
+                : paymentMethod === "bkash"
+                ? "bKash"
+                : paymentMethod}
             </span>
           </div>
           <div className="flex justify-between">
