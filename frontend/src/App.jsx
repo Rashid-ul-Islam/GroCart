@@ -16,7 +16,9 @@ import Approvals from "./pages/Approvals.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import DeliveryBoy from "./pages/DeliveryBoy.jsx";
 import FavoriteProducts from "./pages/FavoriteProducts.jsx";
-import CheckoutPage from "./pages/CheckOut.jsx";
+import CheckoutPage from "./pages/CheckOutRefactored.jsx";
+import PaymentConfirmation from "./pages/PaymentConfirmation.jsx";
+import OrderSuccess from "./pages/OrderSuccess.jsx";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import OrderDetails from "./pages/OrderDetails.jsx";
 import ProductDetails from "./pages/ProductDetail.jsx";
@@ -56,6 +58,8 @@ export default function App() {
           <Route path="/delivery" element={<DeliveryBoy />} />
           <Route path="favorites" element={<FavoriteProducts />} />
           <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/payment-confirmation" element={<PaymentConfirmation />} />
+          <Route path="/order-success" element={<OrderSuccess />} />
           <Route path="/order-details/:orderId" element={<OrderDetails />} />
           <Route path="/product/:productId" element={<ProductDetails />} />
           <Route

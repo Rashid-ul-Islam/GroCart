@@ -31,10 +31,10 @@ import {
   Search,
   Filter,
 } from "lucide-react";
-import { DeliveryOverview } from "../components/Delivery/DeliveryOverview.jsx";
-import { ActiveDeliveries } from "../components/Delivery/ActiveDelivery.jsx";
-import { DeliveryBoyManagement } from "../components/Delivery/DeliveryBoyManagement.jsx";
-import { DeliveryAnalytics } from "../components/Delivery/DeliveryAnalytics.jsx";
+import { DeliveryOverview } from "../components/delivery/DeliveryOverview.jsx";
+import { ActiveDeliveries } from "../components/delivery/ActiveDelivery.jsx";
+import { DeliveryBoyManagement } from "../components/delivery/DeliveryBoyManagement.jsx";
+import { DeliveryAnalytics } from "../components/delivery/DeliveryAnalytics.jsx";
 
 const rootStyles = {
   // CSS Custom Properties (Design System)
