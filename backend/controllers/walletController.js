@@ -262,3 +262,139 @@ export const addWalletBalance = async (req, res) => {
         client.release();
     }
 };
+
+// Process wallet payment for an order
+export const processWalletPayment = async (req, res) => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const {
+            user_id,
+            amount,
+            order_id,
+            description = 'Order payment'
+        } = req.body;
+
+        if (!user_id || !amount || amount <= 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+                success: false,
+                message: 'User ID and valid amount are required'
+            });
+        }
+
+        // Get user's wallet
+        const walletQuery = `
+            SELECT wallet_id, balance FROM "UserWallet" 
+            WHERE user_id = $1
+        `;
+        const walletResult = await client.query(walletQuery, [user_id]);
+
+        if (walletResult.rows.length === 0) {
+            // Create wallet if it doesn't exist
+            const createWalletQuery = `
+                INSERT INTO "UserWallet" (user_id, balance) 
+                VALUES ($1, 0.00) 
+                RETURNING wallet_id, balance
+            `;
+            const newWalletResult = await client.query(createWalletQuery, [user_id]);
+            const newWallet = newWalletResult.rows[0];
+            
+            // Check if new wallet has sufficient balance (it won't)
+            if (parseFloat(newWallet.balance) < parseFloat(amount)) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({
+                    success: false,
+                    message: 'Insufficient balance',
+                    currentBalance: 0.00,
+                    requiredAmount: parseFloat(amount)
+                });
+            }
+        }
+
+        const wallet = walletResult.rows[0];
+        const currentBalance = parseFloat(wallet.balance);
+        const paymentAmount = parseFloat(amount);
+
+        // Check if user has sufficient balance
+        if (currentBalance < paymentAmount) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+                success: false,
+                message: 'Insufficient balance',
+                currentBalance: currentBalance,
+                requiredAmount: paymentAmount
+            });
+        }
+
+        // Calculate new balance
+        const newBalance = currentBalance - paymentAmount;
+
+        // Update wallet balance
+        const updateWalletQuery = `
+            UPDATE "UserWallet" 
+            SET balance = $1, updated_at = now() 
+            WHERE wallet_id = $2
+            RETURNING wallet_id, user_id, balance, created_at, updated_at
+        `;
+        
+        const updatedWalletResult = await client.query(updateWalletQuery, [newBalance, wallet.wallet_id]);
+        const updatedWallet = updatedWalletResult.rows[0];
+        updatedWallet.balance = parseFloat(updatedWallet.balance);
+
+        // Create transaction record
+        const transactionQuery = `
+            INSERT INTO "WalletTransaction" (
+                wallet_id, 
+                transaction_type, 
+                transaction_category, 
+                amount, 
+                balance_before, 
+                balance_after, 
+                reference_type, 
+                reference_id,
+                description, 
+                status
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            RETURNING transaction_id, created_at
+        `;
+
+        const transactionResult = await client.query(transactionQuery, [
+            wallet.wallet_id,
+            'debit',
+            'purchase',
+            paymentAmount,
+            currentBalance,
+            newBalance,
+            'order',
+            order_id || null,
+            description,
+            'completed'
+        ]);
+
+        await client.query('COMMIT');
+
+        res.json({
+            success: true,
+            message: 'Payment processed successfully',
+            wallet: updatedWallet,
+            transaction: {
+                transaction_id: transactionResult.rows[0].transaction_id,
+                amount: paymentAmount,
+                created_at: transactionResult.rows[0].created_at
+            }
+        });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error processing wallet payment:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error processing wallet payment',
+            error: error.message
+        });
+    } finally {
+        client.release();
+    }
+};

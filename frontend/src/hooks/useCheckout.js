@@ -15,7 +15,7 @@ export const useCheckout = () => {
   });
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState("card");
+  const [paymentMethod, setPaymentMethod] = useState("wallet");
   const [isLoading, setIsLoading] = useState(true);
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
@@ -249,10 +249,9 @@ export const useCheckout = () => {
 
   // Payment processing
   const initializePayment = useCallback(async () => {
-    if (paymentMethod === 'cod') {
-      // For COD, we'll handle this separately - just set a flag
-      setPaymentMethod('cod');
-      return { success: true, cod: true };
+    if (paymentMethod === 'cod' || paymentMethod === 'wallet') {
+      // For COD and wallet, we'll handle this in processOrder
+      return { success: true, cod: paymentMethod === 'cod', wallet: paymentMethod === 'wallet' };
     }
 
     setPaymentProcessing(true);
@@ -316,17 +315,23 @@ export const useCheckout = () => {
     }
   }, [orderData, selectedAddress, paymentMethod, appliedCoupon]);
 
-  // Original order processing (for COD or after payment confirmation)
+  // Original order processing (for COD, wallet, or after payment confirmation)
+  // Original order processing (for all payment methods including wallet)
   const processOrder = useCallback(async (orderPayload = null) => {
     setIsProcessingOrder(true);
+    setPaymentError(null);
+    
     try {
       const user = authUtils.getCurrentUser();
+      const totalAmount = calculationUtils.calculateTotal(orderData);
+      
+      // Create order payload - wallet payment will be handled by the backend
       const payload = orderPayload || {
         user_id: user.user_id,
         items: orderData.items,
         address_id: selectedAddress.address_id,
         payment_method: paymentMethod,
-        total_amount: calculationUtils.calculateTotal(orderData),
+        total_amount: totalAmount,
         product_total: orderData.subtotal,
         tax_total: orderData.tax,
         shipping_total: orderData.shipping,
@@ -345,9 +350,22 @@ export const useCheckout = () => {
           ...prev,
           orderId: orderResult.data.order_id,
         }));
+      } else {
+        // Handle specific error messages from backend
+        if (orderResult.message === 'Insufficient balance') {
+          setPaymentError('Not enough balance in your wallet. Please top up your wallet to continue.');
+        } else {
+          setPaymentError(orderResult.message || 'Failed to create order');
+        }
       }
     } catch (error) {
       console.error("Error processing order:", error);
+      // Check if the error response contains insufficient balance message
+      if (error.response && error.response.data && error.response.data.message === 'Insufficient balance') {
+        setPaymentError('Not enough balance in your wallet. Please top up your wallet to continue.');
+      } else {
+        setPaymentError('Failed to process order. Please try again.');
+      }
     } finally {
       setIsProcessingOrder(false);
     }

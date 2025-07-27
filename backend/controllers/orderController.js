@@ -1,6 +1,23 @@
 import pool from '../db.js';
 import { updateOrderStatus } from './statusTrackingUtility.js';
 
+// Helper function to create a notification
+const createNotificationHelper = async (client, user_id, notification_type, title, message, reference_type = null, reference_id = null, priority = 'medium') => {
+  try {
+    const result = await client.query(
+      `INSERT INTO "Notification" 
+       (user_id, notification_type, title, message, reference_type, reference_id, priority, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+       RETURNING *`,
+      [user_id, notification_type, title, message, reference_type, reference_id, priority]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error creating notification:', error);
+    return null;
+  }
+};
+
 // Create new order
 export const createOrder = async (req, res) => {
   const client = await pool.connect();
@@ -180,7 +197,12 @@ export const createOrder = async (req, res) => {
     const estimatedDeliveryDays = deliveryInfo.delivery_days;
 
     // Determine payment status based on payment method
-    const paymentStatus = payment_method === 'bkash' ? 'completed' : 'pending';
+    let paymentStatus = 'pending';
+    if (payment_method === 'bkash') {
+      paymentStatus = 'completed';
+    } else if (payment_method === 'wallet') {
+      paymentStatus = 'pending'; // Will be updated after wallet payment processing
+    }
 
     // NOW create the order (only after ensuring delivery boy is available)
     const orderQuery = `
@@ -198,6 +220,111 @@ export const createOrder = async (req, res) => {
     ]);
     const order_id = orderResult.rows[0].order_id;
 
+    // Process wallet payment if payment method is wallet
+    if (payment_method === 'wallet') {
+      // Get user's wallet
+      const walletQuery = `SELECT wallet_id, balance FROM "UserWallet" WHERE user_id = $1`;
+      const walletResult = await client.query(walletQuery, [user_id]);
+
+      if (walletResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          success: false,
+          message: 'Wallet not found'
+        });
+      }
+
+      const wallet = walletResult.rows[0];
+      const currentBalance = parseFloat(wallet.balance);
+      const paymentAmount = parseFloat(total_amount);
+
+      // Check if user has sufficient balance
+      if (currentBalance < paymentAmount) {
+        // Create notification for insufficient balance
+        await createNotificationHelper(
+          client,
+          user_id,
+          'wallet',
+          'Payment Failed',
+          `Insufficient balance to complete order. Required: ৳${paymentAmount.toFixed(2)}, Available: ৳${currentBalance.toFixed(2)}`,
+          'wallet',
+          wallet.wallet_id,
+          'high'
+        );
+
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          success: false,
+          message: 'Insufficient balance',
+          currentBalance: currentBalance,
+          requiredAmount: paymentAmount
+        });
+      }
+
+      // Calculate new balance
+      const newBalance = currentBalance - paymentAmount;
+
+      // Update wallet balance
+      const updateWalletQuery = `
+        UPDATE "UserWallet" 
+        SET balance = $1, updated_at = now() 
+        WHERE wallet_id = $2
+      `;
+      await client.query(updateWalletQuery, [newBalance, wallet.wallet_id]);
+
+      // Create transaction record
+      const transactionQuery = `
+        INSERT INTO "WalletTransaction" (
+          wallet_id, 
+          transaction_type, 
+          transaction_category, 
+          amount, 
+          balance_before, 
+          balance_after, 
+          reference_type, 
+          reference_id,
+          description, 
+          status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING transaction_id
+      `;
+
+      const transactionResult = await client.query(transactionQuery, [
+        wallet.wallet_id,
+        'debit',
+        'purchase',
+        paymentAmount,
+        currentBalance,
+        newBalance,
+        'order',
+        order_id,
+        `Order payment for Order #${order_id}`,
+        'completed'
+      ]);
+
+      // Update order payment status to completed
+      const updateOrderPaymentQuery = `
+        UPDATE "Order" 
+        SET payment_status = 'completed', transaction_id = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE order_id = $2
+      `;
+      await client.query(updateOrderPaymentQuery, [transactionResult.rows[0].transaction_id, order_id]);
+
+      // Create success notification for wallet payment
+      await createNotificationHelper(
+        client,
+        user_id,
+        'wallet',
+        'Payment Successful',
+        `Payment of ৳${paymentAmount.toFixed(2)} completed successfully for Order #${order_id}. New balance: ৳${newBalance.toFixed(2)}`,
+        'order',
+        order_id,
+        'medium'
+      );
+
+      paymentStatus = 'completed'; // Update local variable for status tracking
+    }
+
     // Create order items and update product quantities
     for (const item of items) {
       const product = productMap.get(item.product_id);
@@ -212,8 +339,7 @@ export const createOrder = async (req, res) => {
       // Convert reserved stock to actual stock reduction
       const updateProductQuery = `
         UPDATE "Product"
-        SET quantity = quantity - $1,
-            buying_in_progress = buying_in_progress - $1,
+        SET buying_in_progress = buying_in_progress - $1,
             updated_at = CURRENT_TIMESTAMP
         WHERE product_id = $2;
       `;
@@ -237,9 +363,10 @@ export const createOrder = async (req, res) => {
     }
 
     // Create initial order status based on payment method
-    if (payment_method === 'bkash') {
-      // For bKash, payment is already completed, so start with confirmed status
-      await updateOrderStatus(order_id, 'payment_received', user_id, 'bKash payment completed', client);
+    if (payment_method === 'bkash' || payment_method === 'wallet') {
+      // For bKash and wallet, payment is already completed, so start with confirmed status
+      await updateOrderStatus(order_id, 'payment_received', user_id, 
+        payment_method === 'wallet' ? 'Wallet payment completed' : 'bKash payment completed', client);
       await updateOrderStatus(order_id, 'confirmed', user_id, 'Order confirmed after payment', client);
     } else {
       // For COD and other methods, start with pending
