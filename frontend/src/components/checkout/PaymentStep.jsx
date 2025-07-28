@@ -1,6 +1,12 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { CreditCard, Gift, CheckCircle, AlertCircle } from "lucide-react";
+import {
+  Wallet,
+  Gift,
+  CheckCircle,
+  AlertCircle,
+  RefreshCw,
+} from "lucide-react";
 
 const PaymentStep = ({
   paymentMethod,
@@ -14,12 +20,62 @@ const PaymentStep = ({
   paymentProcessing,
   paymentError,
 }) => {
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+
+  // Function to fetch wallet balance
+  const fetchWalletBalance = async () => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user) {
+      console.log("No user found in localStorage");
+      return;
+    }
+
+    setIsLoadingBalance(true);
+    try {
+      console.log("Fetching wallet balance for user:", user.user_id);
+      const response = await fetch(
+        `http://localhost:3000/api/wallet/${user.user_id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      const data = await response.json();
+
+      console.log("Wallet API response:", data);
+
+      if (data.success && data.wallet) {
+        const balance = parseFloat(data.wallet.balance);
+        setWalletBalance(balance);
+        console.log("Wallet balance set to:", balance);
+      } else {
+        console.error("Wallet API error:", data);
+        setWalletBalance(0);
+      }
+    } catch (error) {
+      console.error("Error fetching wallet balance:", error);
+      setWalletBalance(0);
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  };
+
+  // Fetch wallet balance when component mounts
+  useEffect(() => {
+    fetchWalletBalance();
+  }, []);
+
   const handlePaymentClick = async () => {
-    if (paymentMethod === 'cod') {
+    if (paymentMethod === "cod") {
       // For COD, directly process the order
       await processOrder();
+    } else if (paymentMethod === "wallet") {
+      // For wallet payment, process the order with wallet payment
+      await processOrder();
     } else {
-      // For card/bKash, initialize payment gateway
+      // For bKash, initialize payment gateway
       await initializePayment();
     }
   };
@@ -33,30 +89,54 @@ const PaymentStep = ({
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Payment Method</h2>
 
       <div className="space-y-4 mb-6">
-        {/* Credit Card Option */}
+        {/* Wallet Balance Option */}
         <motion.div
-          onClick={() => setPaymentMethod("card")}
+          onClick={() => setPaymentMethod("wallet")}
           className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
-            paymentMethod === "card"
+            paymentMethod === "wallet"
               ? "border-blue-600 bg-blue-50"
               : "border-gray-200 hover:border-gray-300"
           }`}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
-          <div className="flex items-center space-x-3">
-            <CreditCard className="w-6 h-6 text-blue-600" />
-            <span className="font-semibold text-gray-900">
-              Credit/Debit Card
-            </span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Wallet className="w-6 h-6 text-blue-600" />
+              <div>
+                <span className="font-semibold text-gray-900">
+                  GroCart Balance
+                </span>
+                <div className="text-sm text-gray-600">
+                  {isLoadingBalance
+                    ? "Loading balance..."
+                    : `Available: ৳${walletBalance.toFixed(2)}`}
+                </div>
+              </div>
+            </div>
+            <motion.button
+              onClick={(e) => {
+                e.stopPropagation();
+                fetchWalletBalance();
+              }}
+              disabled={isLoadingBalance}
+              className="p-2 text-gray-400 hover:text-blue-600 transition-colors disabled:opacity-50"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              title="Refresh balance"
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${isLoadingBalance ? "animate-spin" : ""}`}
+              />
+            </motion.button>
           </div>
         </motion.div>
 
-        {/* PayPal Option */}
+        {/* bKash Option */}
         <motion.div
-          onClick={() => setPaymentMethod("paypal")}
+          onClick={() => setPaymentMethod("bkash")}
           className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
-            paymentMethod === "paypal"
+            paymentMethod === "bkash"
               ? "border-blue-600 bg-blue-50"
               : "border-gray-200 hover:border-gray-300"
           }`}
@@ -64,8 +144,8 @@ const PaymentStep = ({
           whileTap={{ scale: 0.98 }}
         >
           <div className="flex items-center space-x-3">
-            <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
-              <span className="text-white text-xs font-bold">P</span>
+            <div className="w-6 h-6 bg-pink-600 rounded flex items-center justify-center">
+              <span className="text-white text-xs font-bold">bK</span>
             </div>
             <span className="font-semibold text-gray-900">bKash</span>
           </div>
@@ -90,62 +170,6 @@ const PaymentStep = ({
           </div>
         </motion.div>
       </div>
-
-      {/* Card Details Form */}
-      {paymentMethod === "card" && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          className="mb-6 p-4 border border-gray-200 rounded-xl"
-        >
-          <h3 className="font-semibold text-gray-900 mb-4">Card Details</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <input
-                type="text"
-                placeholder="Card Number"
-                value={cardDetails.number}
-                onChange={(e) =>
-                  setCardDetails((prev) => ({
-                    ...prev,
-                    number: e.target.value,
-                  }))
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            <input
-              type="text"
-              placeholder="MM/YY"
-              value={cardDetails.expiry}
-              onChange={(e) =>
-                setCardDetails((prev) => ({ ...prev, expiry: e.target.value }))
-              }
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <input
-              type="text"
-              placeholder="CVV"
-              value={cardDetails.cvv}
-              onChange={(e) =>
-                setCardDetails((prev) => ({ ...prev, cvv: e.target.value }))
-              }
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <div className="md:col-span-2">
-              <input
-                type="text"
-                placeholder="Cardholder Name"
-                value={cardDetails.name}
-                onChange={(e) =>
-                  setCardDetails((prev) => ({ ...prev, name: e.target.value }))
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-        </motion.div>
-      )}
 
       {/* Payment Error Display */}
       {paymentError && (
@@ -178,7 +202,7 @@ const PaymentStep = ({
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
-          {(isProcessingOrder || paymentProcessing) ? (
+          {isProcessingOrder || paymentProcessing ? (
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -186,7 +210,13 @@ const PaymentStep = ({
             />
           ) : (
             <>
-              <span>{paymentMethod === 'cod' ? 'Place Order' : 'Pay Now'}</span>
+              <span>
+                {paymentMethod === "cod"
+                  ? "Place Order"
+                  : paymentMethod === "wallet"
+                  ? "Pay with Balance"
+                  : "Pay Now"}
+              </span>
               <CheckCircle className="w-5 h-5" />
             </>
           )}

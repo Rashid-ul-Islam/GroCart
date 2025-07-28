@@ -15,7 +15,7 @@ export const useCheckout = () => {
   });
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState("card");
+  const [paymentMethod, setPaymentMethod] = useState("wallet");
   const [isLoading, setIsLoading] = useState(true);
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
@@ -87,7 +87,7 @@ export const useCheckout = () => {
 
     try {
       const response = await checkoutService.updateCartItem(itemId, newQuantity);
-      
+
       if (response.ok !== false) {
         const updatedItems = orderData.items.map((item) =>
           item.id === itemId ? { ...item, quantity: newQuantity } : item
@@ -249,27 +249,26 @@ export const useCheckout = () => {
 
   // Payment processing
   const initializePayment = useCallback(async () => {
-    if (paymentMethod === 'cod') {
-      // For COD, we'll handle this separately - just set a flag
-      setPaymentMethod('cod');
-      return { success: true, cod: true };
+    if (paymentMethod === 'cod' || paymentMethod === 'wallet') {
+      // For COD and wallet, we'll handle this in processOrder
+      return { success: true, cod: paymentMethod === 'cod', wallet: paymentMethod === 'wallet' };
     }
 
     setPaymentProcessing(true);
     setPaymentError(null);
-    
+
     try {
       const totalAmount = calculationUtils.calculateTotal(orderData);
-      
+
       // Create transaction with third-party API
       const response = await fetch('https://test-project-production-bf2e.up.railway.app/api/create-trx', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': '13acc245-b584-4767-b80a-5c9a1fe9d71e',
+          'apikey': 'aa5eb0b4-d8fb-4f21-b4ef-bc8a3b4e07bd',
         },
         body: JSON.stringify({
-          username: 'scariful',
+          username: 'grocart',
           amount: parseFloat(totalAmount),
         }),
       });
@@ -278,7 +277,7 @@ export const useCheckout = () => {
 
       if (transactionResult.valid && transactionResult.transactionid) {
         setTransactionId(transactionResult.transactionid);
-        
+
         // Encode order data for the redirect URL
         const user = authUtils.getCurrentUser();
         const orderPayload = {
@@ -300,9 +299,9 @@ export const useCheckout = () => {
         const redirectURL = encodeURIComponent(
           `${window.location.origin}/payment-confirmation?transactionId=${transactionResult.transactionid}&orderData=${encodedOrderData}`
         );
-        
+
         const gatewayURL = `https://tpg-six.vercel.app/gateway?transactionid=${transactionResult.transactionid}&redirectURL=${redirectURL}`;
-        
+
         // Redirect to payment gateway
         window.location.href = gatewayURL;
       } else {
@@ -316,17 +315,23 @@ export const useCheckout = () => {
     }
   }, [orderData, selectedAddress, paymentMethod, appliedCoupon]);
 
-  // Original order processing (for COD or after payment confirmation)
+  // Original order processing (for COD, wallet, or after payment confirmation)
+  // Original order processing (for all payment methods including wallet)
   const processOrder = useCallback(async (orderPayload = null) => {
     setIsProcessingOrder(true);
+    setPaymentError(null);
+
     try {
       const user = authUtils.getCurrentUser();
+      const totalAmount = calculationUtils.calculateTotal(orderData);
+
+      // Create order payload - wallet payment will be handled by the backend
       const payload = orderPayload || {
         user_id: user.user_id,
         items: orderData.items,
         address_id: selectedAddress.address_id,
         payment_method: paymentMethod,
-        total_amount: calculationUtils.calculateTotal(orderData),
+        total_amount: totalAmount,
         product_total: orderData.subtotal,
         tax_total: orderData.tax,
         shipping_total: orderData.shipping,
@@ -345,9 +350,22 @@ export const useCheckout = () => {
           ...prev,
           orderId: orderResult.data.order_id,
         }));
+      } else {
+        // Handle specific error messages from backend
+        if (orderResult.message === 'Insufficient balance') {
+          setPaymentError('Not enough balance in your wallet. Please top up your wallet to continue.');
+        } else {
+          setPaymentError(orderResult.message || 'Failed to create order');
+        }
       }
     } catch (error) {
       console.error("Error processing order:", error);
+      // Check if the error response contains insufficient balance message
+      if (error.response && error.response.data && error.response.data.message === 'Insufficient balance') {
+        setPaymentError('Not enough balance in your wallet. Please top up your wallet to continue.');
+      } else {
+        setPaymentError('Failed to process order. Please try again.');
+      }
     } finally {
       setIsProcessingOrder(false);
     }

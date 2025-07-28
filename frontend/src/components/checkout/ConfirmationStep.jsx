@@ -46,12 +46,20 @@ const ConfirmationStep = ({
           <div className="flex justify-between">
             <span>Order Total:</span>
             <span className="font-semibold">
-              ${calculateTotal().toFixed(2)}
+              ৳{calculateTotal().toFixed(2)}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Payment Method:</span>
-            <span className="capitalize">{paymentMethod}</span>
+            <span className="capitalize">
+              {paymentMethod === "wallet"
+                ? "GroCart Balance"
+                : paymentMethod === "cod"
+                ? "Cash on Delivery"
+                : paymentMethod === "bkash"
+                ? "bKash"
+                : paymentMethod}
+            </span>
           </div>
           <div className="flex justify-between">
             <span>Delivery Address:</span>
