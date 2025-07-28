@@ -464,13 +464,14 @@ export const getProductById = async (req, res) => {
         c.category_id,
         COALESCE(AVG(r.rating), 4.0) AS avg_rating,
         COALESCE(COUNT(r.review_id), 0) AS review_count,
-        p.created_at
+        p.created_at,
+        p.total_available_stock
       FROM "Product" p
       LEFT JOIN "Category" c ON p.category_id = c.category_id
       LEFT JOIN "Review" r ON p.product_id = r.product_id
       WHERE p.product_id = $1 AND p.is_available = true
       GROUP BY p.product_id, p.name, p.price, p.quantity, p.unit_measure, p.origin, 
-               p.description, p.is_available, p.is_refundable, c.name, c.category_id, p.created_at
+               p.description, p.is_available, p.is_refundable, c.name, c.category_id, p.created_at, p.total_available_stock
     `;
 
     const products = await getProductsWithDetails(query, [productId]);

@@ -13,7 +13,6 @@ import {
   RotateCcw,
   ChevronLeft,
   ChevronRight,
-  Check,
   X,
   MessageCircle,
   ThumbsUp,
@@ -55,7 +54,13 @@ const ProductDetailsPage = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
   const { user, isLoggedIn } = useAuth();
-  const { notification, showSuccess, showError, showWarning, hideNotification } = useNotification();
+  const {
+    notification,
+    showSuccess,
+    showError,
+    showWarning,
+    hideNotification,
+  } = useNotification();
   const cartBarRef = useRef(null);
 
   const [product, setProduct] = useState(null);
@@ -72,7 +77,6 @@ const ProductDetailsPage = () => {
   const [reviews, setReviews] = useState([]);
   const [reviewStats, setReviewStats] = useState({});
   const [cartItems, setCartItems] = useState([]);
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   // Loading states and login modal
   const [isCartLoading, setIsCartLoading] = useState(false);
@@ -87,7 +91,6 @@ const ProductDetailsPage = () => {
   // Log productId for debugging
   console.log("Product ID:", productId);
 
-  // Mock API calls - replace with actual API endpoints
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true);
@@ -100,6 +103,10 @@ const ProductDetailsPage = () => {
         const result = await response.json();
         if (result.success) {
           console.log("Product data received:", result.data); // Debug log
+          console.log("Available stock values:", {
+            total_available_stock: result.data.total_available_stock,
+            quantity: result.data.quantity,
+          }); // Debug stock values
           setProduct(result.data);
 
           // Set reviews if they exist in the response
@@ -223,8 +230,7 @@ const ProductDetailsPage = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setShowSuccessMessage(true);
-        setTimeout(() => setShowSuccessMessage(false), 3000);
+        showSuccess("Success", "Added to cart successfully!");
 
         // Refresh cart bar if available
         if (cartBarRef.current && cartBarRef.current.refreshCart) {
@@ -236,7 +242,10 @@ const ProductDetailsPage = () => {
       }
     } catch (error) {
       console.error("Error adding to cart:", error);
-      showError("Network Error", "Failed to add item to cart. Please try again.");
+      showError(
+        "Network Error",
+        "Failed to add item to cart. Please try again."
+      );
     } finally {
       setIsCartLoading(false);
     }
@@ -302,14 +311,23 @@ const ProductDetailsPage = () => {
 
       if (response.ok) {
         setIsFavorite(!isFavorite);
-        showSuccess("Favorites Updated!", isFavorite ? "Removed from favorites" : "Added to favorites");
+        showSuccess(
+          "Favorites Updated!",
+          isFavorite ? "Removed from favorites" : "Added to favorites"
+        );
       } else {
         console.error("Failed to toggle favorite:", data.message);
-        showError("Favorites Error", data.message || "Failed to update favorites");
+        showError(
+          "Favorites Error",
+          data.message || "Failed to update favorites"
+        );
       }
     } catch (error) {
       console.error("Error toggling favorite:", error);
-      showError("Network Error", "Failed to update favorites. Please try again.");
+      showError(
+        "Network Error",
+        "Failed to update favorites. Please try again."
+      );
     } finally {
       setIsLikesLoading(false);
     }
@@ -317,7 +335,8 @@ const ProductDetailsPage = () => {
 
   const handleQuantityChange = (change) => {
     const newQuantity = quantity + change;
-    const maxQuantity = product?.quantity || 999; // Default to 999 if quantity is undefined
+    const maxQuantity =
+      product?.total_available_stock || product?.quantity || 999; // Use total_available_stock first
     if (newQuantity >= 1 && newQuantity <= maxQuantity) {
       setQuantity(newQuantity);
     }
@@ -405,7 +424,7 @@ const ProductDetailsPage = () => {
   if (!product) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex flex-col">
       {/* Sidebar Component */}
       <Sidebar
         onCategorySelect={handleCategorySelect}
@@ -417,20 +436,12 @@ const ProductDetailsPage = () => {
       {/* CartBar Component */}
       <CartBar ref={cartBarRef} />
 
-      {/* Main Content Area - Responsive to sidebar state */}
+      {/* Main Content Area - Responsive to sidebar state with proper navbar spacing */}
       <div
         className={`transition-all duration-300 ${
           isSidebarCollapsed ? "ml-16" : "ml-80"
-        } min-h-screen bg-gray-50`}
+        } flex-1 bg-gray-50 pt-[72px]`}
       >
-        {/* Success Message */}
-        {showSuccessMessage && (
-          <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center">
-            <Check className="w-5 h-5 mr-2" />
-            Added to cart successfully!
-          </div>
-        )}
-
         <div className="max-w-7xl mx-auto px-4 py-8">
           {renderBreadcrumb()}
 
@@ -441,7 +452,7 @@ const ProductDetailsPage = () => {
                 <img
                   src={productImages[selectedImageIndex]?.image_url}
                   alt={product.name}
-                  className="w-full h-96 object-cover"
+                  className="w-full h-96 object-contain"
                 />
                 {productImages.length > 1 && (
                   <>
@@ -576,13 +587,21 @@ const ProductDetailsPage = () => {
                     <button
                       onClick={() => handleQuantityChange(1)}
                       className="p-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={quantity >= (product?.quantity || 999)}
+                      disabled={
+                        quantity >=
+                        (product?.total_available_stock ||
+                          product?.quantity ||
+                          999)
+                      }
                     >
                       <Plus className="w-4 h-4 text-black" />
                     </button>
                   </div>
                   <span className="text-sm text-gray-600">
-                    {product?.quantity || "In stock"} available
+                    {product?.total_available_stock ||
+                      product?.quantity ||
+                      "In stock"}{" "}
+                    available
                   </span>
                 </div>
               </div>
@@ -594,6 +613,8 @@ const ProductDetailsPage = () => {
                   disabled={
                     isCartLoading ||
                     product?.is_available === false ||
+                    (product?.total_available_stock &&
+                      product.total_available_stock === 0) ||
                     (product?.quantity && product.quantity === 0) ||
                     quantity === 0
                   }
@@ -718,9 +739,10 @@ const ProductDetailsPage = () => {
                         </dd>
                       </div>
                       <div className="flex justify-between">
-                        <dt className="text-gray-600">Quantity Available:</dt>
+                        <dt className="text-gray-600">Quantity :</dt>
                         <dd className="text-black font-medium">
-                          {product.quantity || "In stock"}
+                          {product.quantity || "In stock"}{" "}
+                          {product.unit_measure || ""}
                         </dd>
                       </div>
                     </dl>
@@ -883,9 +905,6 @@ const ProductDetailsPage = () => {
                         <h3 className="text-lg font-medium text-gray-900 mb-2">
                           No reviews yet
                         </h3>
-                        <p className="text-gray-500">
-                          Be the first to review this product!
-                        </p>
                       </div>
                     )}
                   </div>
@@ -907,7 +926,7 @@ const ProductDetailsPage = () => {
         className="lg:hidden fixed inset-0 bg-black/20 opacity-0 pointer-events-none transition-opacity duration-300 z-30"
         id="sidebar-overlay"
       ></div>
-      
+
       {/* Notification Component */}
       <Notification
         show={notification.show}

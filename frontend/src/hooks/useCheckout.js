@@ -19,6 +19,8 @@ export const useCheckout = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [availableCoupons, setAvailableCoupons] = useState([]);
+  const [isLoadingCoupons, setIsLoadingCoupons] = useState(false);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState(false);
@@ -74,10 +76,30 @@ export const useCheckout = () => {
       setSelectedAddress(
         addressData.data?.find((addr) => addr.isPrimary) || addressData.data?.[0]
       );
+
+      // Fetch available coupons
+      await fetchAvailableCoupons(user.user_id);
+
     } catch (error) {
       console.error("Error fetching checkout data:", error);
     } finally {
       setIsLoading(false);
+    }
+  }, []);
+
+  // Fetch available coupons for user
+  const fetchAvailableCoupons = useCallback(async (userId) => {
+    try {
+      setIsLoadingCoupons(true);
+      const response = await checkoutService.getAvailableCoupons(userId);
+      if (response.coupons) {
+        setAvailableCoupons(response.coupons);
+      }
+    } catch (error) {
+      console.error("Error fetching available coupons:", error);
+      setAvailableCoupons([]);
+    } finally {
+      setIsLoadingCoupons(false);
     }
   }, []);
 
@@ -199,20 +221,32 @@ export const useCheckout = () => {
   }, [orderData.items, isReleasingStock]);
 
   // Coupon management
-  const applyCoupon = useCallback(async () => {
-    if (!couponCode.trim()) return;
+  const applyCoupon = useCallback(async (selectedCouponCode = null) => {
+    const codeToValidate = selectedCouponCode || couponCode.trim();
+    if (!codeToValidate) return;
 
     try {
-      const couponData = await checkoutService.validateCoupon(couponCode, orderData.subtotal);
-      if (couponData.success) {
-        setAppliedCoupon(couponData.data);
+      const user = authUtils.getCurrentUser();
+      const couponData = await checkoutService.validateCoupon(
+        codeToValidate,
+        user.user_id,
+        orderData.subtotal
+      );
+
+      if (couponData.valid) {
+        setAppliedCoupon(couponData.coupon);
+        setCouponCode(codeToValidate);
+        // Apply discount only to subtotal, not to shipping
         setOrderData((prev) => ({
           ...prev,
-          discount: couponData.data.discount_amount,
+          discount: couponData.coupon.discount_amount,
         }));
+      } else {
+        alert(couponData.message || 'Invalid coupon');
       }
     } catch (error) {
       console.error("Error applying coupon:", error);
+      alert('Error applying coupon');
     }
   }, [couponCode, orderData.subtotal]);
 
@@ -423,6 +457,8 @@ export const useCheckout = () => {
     couponCode,
     setCouponCode,
     appliedCoupon,
+    availableCoupons,
+    isLoadingCoupons,
     showAddressForm,
     setShowAddressForm,
     isProcessingOrder,
@@ -445,6 +481,7 @@ export const useCheckout = () => {
 
     // Functions
     fetchCheckoutData,
+    fetchAvailableCoupons,
     updateQuantity,
     removeItem,
     checkStockAvailability,

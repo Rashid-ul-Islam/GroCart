@@ -12,8 +12,14 @@ router.get('/search', couponController.searchCoupons);
 // Get user tiers for dropdown
 router.get('/tiers', couponController.getUserTiers);
 
+// Get available coupons for user based on tier
+router.get('/available/:userId', couponController.getAvailableCoupons);
+
 // Validate coupon for use
 router.post('/validate', couponController.validateCoupon);
+
+// Apply coupon to order (increment usage and create OrderCoupon record)
+router.post('/apply-to-order', couponController.applyCouponToOrder);
 
 // Get single coupon by ID
 router.get('/:couponId', couponController.getCouponById);
