@@ -41,6 +41,35 @@ export const handleSocketConnection = (io) => {
 
         // Join user-specific room
         socket.join(`user_${userId}`);
+        
+        // Handle joining notification room
+        socket.on('join_notification_room', (userIdFromClient) => {
+            if (userIdFromClient === userId) {
+                socket.join(`notifications_${userId}`);
+                console.log(`User ${userId} joined notification room`);
+            }
+        });
+
+        // Handle mark notification as read
+        socket.on('mark_notification_read', (data) => {
+            console.log(`User ${userId} marked notification ${data.notificationId} as read`);
+            // Broadcast to all sessions of this user
+            socket.to(`user_${userId}`).emit('notification_read', {
+                notificationId: data.notificationId,
+                readAt: new Date().toISOString(),
+                userId: userId
+            });
+        });
+
+        // Handle mark all notifications as read
+        socket.on('mark_all_notifications_read', (data) => {
+            console.log(`User ${userId} marked all notifications as read`);
+            // Broadcast to all sessions of this user
+            socket.to(`user_${userId}`).emit('all_notifications_read', {
+                userId: userId,
+                readAt: new Date().toISOString()
+            });
+        });
 
         // Handle disconnection
         socket.on('disconnect', (reason) => {
@@ -62,11 +91,23 @@ export const handleSocketConnection = (io) => {
             socket.emit('pong');
         });
 
+        // Handle heartbeat
+        socket.on('heartbeat', () => {
+            socket.emit('heartbeat_ack', { timestamp: new Date().toISOString() });
+        });
+
         // Send welcome message
         socket.emit('connected', {
             message: 'Real-time notifications connected',
             userId: userId,
             timestamp: new Date().toISOString()
+        });
+
+        // Send immediate status
+        socket.emit('connection_status', {
+            connected: true,
+            userId: userId,
+            socketId: socket.id
         });
     });
 

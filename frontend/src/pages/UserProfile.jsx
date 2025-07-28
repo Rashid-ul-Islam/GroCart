@@ -22,6 +22,8 @@ import { Button } from "../components/ui/button.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import Notification from "../components/ui/Notification.jsx";
 import { useNotification } from "../hooks/useNotification.js";
+import ConfirmationModal from "../components/ui/ConfirmationModal.jsx";
+import { useConfirmation } from "../hooks/useConfirmation.js";
 
 export default function UserProfile() {
   const { user, isLoggedIn } = useAuth();
@@ -29,6 +31,9 @@ export default function UserProfile() {
 
   // Use the notification hook
   const { notification, showSuccess, showError, hideNotification } = useNotification();
+
+  // Use the confirmation hook
+  const { confirmationConfig, confirmDanger } = useConfirmation();
 
   // State management
   const [profileData, setProfileData] = useState(null);
@@ -452,7 +457,21 @@ export default function UserProfile() {
   };
 
   const handleDeleteAddress = async (addressId) => {
-    if (!window.confirm("Are you sure you want to delete this address?")) {
+    // Check if this is the primary address
+    const addressToDelete = addresses.find(addr => addr.address_id === addressId);
+    
+    if (addressToDelete && addressToDelete.isPrimary) {
+      showError("Cannot Delete", "Primary address cannot be deleted. Please set another address as primary first.");
+      return;
+    }
+
+    const confirmed = await confirmDanger(
+      "Delete Address",
+      "Are you sure you want to delete this address? This action cannot be undone.",
+      { confirmText: "Delete Address" }
+    );
+
+    if (!confirmed) {
       return;
     }
 
@@ -1095,7 +1114,13 @@ export default function UserProfile() {
                             onClick={() =>
                               handleDeleteAddress(address.address_id)
                             }
-                            className="bg-red-600 hover:bg-red-700 hover:scale-110 text-white text-sm px-3 py-1 rounded-lg shadow-sm transform transition-all duration-400 font-medium hover:shadow-md"
+                            disabled={address.isPrimary}
+                            className={`text-white text-sm px-3 py-1 rounded-lg shadow-sm transform transition-all duration-400 font-medium ${
+                              address.isPrimary
+                                ? "bg-gray-400 cursor-not-allowed opacity-50"
+                                : "bg-red-600 hover:bg-red-700 hover:scale-110 hover:shadow-md"
+                            }`}
+                            title={address.isPrimary ? "Primary address cannot be deleted" : "Delete address"}
                           >
                             <Trash2 className="w-3 h-3" />
                           </Button>
@@ -1109,6 +1134,20 @@ export default function UserProfile() {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        show={confirmationConfig.show}
+        type={confirmationConfig.type}
+        title={confirmationConfig.title}
+        message={confirmationConfig.message}
+        confirmText={confirmationConfig.confirmText}
+        cancelText={confirmationConfig.cancelText}
+        onConfirm={confirmationConfig.onConfirm}
+        onCancel={confirmationConfig.onCancel}
+        confirmButtonClass={confirmationConfig.confirmButtonClass}
+        cancelButtonClass={confirmationConfig.cancelButtonClass}
+      />
 
       {/* Notification Component */}
       <Notification

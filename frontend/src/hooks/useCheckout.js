@@ -281,6 +281,25 @@ export const useCheckout = () => {
     }
   }, [newAddress]);
 
+  // Refresh addresses
+  const refreshAddresses = useCallback(async (newAddresses) => {
+    if (newAddresses) {
+      // If new addresses are provided, update state directly
+      setAddresses(newAddresses);
+    } else {
+      // Otherwise, fetch from server
+      try {
+        const user = authUtils.getCurrentUser();
+        if (!user) return;
+
+        const addressData = await checkoutService.getAddresses(user.user_id);
+        setAddresses(addressData.data || []);
+      } catch (error) {
+        console.error("Error refreshing addresses:", error);
+      }
+    }
+  }, []);
+
   // Payment processing
   const initializePayment = useCallback(async () => {
     if (paymentMethod === 'cod' || paymentMethod === 'wallet') {
@@ -489,6 +508,7 @@ export const useCheckout = () => {
     applyCoupon,
     removeCoupon,
     addNewAddress,
+    refreshAddresses,
     initializePayment,
     processOrder,
     goBackToReview,

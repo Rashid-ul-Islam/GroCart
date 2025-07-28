@@ -45,10 +45,11 @@ import {
   Loader2,
   AlertTriangle,
   CheckCircle,
+  Edit,
 } from "lucide-react";
 import { toast } from "../../hooks/use-toast.js";
 
-export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
+export const DeliveryBoyManagement = () => {
   const [deliveryBoys, setDeliveryBoys] = useState([]);
   const [stats, setStats] = useState({
     availableCount: 0,
@@ -68,6 +69,12 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
   const [isLoadingRegions, setIsLoadingRegions] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Edit Delivery Boy Dialog States
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingDeliveryBoy, setEditingDeliveryBoy] = useState(null);
+  const [editSelectedRegionId, setEditSelectedRegionId] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Fetch delivery boys data
   const fetchDeliveryBoys = async () => {
@@ -294,15 +301,78 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
     fetchDeliveryRegions();
   };
 
-  const filteredDeliveryBoys = deliveryBoys.filter((boy) => {
-    const matchesSearch =
-      boy.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      boy.phone.includes(searchTerm);
-    const matchesRegion =
-      filterRegion === "all" ||
-      boy.deliveryRegion.toLowerCase() === filterRegion.toLowerCase();
-    return matchesSearch && matchesRegion;
-  });
+  // Edit Delivery Boy Functions
+  const handleEditDialogOpen = (deliveryBoy) => {
+    setEditingDeliveryBoy(deliveryBoy);
+    setEditSelectedRegionId(deliveryBoy.regionId || "");
+    setIsEditDialogOpen(true);
+    fetchDeliveryRegions();
+  };
+
+  const handleEditDeliveryBoy = async () => {
+    if (!editSelectedRegionId) {
+      toast({
+        title: "Error",
+        description: "Please select a delivery region",
+        type: "error",
+      });
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/delivery/updateDeliveryBoyRegion/${editingDeliveryBoy.userId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            delivery_region_id: parseInt(editSelectedRegionId),
+          }),
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        toast({
+          title: "Success",
+          description: "Delivery boy region updated successfully",
+        });
+
+        // Refresh data
+        fetchDeliveryBoys();
+        fetchStats();
+
+        // Reset and close dialog
+        setEditingDeliveryBoy(null);
+        setEditSelectedRegionId("");
+        setIsEditDialogOpen(false);
+      } else {
+        toast({
+          title: "Error",
+          description: data.message || "Failed to update delivery boy region",
+          type: "error",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating delivery boy region:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update delivery boy region",
+        type: "error",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleEditDialogClose = () => {
+    setIsEditDialogOpen(false);
+    setEditingDeliveryBoy(null);
+    setEditSelectedRegionId("");
+  };
 
   const filteredUsers = allUsers.filter((user) => {
     const searchLower = userSearchTerm.toLowerCase();
@@ -592,8 +662,127 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
             </Dialog>
           </div>
 
+          {/* Edit Delivery Boy Dialog */}
+          <Dialog open={isEditDialogOpen} onOpenChange={handleEditDialogClose}>
+            <DialogContent className="max-w-md bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-xl border-0">
+              {/* Header with gradient background */}
+              <div className="bg-gradient-to-r from-purple-600 via-pink-500 to-blue-500 p-4 -m-6 mb-4">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                    <div className="bg-white/20 p-1.5 rounded-lg">
+                      <Edit className="h-4 w-4 text-white" />
+                    </div>
+                    Edit Delivery Boy
+                  </DialogTitle>
+                  <DialogDescription className="text-white/90 text-sm">
+                    Update region for{" "}
+                    <span className="font-semibold text-white">
+                      {editingDeliveryBoy?.name}
+                    </span>
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
+
+              <div className="space-y-4 px-1">
+                {/* Current Information Card */}
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-3 rounded-xl border border-blue-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-1 rounded-lg">
+                      <Users className="h-4 w-4 text-white" />
+                    </div>
+                    <h4 className="text-sm font-bold text-gray-800">
+                      Current Information
+                    </h4>
+                  </div>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between p-2 bg-white/60 rounded-lg">
+                      <span className="font-medium text-gray-700">Name:</span>
+                      <span className="text-gray-800 font-medium">
+                        {editingDeliveryBoy?.name}
+                      </span>
+                    </div>
+                    <div className="flex justify-between p-2 bg-white/60 rounded-lg">
+                      <span className="font-medium text-gray-700">Phone:</span>
+                      <span className="text-gray-800 font-medium">
+                        {editingDeliveryBoy?.phone}
+                      </span>
+                    </div>
+                    <div className="flex justify-between p-2 bg-white/60 rounded-lg">
+                      <span className="font-medium text-gray-700">Current Region:</span>
+                      <span className="text-gray-800 font-medium bg-green-100 px-2 py-1 rounded-full">
+                        {editingDeliveryBoy?.deliveryRegion}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Region Selection Card */}
+                <div className="bg-gradient-to-r from-green-50 to-teal-50 p-3 rounded-xl border border-green-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="bg-gradient-to-r from-green-500 to-teal-500 p-1 rounded-lg">
+                      <MapPin className="h-4 w-4 text-white" />
+                    </div>
+                    <label className="text-sm font-bold text-gray-800">
+                      Select New Region
+                    </label>
+                  </div>
+                  <Select
+                    value={editSelectedRegionId.toString()}
+                    onValueChange={(value) => setEditSelectedRegionId(value)}
+                  >
+                    <SelectTrigger className="h-10 bg-white text-black border-2 border-teal-300 rounded-lg focus:ring-2 focus:ring-teal-200 focus:border-teal-500 text-sm">
+                      <SelectValue placeholder="🌍 Choose region..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-2 border-teal-200 rounded-lg shadow-xl">
+                      {deliveryRegions.map((region) => (
+                        <SelectItem
+                          key={region.delivery_region_id}
+                          value={region.delivery_region_id.toString()}
+                          className="text-black hover:bg-teal-50 rounded-md m-0.5 py-2 text-sm"
+                        >
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-3 w-3 text-teal-500" />
+                            {region.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex justify-end space-x-3 pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleEditDialogClose}
+                    className="px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 text-sm font-medium"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleEditDeliveryBoy}
+                    disabled={isUpdating || !editSelectedRegionId}
+                    className="px-4 py-2 bg-gradient-to-r from-purple-600 via-pink-500 to-blue-500 text-white rounded-lg hover:from-purple-700 hover:via-pink-600 hover:to-blue-600 disabled:opacity-50 shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 text-sm font-medium"
+                  >
+                    {isUpdating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Update
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <div className="p-6">
-            {filteredDeliveryBoys.length === 0 ? (
+            {deliveryBoys.length === 0 ? (
               <div className="text-center py-12">
                 <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500 text-lg">No delivery boys found.</p>
@@ -627,7 +816,7 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredDeliveryBoys.map((boy) => (
+                    {deliveryBoys.map((boy) => (
                       <TableRow
                         key={boy.userId}
                         className="hover:bg-gray-50 transition duration-200"
@@ -702,23 +891,32 @@ export const DeliveryBoyManagement = ({ searchTerm, filterRegion }) => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            onClick={() =>
-                              handleStatusToggle(
-                                boy.userId,
-                                boy.availabilityStatus
-                              )
-                            }
-                            className={`px-4 py-2 rounded-lg shadow-md transform hover:scale-105 transition duration-200 text-white font-medium ${
-                              boy.availabilityStatus === "available"
-                                ? "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
-                                : "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
-                            }`}
-                          >
-                            {boy.availabilityStatus === "available"
-                              ? "Set Offline"
-                              : "Set Available"}
-                          </Button>
+                          <div className="flex space-x-2">
+                            <Button
+                              onClick={() => handleEditDialogOpen(boy)}
+                              className="px-3 py-2 rounded-lg shadow-md transform hover:scale-105 transition duration-200 text-white font-medium bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              onClick={() =>
+                                handleStatusToggle(
+                                  boy.userId,
+                                  boy.availabilityStatus
+                                )
+                              }
+                              className={`px-4 py-2 rounded-lg shadow-md transform hover:scale-105 transition duration-200 text-white font-medium ${
+                                boy.availabilityStatus === "available"
+                                  ? "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+                                  : "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                              }`}
+                            >
+                              {boy.availabilityStatus === "available"
+                                ? "Set Offline"
+                                : "Set Available"}
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

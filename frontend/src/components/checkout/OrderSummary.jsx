@@ -45,9 +45,13 @@ const OrderSummary = ({
             <div key={item.id} className="flex justify-between items-center">
               <div className="flex items-center space-x-3">
                 <img
-                  src={item.image_url || "/placeholder-product.jpg"}
+                  src={item.image_url || item.image || "https://via.placeholder.com/300x200"}
                   alt={item.name}
                   className="w-12 h-12 object-cover rounded-lg"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "https://via.placeholder.com/300x200";
+                  }}
                 />
                 <div>
                   <p className="font-medium text-gray-900">{item.name}</p>

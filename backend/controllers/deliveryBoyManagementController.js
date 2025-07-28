@@ -11,6 +11,7 @@ export const getAllDeliveryBoys = async (req, res) => {
   db.current_load,
   20 as max_load,
   dr.name as delivery_region,
+  db.delivery_region_id,
   db.joined_date,
   COALESCE(total_stats.total_deliveries, 0) as total_deliveries,
   COALESCE(perf.avg_rating, 0) as avg_rating,
@@ -88,6 +89,7 @@ ORDER BY db.user_id;
         currentLoad: row.current_load,
         maxLoad: row.max_load,
         deliveryRegion: row.delivery_region,
+        regionId: row.delivery_region_id,
         joinedDate: row.joined_date,
         totalDeliveries: parseInt(row.total_deliveries),
         onTimeRate: parseFloat(row.on_time_rate),
@@ -480,6 +482,94 @@ export const getDeliveryRegions = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching delivery regions',
+      error: error.message
+    });
+  }
+};
+
+// Update delivery boy region
+export const updateDeliveryBoyRegion = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { delivery_region_id } = req.body;
+
+    // Validate input
+    if (!userId || !delivery_region_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID and delivery region ID are required'
+      });
+    }
+
+    // Check if delivery boy exists
+    const checkDeliveryBoyQuery = `
+      SELECT user_id FROM "DeliveryBoy" WHERE user_id = $1
+    `;
+    const deliveryBoyCheck = await pool.query(checkDeliveryBoyQuery, [userId]);
+
+    if (deliveryBoyCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Delivery boy not found'
+      });
+    }
+
+    // Check if delivery region exists
+    const checkRegionQuery = `
+      SELECT delivery_region_id FROM "DeliveryRegion" WHERE delivery_region_id = $1
+    `;
+    const regionCheck = await pool.query(checkRegionQuery, [delivery_region_id]);
+
+    if (regionCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Delivery region not found'
+      });
+    }
+
+    // Update delivery boy region
+    const updateQuery = `
+      UPDATE "DeliveryBoy" 
+      SET delivery_region_id = $1
+      WHERE user_id = $2
+      RETURNING user_id, delivery_region_id
+    `;
+    
+    const result = await pool.query(updateQuery, [delivery_region_id, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to update delivery boy region'
+      });
+    }
+
+    // Get updated delivery boy information with region name
+    const getUpdatedInfoQuery = `
+      SELECT 
+        db.user_id,
+        u.first_name || ' ' || u.last_name as name,
+        dr.name as delivery_region,
+        db.delivery_region_id
+      FROM "DeliveryBoy" db
+      JOIN "User" u ON db.user_id = u.user_id
+      JOIN "DeliveryRegion" dr ON db.delivery_region_id = dr.delivery_region_id
+      WHERE db.user_id = $1
+    `;
+    
+    const updatedInfo = await pool.query(getUpdatedInfoQuery, [userId]);
+
+    res.status(200).json({
+      success: true,
+      message: 'Delivery boy region updated successfully',
+      data: updatedInfo.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Error updating delivery boy region:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating delivery boy region',
       error: error.message
     });
   }

@@ -10,8 +10,6 @@ import {
   Package,
   Gift,
   TrendingUp,
-  Wifi,
-  WifiOff,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { io } from "socket.io-client";
@@ -65,19 +63,37 @@ const UserNotification = () => {
         userId: user.user_id,
         token: localStorage.getItem("token")
       },
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      forceNew: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 20000
     });
 
     // Connection events
     socketRef.current.on('connect', () => {
-      console.log("Socket.IO connected");
+      console.log("Socket.IO connected successfully");
       setIsConnected(true);
       setError(null);
+      
+      // Join user-specific room for notifications
+      socketRef.current.emit('join_notification_room', user.user_id);
+      
+      // Send connection confirmation
+      console.log("Sending connection confirmation to server");
     });
 
-    socketRef.current.on('disconnect', () => {
-      console.log("Socket.IO disconnected");
+    socketRef.current.on('disconnect', (reason) => {
+      console.log("Socket.IO disconnected:", reason);
       setIsConnected(false);
+      
+      // Auto-reconnect if disconnected unexpectedly
+      if (reason === 'io server disconnect') {
+        setTimeout(() => {
+          socketRef.current.connect();
+        }, 1000);
+      }
     });
 
     socketRef.current.on('connect_error', (error) => {
@@ -86,48 +102,156 @@ const UserNotification = () => {
       setError("Real-time connection failed");
     });
 
-    // Notification events
+    socketRef.current.on('reconnect', (attemptNumber) => {
+      console.log("Socket.IO reconnected after", attemptNumber, "attempts");
+      setIsConnected(true);
+      setError(null);
+      // Re-join notification room after reconnection
+      socketRef.current.emit('join_notification_room', user.user_id);
+    });
+
+    socketRef.current.on('reconnect_error', (error) => {
+      console.error("Socket.IO reconnection error:", error);
+    });
+
+    // Handle connection status updates
+    socketRef.current.on('connected', (data) => {
+      console.log("Received connection confirmation:", data);
+    });
+
+    socketRef.current.on('connection_status', (data) => {
+      console.log("Connection status:", data);
+    });
+
+    // Handle heartbeat response
+    socketRef.current.on('heartbeat_ack', (data) => {
+      console.log("Heartbeat acknowledged:", data);
+    });
+
+    // Notification events with better error handling
     socketRef.current.on('new_notification', (notification) => {
-      console.log("Received new notification:", notification);
+      console.log("🔔 Received new notification:", notification);
       
-      // Add new notification to the list
-      setNotifications(prev => [notification, ...prev]);
-      setUnreadCount(prev => prev + 1);
-      
-      // Show browser notification if permission granted
-      if (Notification.permission === "granted") {
-        new Notification(notification.title, {
-          body: notification.message,
-          icon: "/favicon.ico",
-          tag: notification.notification_id
-        });
+      try {
+        // Ensure notification has required fields
+        if (notification && notification.notification_id) {
+          // Add new notification to the top of the list
+          setNotifications(prev => {
+            // Check if notification already exists to prevent duplicates
+            const exists = prev.find(n => n.notification_id === notification.notification_id);
+            if (exists) {
+              console.log("Notification already exists, skipping duplicate");
+              return prev;
+            }
+            
+            console.log("Adding new notification to list");
+            return [notification, ...prev];
+          });
+          
+          // Update unread count
+          setUnreadCount(prev => {
+            const newCount = prev + 1;
+            console.log("Updated unread count:", newCount);
+            return newCount;
+          });
+          
+          // Show browser notification if permission granted
+          if (Notification.permission === "granted") {
+            new Notification(notification.title || "New Notification", {
+              body: notification.message || "You have a new notification",
+              icon: "/favicon.ico",
+              tag: notification.notification_id.toString(),
+              silent: false
+            });
+          }
+        } else {
+          console.error("Invalid notification received:", notification);
+        }
+      } catch (error) {
+        console.error("Error processing new notification:", error);
       }
     });
 
     socketRef.current.on('notification_read', (data) => {
-      console.log("Notification marked as read:", data);
+      console.log("📖 Notification marked as read:", data);
       
-      setNotifications(prev =>
-        prev.map(notif =>
-          notif.notification_id === data.notificationId
-            ? { ...notif, is_read: true, read_at: data.readAt }
-            : notif
-        )
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      try {
+        if (data && data.notificationId) {
+          setNotifications(prev =>
+            prev.map(notif =>
+              notif.notification_id === data.notificationId
+                ? { ...notif, is_read: true, read_at: data.readAt || new Date().toISOString() }
+                : notif
+            )
+          );
+          setUnreadCount(prev => {
+            const newCount = Math.max(0, prev - 1);
+            console.log("Updated unread count after read:", newCount);
+            return newCount;
+          });
+        }
+      } catch (error) {
+        console.error("Error processing notification read event:", error);
+      }
     });
 
     socketRef.current.on('all_notifications_read', (data) => {
-      console.log("All notifications marked as read for user:", data.userId);
+      console.log("📚 All notifications marked as read for user:", data.userId);
       
-      setNotifications(prev =>
-        prev.map(notif => ({
-          ...notif,
-          is_read: true,
-          read_at: data.readAt
-        }))
-      );
-      setUnreadCount(0);
+      try {
+        if (data && data.userId === user.user_id) {
+          setNotifications(prev =>
+            prev.map(notif => ({
+              ...notif,
+              is_read: true,
+              read_at: data.readAt || new Date().toISOString()
+            }))
+          );
+          setUnreadCount(0);
+          console.log("Reset unread count to 0");
+        }
+      } catch (error) {
+        console.error("Error processing all notifications read event:", error);
+      }
+    });
+
+    // Handle notification updates (for status changes, etc.)
+    socketRef.current.on('notification_updated', (data) => {
+      console.log("🔄 Notification updated:", data);
+      
+      try {
+        if (data && data.notification) {
+          setNotifications(prev =>
+            prev.map(notif =>
+              notif.notification_id === data.notification.notification_id
+                ? { ...notif, ...data.notification }
+                : notif
+            )
+          );
+        }
+      } catch (error) {
+        console.error("Error processing notification update:", error);
+      }
+    });
+
+    // Handle notification deletion
+    socketRef.current.on('notification_deleted', (data) => {
+      console.log("🗑️ Notification deleted:", data);
+      
+      try {
+        if (data && data.notificationId) {
+          setNotifications(prev =>
+            prev.filter(notif => notif.notification_id !== data.notificationId)
+          );
+          
+          // Update unread count if deleted notification was unread
+          if (!data.wasRead) {
+            setUnreadCount(prev => Math.max(0, prev - 1));
+          }
+        }
+      } catch (error) {
+        console.error("Error processing notification deletion:", error);
+      }
     });
   };
 
@@ -259,6 +383,27 @@ const UserNotification = () => {
     try {
       console.log("Marking notification as read:", notificationId);
 
+      // First check if the notification is already read
+      const notification = notifications.find(n => n.notification_id === notificationId);
+      if (notification && notification.is_read) {
+        console.log("Notification already marked as read");
+        return; // Already read, don't do anything
+      }
+
+      // Optimistically update UI first
+      setNotifications((prev) =>
+        prev.map((notif) =>
+          notif.notification_id === notificationId
+            ? { ...notif, is_read: true, read_at: new Date().toISOString() }
+            : notif
+        )
+      );
+      
+      // Only decrease count if notification was unread
+      if (notification && !notification.is_read) {
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      }
+
       const response = await fetch(
         `${API_BASE_URL}/notifications/${notificationId}/read`,
         {
@@ -273,20 +418,41 @@ const UserNotification = () => {
       const data = await response.json();
       console.log("Mark as read response:", data);
 
-      if (response.ok && data.success) {
-        setNotifications((prev) =>
-          prev.map((notif) =>
-            notif.notification_id === notificationId
-              ? { ...notif, is_read: true, read_at: new Date().toISOString() }
-              : notif
-          )
-        );
-        setUnreadCount((prev) => Math.max(0, prev - 1));
-      } else {
+      if (!response.ok || !data.success) {
         console.error("Failed to mark notification as read:", data);
+        // Revert optimistic update if API call failed (only if notification was unread)
+        if (notification && !notification.is_read) {
+          setNotifications((prev) =>
+            prev.map((notif) =>
+              notif.notification_id === notificationId
+                ? { ...notif, is_read: false, read_at: null }
+                : notif
+            )
+          );
+          setUnreadCount((prev) => prev + 1);
+        }
+      } else {
+        // Emit socket event for real-time sync across tabs
+        if (socketRef.current && socketRef.current.connected) {
+          socketRef.current.emit('mark_notification_read', {
+            notificationId,
+            userId: user.user_id
+          });
+        }
       }
     } catch (error) {
       console.error("Error marking notification as read:", error);
+      // Revert optimistic update on error (only if notification was unread)
+      if (notification && !notification.is_read) {
+        setNotifications((prev) =>
+          prev.map((notif) =>
+            notif.notification_id === notificationId
+              ? { ...notif, is_read: false, read_at: null }
+              : notif
+          )
+        );
+        setUnreadCount((prev) => prev + 1);
+      }
     }
   };
 
@@ -296,6 +462,17 @@ const UserNotification = () => {
 
     try {
       console.log("Marking all notifications as read for user:", user.user_id);
+
+      // Optimistically update UI first
+      const currentTime = new Date().toISOString();
+      setNotifications((prev) =>
+        prev.map((notif) => ({
+          ...notif,
+          is_read: true,
+          read_at: currentTime,
+        }))
+      );
+      setUnreadCount(0);
 
       const response = await fetch(
         `${API_BASE_URL}/notifications/user/${user.user_id}/read-all`,
@@ -311,20 +488,22 @@ const UserNotification = () => {
       const data = await response.json();
       console.log("Mark all as read response:", data);
 
-      if (response.ok && data.success) {
-        setNotifications((prev) =>
-          prev.map((notif) => ({
-            ...notif,
-            is_read: true,
-            read_at: new Date().toISOString(),
-          }))
-        );
-        setUnreadCount(0);
-      } else {
+      if (!response.ok || !data.success) {
         console.error("Failed to mark all notifications as read:", data);
+        // Revert optimistic update if API call failed
+        fetchNotifications(); // Refresh from server
+      } else {
+        // Emit socket event for real-time sync across tabs
+        if (socketRef.current && socketRef.current.connected) {
+          socketRef.current.emit('mark_all_notifications_read', {
+            userId: user.user_id
+          });
+        }
       }
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
+      // Revert optimistic update on error
+      fetchNotifications(); // Refresh from server
     }
   };
 
@@ -436,6 +615,27 @@ const UserNotification = () => {
       
       // Fetch initial notifications
       fetchNotifications();
+      
+      // Set up periodic refresh as fallback (every 30 seconds)
+      const refreshInterval = setInterval(() => {
+        if (!isConnected) {
+          console.log("Socket disconnected, fetching notifications manually");
+          fetchNotifications();
+        }
+      }, 30000);
+
+      // Set up heartbeat to keep connection alive
+      const heartbeatInterval = setInterval(() => {
+        if (socketRef.current && socketRef.current.connected) {
+          socketRef.current.emit('heartbeat');
+        }
+      }, 25000); // Send heartbeat every 25 seconds
+      
+      return () => {
+        clearInterval(refreshInterval);
+        clearInterval(heartbeatInterval);
+        cleanupSocket();
+      };
     } else {
       console.log("Cleaning up: user not logged in");
       cleanupSocket();
@@ -443,11 +643,39 @@ const UserNotification = () => {
       setUnreadCount(0);
       setError(null);
     }
+  }, [isLoggedIn, user?.user_id]);
 
-    // Cleanup on unmount
-    return () => {
-      cleanupSocket();
+  // Separate effect to handle socket reconnection when connection is lost
+  useEffect(() => {
+    if (isLoggedIn && user?.user_id && !isConnected && !socketRef.current) {
+      console.log("Attempting to reconnect socket...");
+      const reconnectTimer = setTimeout(() => {
+        initializeSocket();
+      }, 2000);
+      
+      return () => clearTimeout(reconnectTimer);
+    }
+  }, [isConnected, isLoggedIn, user?.user_id]);
+
+  // Handle window focus to refresh notifications if connection was lost
+  useEffect(() => {
+    const handleFocus = () => {
+      if (isLoggedIn && user?.user_id) {
+        // Check if socket is still connected, if not reconnect
+        if (!socketRef.current || !socketRef.current.connected) {
+          console.log("Window focused, reconnecting socket...");
+          cleanupSocket();
+          setTimeout(() => {
+            initializeSocket();
+          }, 1000);
+        }
+        // Always fetch latest notifications on focus
+        fetchNotifications();
+      }
     };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [isLoggedIn, user?.user_id]);
 
   if (!isLoggedIn) {
@@ -484,14 +712,6 @@ const UserNotification = () => {
                 <h3 className="text-lg font-semibold text-purple-900">
                   Notifications
                 </h3>
-                {/* Socket connection status */}
-                <div className="flex items-center space-x-1">
-                  {isConnected ? (
-                    <Wifi className="w-4 h-4 text-green-500" title="Connected - Real-time updates" />
-                  ) : (
-                    <WifiOff className="w-4 h-4 text-red-500" title="Disconnected - Manual refresh only" />
-                  )}
-                </div>
               </div>
               <div className="flex items-center space-x-2">
                 {unreadCount > 0 && (
@@ -513,12 +733,6 @@ const UserNotification = () => {
             {unreadCount > 0 && (
               <p className="text-sm text-purple-600 mt-1">
                 {unreadCount} unread notification{unreadCount !== 1 ? "s" : ""}
-              </p>
-            )}
-            {!isConnected && (
-              <p className="text-xs text-orange-600 mt-1 flex items-center space-x-1">
-                <WifiOff className="w-3 h-3" />
-                <span>Real-time updates unavailable</span>
               </p>
             )}
           </div>

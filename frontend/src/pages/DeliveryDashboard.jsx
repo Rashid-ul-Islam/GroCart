@@ -14,22 +14,12 @@ import {
 } from "../components/ui/tabs.jsx";
 import { Badge } from "../components/ui/badge.jsx";
 import { Button } from "../components/ui/button.jsx";
-import { Input } from "../components/ui/input.jsx";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../components/ui/select.jsx";
 import {
   Truck,
   Clock,
   Users,
   Package,
   TrendingUp,
-  Search,
-  Filter,
 } from "lucide-react";
 import { DeliveryOverview } from "../components/delivery/DeliveryOverview.jsx";
 import { ActiveDeliveries } from "../components/delivery/ActiveDelivery.jsx";
@@ -218,8 +208,6 @@ const componentStyles = {
 
 const DeliveryDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterRegion, setFilterRegion] = useState("all");
 
   return (
     <div style={rootStyles}>
@@ -234,30 +222,6 @@ const DeliveryDashboard = () => {
               <p className="text-muted-foreground">
                 Monitor and manage all delivery operations in real-time
               </p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="relative w-full max-w-sm">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4 pointer-events-none" />
-                <Input
-                  placeholder="Search orders, delivery boys..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 w-full bg-white text-black placeholder-gray-400 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                />
-              </div>
-
-              <Select value={filterRegion} onValueChange={setFilterRegion}>
-                <SelectTrigger className="w-40">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Region" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Regions</SelectItem>
-                  <SelectItem value="dhaka">Dhaka</SelectItem>
-                  <SelectItem value="chittagong">Chittagong</SelectItem>
-                  <SelectItem value="sylhet">Sylhet</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
 
@@ -287,24 +251,15 @@ const DeliveryDashboard = () => {
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
-              <DeliveryOverview
-                searchTerm={searchTerm}
-                filterRegion={filterRegion}
-              />
+              <DeliveryOverview />
             </TabsContent>
 
             <TabsContent value="active" className="space-y-6">
-              <ActiveDeliveries
-                searchTerm={searchTerm}
-                filterRegion={filterRegion}
-              />
+              <ActiveDeliveries />
             </TabsContent>
 
             <TabsContent value="delivery-boys" className="space-y-6">
-              <DeliveryBoyManagement
-                searchTerm={searchTerm}
-                filterRegion={filterRegion}
-              />
+              <DeliveryBoyManagement />
             </TabsContent>
 
             <TabsContent value="analytics" className="space-y-6">

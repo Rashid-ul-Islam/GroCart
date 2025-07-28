@@ -542,7 +542,7 @@ function ProductReviewModal({ order, onClose }) {
           <h2 className="text-3xl font-extrabold text-yellow-700 mb-3 tracking-tight">
             Product Review
           </h2>
-          <p className="text-sm text-gray-400 mb-6">
+          <p className="text-sm text-gray-700 mb-6">
             Rate the products from Order {order.order_id}
           </p>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -558,11 +558,11 @@ function ProductReviewModal({ order, onClose }) {
                   );
                   setSelectedProduct(product);
                 }}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white text-gray-900"
               >
-                <option value="">Choose a product...</option>
+                <option value="" className="text-gray-700">Choose a product...</option>
                 {order.items?.map((item) => (
-                  <option key={item.product_id} value={item.product_id}>
+                  <option key={item.product_id} value={item.product_id} className="text-gray-900">
                     {item.product_name || "Unknown Product"}
                   </option>
                 ))}
@@ -592,14 +592,14 @@ function ProductReviewModal({ order, onClose }) {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-900 mb-2">
                 Review comments (optional):
               </label>
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white text-gray-900"
                 placeholder="Tell us about this product..."
               />
             </div>
@@ -1049,9 +1049,19 @@ function OrderDetailsModal({ order, onClose }) {
                 {order.items.map((item, idx) => (
                   <div
                     key={idx}
-                    className="flex justify-between items-center px-4 py-2"
+                    className="flex items-center gap-4 px-4 py-3"
                   >
-                    <div>
+                    <div className="flex-shrink-0">
+                      <img
+                        src={item?.image_url || item?.image || "https://via.placeholder.com/60x60"}
+                        alt={item?.product_name || "Product"}
+                        className="w-12 h-12 object-cover rounded-lg border border-gray-200"
+                        onError={(e) => {
+                          e.target.src = "https://via.placeholder.com/60x60";
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1">
                       <div className="font-bold text-gray-900">
                         {item?.product_name || (
                           <i className="text-gray-400">Unknown Item</i>
