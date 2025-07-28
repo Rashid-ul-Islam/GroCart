@@ -17,14 +17,25 @@ import {
   Shield,
   Eye,
   EyeOff,
+  Image,
+  Upload,
+  Trash2,
+  Star,
 } from "lucide-react";
 import { Button } from "../ui/button.jsx";
+import { toast } from "react-hot-toast";
 
 export default function ProductEdit() {
   const { productId } = useParams();
   const navigate = useNavigate();
   const [images, setImages] = useState([]);
   const [newImageUrl, setNewImageUrl] = useState("");
+  
+  // File upload states
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [filePreviews, setFilePreviews] = useState([]);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  
   const [product, setProduct] = useState(null);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -90,6 +101,84 @@ export default function ProductEdit() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // File upload functions
+  const uploadImage = async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('http://localhost:3000/api/products/upload-image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.imageUrl;
+      } else {
+        const errorData = await response.json();
+        console.error('Image upload failed:', errorData);
+        toast.error(errorData.message || `Failed to upload image: ${response.statusText}`);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error(`Error uploading image: ${error.message}`);
+      return null;
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    // Validate files
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    
+    const validFiles = [];
+    const previews = [];
+
+    files.forEach(file => {
+      if (!validTypes.includes(file.type)) {
+        toast.error(`${file.name}: Invalid file type. Please select JPEG, PNG, or WebP images.`);
+        return;
+      }
+
+      if (file.size > maxSize) {
+        toast.error(`${file.name}: File too large. Please select images smaller than 5MB.`);
+        return;
+      }
+
+      validFiles.push(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        previews.push({
+          file: file,
+          preview: e.target.result,
+          name: file.name,
+          size: file.size
+        });
+        
+        if (previews.length === validFiles.length) {
+          setSelectedFiles(prev => [...prev, ...validFiles]);
+          setFilePreviews(prev => [...prev, ...previews]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Reset file input
+    e.target.value = '';
+  };
+
+  const removeSelectedFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setFilePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleAddImage = () => {
@@ -197,6 +286,33 @@ export default function ProductEdit() {
     setError(null);
 
     try {
+      // Upload new files first if any
+      const newImageUrls = [];
+      if (selectedFiles.length > 0) {
+        setUploadLoading(true);
+        
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+          const uploadedUrl = await uploadImage(file);
+          
+          if (uploadedUrl) {
+            newImageUrls.push({
+              image_url: uploadedUrl,
+              is_primary: images.length === 0 && i === 0, // First uploaded image is primary if no existing primary
+              display_order: images.length + i + 1,
+              isNew: true,
+            });
+          } else {
+            // If any upload fails, stop the process
+            setSaving(false);
+            setUploadLoading(false);
+            return;
+          }
+        }
+        
+        setUploadLoading(false);
+      }
+
       const updateData = {};
       Object.keys(formData).forEach((key) => {
         const value = formData[key];
@@ -205,8 +321,8 @@ export default function ProductEdit() {
         }
       });
 
-      // Include images in update data
-      updateData.images = images;
+      // Include both existing images and new uploaded images
+      updateData.images = [...images, ...newImageUrls];
 
       const response = await fetch(
         `http://localhost:3000/api/adminDashboard/products/${productId}`,
@@ -220,7 +336,12 @@ export default function ProductEdit() {
       );
 
       if (response.ok) {
+        // Clear file selections after successful update
+        setSelectedFiles([]);
+        setFilePreviews([]);
+        
         setSuccess(true);
+        toast.success("Product updated successfully!");
         setTimeout(() => {
           navigate("/admin");
         }, 2000);
@@ -391,80 +512,142 @@ export default function ProductEdit() {
                   {/* Product Images Section */}
                   <div className="space-y-4">
                     <label className="block text-sm font-medium text-gray-700">
-                      <Package className="inline w-4 h-4 mr-2" />
+                      <Image className="inline w-4 h-4 mr-2" />
                       Product Images
                     </label>
 
-                    {/* Add New Image */}
-                    <div className="flex gap-2">
-                      <input
-                        type="url"
-                        value={newImageUrl}
-                        onChange={(e) => setNewImageUrl(e.target.value)}
-                        placeholder="Enter image URL"
-                        className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-500"
-                      />
-                      <Button
-                        type="button"
-                        onClick={handleAddImage}
-                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                      >
-                        Add Image
-                      </Button>
+                    {/* File Upload Section */}
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <input
+                          type="file"
+                          id="productImages"
+                          accept="image/jpeg,image/jpg,image/png,image/webp"
+                          multiple
+                          onChange={handleFileSelect}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="productImages"
+                          className="w-full h-32 border-2 border-dashed border-purple-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-all duration-300 bg-white"
+                        >
+                          <Upload className="w-8 h-8 text-purple-400 mb-2" />
+                          <span className="text-sm font-medium text-purple-600">
+                            Click to select images
+                          </span>
+                          <span className="text-xs text-gray-500 mt-1">
+                            JPEG, PNG, WebP (Max 5MB each, Multiple files)
+                          </span>
+                        </label>
+                      </div>
+
+                      {/* Selected Files Preview */}
+                      {filePreviews.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-sm text-gray-600 font-medium">Selected Files ({filePreviews.length}):</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {filePreviews.map((filePreview, index) => (
+                              <div
+                                key={index}
+                                className="relative border-2 border-purple-200 rounded-xl p-3 bg-purple-50"
+                              >
+                                <div className="flex items-start gap-3">
+                                  <img
+                                    src={filePreview.preview}
+                                    alt={`Selected ${index + 1}`}
+                                    className="w-16 h-16 object-cover rounded-lg border shadow-md"
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                      {filePreview.name}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      {(filePreview.size / 1024 / 1024).toFixed(2)} MB
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeSelectedFile(index)}
+                                      className="mt-1 text-xs text-red-600 hover:text-red-800 underline flex items-center gap-1"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                      Remove
+                                    </button>
+                                  </div>
+                                </div>
+                                {uploadLoading && (
+                                  <div className="absolute inset-0 bg-white/80 rounded-xl flex items-center justify-center">
+                                    <div className="flex items-center gap-2">
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                                      <span className="text-sm text-purple-600 font-medium">
+                                        Uploading...
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Existing Images */}
                     {images.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-sm text-gray-600">Current Images:</p>
-                        {images.map((image, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center gap-3 p-3 bg-gray-50 rounded-md"
-                          >
-                            <img
-                              src={image.image_url}
-                              alt={`Product ${index + 1}`}
-                              className="w-16 h-16 object-cover rounded"
-                              onError={(e) => {
-                                e.target.src = "/default-product.png";
-                              }}
-                            />
-                            <div className="flex-1">
-                              <p className="text-sm font-medium truncate">
-                                {image.image_url}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1">
-                                {image.is_primary && (
-                                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                                    Primary
+                        <p className="text-sm text-gray-600 font-medium">Current Images:</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {images.map((image, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200"
+                            >
+                              <img
+                                src={image.image_url}
+                                alt={`Product ${index + 1}`}
+                                className="w-16 h-16 object-cover rounded-lg border shadow-md"
+                                onError={(e) => {
+                                  e.target.src = "/default-product.png";
+                                }}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">
+                                  Image {index + 1}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  {image.is_primary && (
+                                    <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full flex items-center gap-1">
+                                      <Star className="w-3 h-3" />
+                                      Primary
+                                    </span>
+                                  )}
+                                  <span className="text-xs text-gray-500">
+                                    Order: {image.display_order || index + 1}
                                   </span>
-                                )}
-                                <span className="text-xs text-gray-500">
-                                  Order: {image.display_order || index + 1}
-                                </span>
+                                </div>
                               </div>
-                            </div>
-                            <div className="flex gap-2">
-                              {!image.is_primary && (
+                              <div className="flex flex-col gap-1">
+                                {!image.is_primary && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSetPrimary(index)}
+                                    className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 flex items-center gap-1"
+                                  >
+                                    <Star className="w-3 h-3" />
+                                    Set Primary
+                                  </button>
+                                )}
                                 <button
                                   type="button"
-                                  onClick={() => handleSetPrimary(index)}
-                                  className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                                  onClick={() => handleRemoveImage(index)}
+                                  className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 flex items-center gap-1"
                                 >
-                                  Set Primary
+                                  <Trash2 className="w-3 h-3" />
+                                  Remove
                                 </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveImage(index)}
-                                className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
-                              >
-                                Remove
-                              </button>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
