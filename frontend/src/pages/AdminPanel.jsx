@@ -41,29 +41,53 @@ export default function AdminPanel() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [statsError, setStatsError] = useState(null);
 
-  // Search and filter states
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
+  // Helper functions for localStorage
+  const getStoredState = (key, defaultValue) => {
+    try {
+      const stored = localStorage.getItem(`adminPanel_${key}`);
+      return stored ? JSON.parse(stored) : defaultValue;
+    } catch (error) {
+      console.error(`Error reading ${key} from localStorage:`, error);
+      return defaultValue;
+    }
+  };
 
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
+  const setStoredState = (key, value) => {
+    try {
+      localStorage.setItem(`adminPanel_${key}`, JSON.stringify(value));
+    } catch (error) {
+      console.error(`Error saving ${key} to localStorage:`, error);
+    }
+  };
+
+  // Search and filter states with localStorage persistence
+  const [searchTerm, setSearchTerm] = useState(getStoredState("searchTerm", ""));
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(getStoredState("isSearching", false));
+
+  // Pagination states with localStorage persistence
+  const [currentPage, setCurrentPage] = useState(getStoredState("currentPage", 1));
   const [productsPerPage] = useState(10);
 
-  // Filter states
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [priceRange, setPriceRange] = useState({ min: "", max: "" });
-  const [selectedOrigin, setSelectedOrigin] = useState("");
-  const [isRefundableFilter, setIsRefundableFilter] = useState("");
-  const [isAvailableFilter, setIsAvailableFilter] = useState("");
-  const [dateRange, setDateRange] = useState({ start: "", end: "" });
-  const [showFilters, setShowFilters] = useState(false);
+  // Filter states with localStorage persistence
+  const [selectedCategory, setSelectedCategory] = useState(getStoredState("selectedCategory", ""));
+  const [priceRange, setPriceRange] = useState(getStoredState("priceRange", { min: "", max: "" }));
+  const [selectedOrigin, setSelectedOrigin] = useState(getStoredState("selectedOrigin", ""));
+  const [isRefundableFilter, setIsRefundableFilter] = useState(getStoredState("isRefundableFilter", ""));
+  const [isAvailableFilter, setIsAvailableFilter] = useState(getStoredState("isAvailableFilter", ""));
+  const [dateRange, setDateRange] = useState(getStoredState("dateRange", { start: "", end: "" }));
+  const [showFilters, setShowFilters] = useState(getStoredState("showFilters", false));
 
   // Fetch dashboard stats on component mount
   useEffect(() => {
     fetchDashboardStats();
     fetchCategories();
     fetchProducts();
+    
+    // If we have a stored search term and isSearching state, restore search results
+    if (isSearching && searchTerm.trim()) {
+      handleSearch({ preventDefault: () => {} });
+    }
   }, [
     currentPage,
     selectedCategory,
@@ -73,6 +97,47 @@ export default function AdminPanel() {
     isAvailableFilter,
     dateRange,
   ]);
+
+  // Save state to localStorage whenever it changes
+  useEffect(() => {
+    setStoredState("searchTerm", searchTerm);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    setStoredState("isSearching", isSearching);
+  }, [isSearching]);
+
+  useEffect(() => {
+    setStoredState("currentPage", currentPage);
+  }, [currentPage]);
+
+  useEffect(() => {
+    setStoredState("selectedCategory", selectedCategory);
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    setStoredState("priceRange", priceRange);
+  }, [priceRange]);
+
+  useEffect(() => {
+    setStoredState("selectedOrigin", selectedOrigin);
+  }, [selectedOrigin]);
+
+  useEffect(() => {
+    setStoredState("isRefundableFilter", isRefundableFilter);
+  }, [isRefundableFilter]);
+
+  useEffect(() => {
+    setStoredState("isAvailableFilter", isAvailableFilter);
+  }, [isAvailableFilter]);
+
+  useEffect(() => {
+    setStoredState("dateRange", dateRange);
+  }, [dateRange]);
+
+  useEffect(() => {
+    setStoredState("showFilters", showFilters);
+  }, [showFilters]);
 
   const fetchDashboardStats = async () => {
     setStatsLoading(true);
@@ -199,6 +264,9 @@ export default function AdminPanel() {
     setSearchTerm("");
     setSearchResults([]);
     setIsSearching(false);
+    // Clear from localStorage as well
+    setStoredState("searchTerm", "");
+    setStoredState("isSearching", false);
   };
 
   // Filter functionality
@@ -246,11 +314,21 @@ export default function AdminPanel() {
   };
 
   const goToNextPage = () => {
-    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+    const newPage = Math.min(currentPage + 1, totalPages);
+    setCurrentPage(newPage);
+    setStoredState("currentPage", newPage);
   };
 
   const goToPreviousPage = () => {
-    setCurrentPage((prev) => Math.max(prev - 1, 1));
+    const newPage = Math.max(currentPage - 1, 1);
+    setCurrentPage(newPage);
+    setStoredState("currentPage", newPage);
+  };
+
+  const goToPage = (pageNumber) => {
+    const newPage = Math.max(1, Math.min(pageNumber, totalPages));
+    setCurrentPage(newPage);
+    setStoredState("currentPage", newPage);
   };
 
   const clearFilters = () => {
@@ -261,6 +339,45 @@ export default function AdminPanel() {
     setIsAvailableFilter("");
     setDateRange({ start: "", end: "" });
     setCurrentPage(1);
+    
+    // Clear from localStorage as well
+    setStoredState("selectedCategory", "");
+    setStoredState("priceRange", { min: "", max: "" });
+    setStoredState("selectedOrigin", "");
+    setStoredState("isRefundableFilter", "");
+    setStoredState("isAvailableFilter", "");
+    setStoredState("dateRange", { start: "", end: "" });
+    setStoredState("currentPage", 1);
+  };
+
+  const clearAllState = () => {
+    // Clear all state
+    setSelectedCategory("");
+    setPriceRange({ min: "", max: "" });
+    setSelectedOrigin("");
+    setIsRefundableFilter("");
+    setIsAvailableFilter("");
+    setDateRange({ start: "", end: "" });
+    setCurrentPage(1);
+    setSearchTerm("");
+    setSearchResults([]);
+    setIsSearching(false);
+    setShowFilters(false);
+    
+    // Clear all localStorage items
+    const keysToRemove = [
+      "selectedCategory", "priceRange", "selectedOrigin", 
+      "isRefundableFilter", "isAvailableFilter", "dateRange", 
+      "currentPage", "searchTerm", "isSearching", "showFilters"
+    ];
+    
+    keysToRemove.forEach(key => {
+      try {
+        localStorage.removeItem(`adminPanel_${key}`);
+      } catch (error) {
+        console.error(`Error removing ${key} from localStorage:`, error);
+      }
+    });
   };
 
   const handleEditProduct = (productId) => {
@@ -281,6 +398,11 @@ export default function AdminPanel() {
           showSuccess("Product Deleted!", "Product deleted successfully!");
           fetchProducts(); // Refresh products list
           fetchDashboardStats(); // Refresh stats
+          
+          // If we're searching, refresh search results too
+          if (isSearching && searchTerm.trim()) {
+            handleSearch({ preventDefault: () => {} });
+          }
         } else {
           showError("Delete Failed", "Failed to delete product");
         }
@@ -312,16 +434,18 @@ export default function AdminPanel() {
                 Manage your GroCart products and inventory
               </p>
             </div>
-            <Button
-              onClick={fetchDashboardStats}
-              disabled={statsLoading}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-2"
-            >
-              <RefreshCw
-                className={`w-4 h-4 ${statsLoading ? "animate-spin" : ""}`}
-              />
-              Refresh Stats
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={fetchDashboardStats}
+                disabled={statsLoading}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-2"
+              >
+                <RefreshCw
+                  className={`w-4 h-4 ${statsLoading ? "animate-spin" : ""}`}
+                />
+                Refresh Stats
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -451,9 +575,22 @@ export default function AdminPanel() {
 
         {/* Product Search Section */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            🔍 Product Search
-          </h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">
+              🔍 Product Search
+            </h2>
+            {/* Search persistence indicator */}
+            {isSearching && searchTerm && (
+              <div className="flex items-center gap-2">
+                <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
+                  Search Results Cached
+                </span>
+                <span className="text-xs text-gray-500">
+                  ({searchResults.length} results)
+                </span>
+              </div>
+            )}
+          </div>
           <form onSubmit={handleSearch} className="mb-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
@@ -551,9 +688,28 @@ export default function AdminPanel() {
         {/* Filter Section */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">
-              🔧 Product Filters
-            </h2>
+            <div className="flex items-center gap-4">
+              <h2 className="text-2xl font-bold text-gray-800">
+                🔧 Product Filters
+              </h2>
+              {/* Active filters indicator */}
+              {(selectedCategory || priceRange.min || priceRange.max || selectedOrigin || 
+                isRefundableFilter || isAvailableFilter || dateRange.start || dateRange.end) && (
+                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                  Filters Active
+                </span>
+              )}
+              {isSearching && searchTerm && (
+                <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
+                  Search Active: "{searchTerm.slice(0, 20)}{searchTerm.length > 20 ? '...' : ''}"
+                </span>
+              )}
+              {currentPage > 1 && (
+                <span className="bg-purple-100 text-purple-800 text-xs font-medium px-2 py-1 rounded-full">
+                  Page {currentPage}
+                </span>
+              )}
+            </div>
             <div className="flex gap-2">
               <Button
                 onClick={() => setShowFilters(!showFilters)}
@@ -868,8 +1024,12 @@ export default function AdminPanel() {
                 Showing {(currentPage - 1) * productsPerPage + 1} to{" "}
                 {Math.min(currentPage * productsPerPage, totalProducts)} of{" "}
                 {totalProducts} products
+                {(selectedCategory || priceRange.min || priceRange.max || selectedOrigin || 
+                  isRefundableFilter || isAvailableFilter || dateRange.start || dateRange.end) && (
+                  <span className="ml-2 text-blue-600 font-medium">(filtered)</span>
+                )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <Button
                   onClick={goToPreviousPage}
                   disabled={currentPage === 1}
@@ -882,6 +1042,48 @@ export default function AdminPanel() {
                   <ChevronLeft className="w-4 h-4" />
                   Previous
                 </Button>
+                
+                {/* Page numbers */}
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => goToPage(pageNum)}
+                        className={`px-3 py-1 rounded text-sm font-medium transition duration-200 ${
+                          currentPage === pageNum
+                            ? "bg-purple-600 text-white"
+                            : "bg-white text-gray-700 hover:bg-purple-100"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                  {totalPages > 5 && currentPage < totalPages - 2 && (
+                    <>
+                      <span className="px-2 text-gray-500">...</span>
+                      <button
+                        onClick={() => goToPage(totalPages)}
+                        className="px-3 py-1 rounded text-sm font-medium bg-white text-gray-700 hover:bg-purple-100 transition duration-200"
+                      >
+                        {totalPages}
+                      </button>
+                    </>
+                  )}
+                </div>
+                
                 <Button
                   onClick={goToNextPage}
                   disabled={currentPage === totalPages}
