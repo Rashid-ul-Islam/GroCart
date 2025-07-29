@@ -6,7 +6,8 @@ import {
     updateDeliveryBoyStatus,
     assignDeliveryBoyRole,
     getAllUsers,
-    getDeliveryRegions
+    getDeliveryRegions,
+    updateDeliveryBoyRegion
 } from "../controllers/deliveryBoyManagementController.js";
 
 const router = express.Router();
@@ -16,6 +17,7 @@ router.get("/allDeliveryBoys", getAllDeliveryBoys);
 router.get("/deliveryBoyStats", getDeliveryBoyStats);
 router.get("/deliveryBoy/:id", getDeliveryBoyById);
 router.put("/updateDeliveryBoyStatus/:id", updateDeliveryBoyStatus);
+router.put("/updateDeliveryBoyRegion/:userId", updateDeliveryBoyRegion);
 router.post("/assignDeliveryBoyRole", assignDeliveryBoyRole);
 router.get("/allUsers", getAllUsers);
 router.get("/deliveryRegions", getDeliveryRegions);

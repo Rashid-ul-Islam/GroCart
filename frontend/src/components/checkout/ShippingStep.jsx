@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Edit, Plus, ArrowRight, MapPin, Home, Trash2, ChevronDown } from "lucide-react";
 import { toast } from "react-hot-toast";
+import Notification from "../ui/Notification.jsx";
+import { useNotification } from "../../hooks/useNotification.js";
 
 const ShippingStep = ({
   addresses,
@@ -14,6 +16,7 @@ const ShippingStep = ({
   addNewAddress,
   goBackToReview,
   setCurrentStep,
+  refreshAddresses, // Add this prop to refresh addresses from parent
 }) => {
   // State for location hierarchy
   const [divisions, setDivisions] = useState([]);
@@ -28,8 +31,11 @@ const ShippingStep = ({
     regionId: "",
   });
 
+  // Use the notification hook
+  const { notification, showSuccess, showError, hideNotification } = useNotification();
+
   // Helper function to refresh addresses
-  const refreshAddresses = async () => {
+  const refreshAddressesData = async () => {
     try {
       const token = sessionStorage.getItem("token");
       const userData = sessionStorage.getItem("user");
@@ -49,9 +55,12 @@ const ShippingStep = ({
         const data = await response.json();
         console.log("Refreshed addresses:", data);
         
-        // For now, we'll reload the page to refresh the checkout data
-        // In a production app, we'd call a parent refresh function
-        window.location.reload();
+        // If parent provides a refresh function, use it
+        if (refreshAddresses && typeof refreshAddresses === 'function') {
+          refreshAddresses(data);
+        }
+        
+        return data;
       } else {
         console.error("Failed to refresh addresses:", response.status);
       }
@@ -171,7 +180,7 @@ const ShippingStep = ({
     
     if (!addressForm.address.trim() || !addressForm.regionId) {
       console.log("❌ Validation failed");
-      toast.error("Please fill in all address fields");
+      showError("Validation Error", "Please fill in all address fields");
       return;
     }
 
@@ -185,7 +194,7 @@ const ShippingStep = ({
 
       if (!user || !token) {
         console.log("❌ Authentication failed");
-        toast.error("Authentication required. Please log in again.");
+        showError("Authentication Error", "Authentication required. Please log in again.");
         return;
       }
 
@@ -212,27 +221,27 @@ const ShippingStep = ({
 
       if (response.ok) {
         console.log("✅ Address added successfully!");
-        toast.success("Address added successfully!");
+        showSuccess("Success", "Address added successfully!");
         
         // Reset form and state
         setShowAddressForm(false);
         resetForm();
         
-        // Refresh the addresses
-        await refreshAddresses();
+        // Refresh the addresses using the new function
+        await refreshAddressesData();
         
       } else {
         const errorData = await response.json();
         console.error("❌ API error:", errorData);
         if (response.status === 409) {
-          toast.error(errorData.message || "This address already exists");
+          showError("Duplicate Address", errorData.message || "This address already exists");
         } else {
-          toast.error(errorData.message || errorData.error || "Failed to add address");
+          showError("Error", errorData.message || errorData.error || "Failed to add address");
         }
       }
     } catch (error) {
       console.error("💥 Error adding address:", error);
-      toast.error("An error occurred while adding the address");
+      showError("Error", "An error occurred while adding the address");
     }
   };
 
@@ -249,12 +258,22 @@ const ShippingStep = ({
     setRegions([]);
   };
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      className="bg-white rounded-2xl shadow-lg p-6"
-    >
+    <>
+      {/* Notification Component */}
+      <Notification
+        show={notification.show}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        onClose={hideNotification}
+      />
+      
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        className="bg-white rounded-2xl shadow-lg p-6"
+      >
       <h2 className="text-2xl font-bold text-gray-900 mb-6">
         Shipping Address
       </h2>
@@ -478,8 +497,14 @@ const ShippingStep = ({
                   value={addressForm.address}
                   onChange={handleAddressInputChange}
                   rows={3}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-300 hover:border-green-400 resize-none"
-                  style={{ color: '#000000', fontWeight: 'bold', fontSize: '16px' }}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-300 hover:border-green-400 resize-none bg-white text-gray-900"
+                  style={{ 
+                    color: '#111827', 
+                    backgroundColor: '#ffffff',
+                    fontWeight: 'bold', 
+                    fontSize: '16px',
+                    caretColor: '#111827'
+                  }}
                   required
                 />
                 <p className="text-xs text-gray-700 font-medium mt-1">
@@ -553,6 +578,7 @@ const ShippingStep = ({
         </motion.button>
       </div>
     </motion.div>
+    </>
   );
 };
 

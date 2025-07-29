@@ -44,6 +44,7 @@ import {
 
 export const DeliveryAnalytics = () => {
   const [timeRange, setTimeRange] = useState("30"); // Default to 30 days
+  const [sortBy, setSortBy] = useState("deliveries"); // New state for sorting
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -83,7 +84,7 @@ export const DeliveryAnalytics = () => {
               timeRange === "7d" ? "7d" : "6months"
             }`
           ),
-          fetch(`${API_BASE}/top-performers?timeRange=${timeRange}&limit=5`),
+          fetch(`${API_BASE}/top-performers?timeRange=${timeRange}&limit=5&sortBy=${sortBy}`),
         ]);
 
       if (
@@ -126,7 +127,7 @@ export const DeliveryAnalytics = () => {
   // Fetch data on component mount and when timeRange changes
   useEffect(() => {
     fetchAnalyticsData();
-  }, [timeRange]);
+  }, [timeRange, sortBy]); // Add sortBy to dependencies
 
   // Loading state
   if (loading) {
@@ -207,11 +208,11 @@ export const DeliveryAnalytics = () => {
               <SelectTrigger className="w-48 h-12 bg-white text-gray-900 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 font-semibold">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7d">Last 7 days</SelectItem>
-                <SelectItem value="30d">Last 30 days</SelectItem>
-                <SelectItem value="90d">Last 90 days</SelectItem>
-                <SelectItem value="1y">Last year</SelectItem>
+              <SelectContent className="bg-white text-gray-900">
+                <SelectItem value="7d" className="text-gray-900 hover:bg-gray-100">Last 7 days</SelectItem>
+                <SelectItem value="30d" className="text-gray-900 hover:bg-gray-100">Last 30 days</SelectItem>
+                <SelectItem value="90d" className="text-gray-900 hover:bg-gray-100">Last 90 days</SelectItem>
+                <SelectItem value="1y" className="text-gray-900 hover:bg-gray-100">Last year</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -428,10 +429,10 @@ export const DeliveryAnalytics = () => {
                   <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                     <div className="mb-6">
                       <h3 className="text-xl font-bold text-gray-800 mb-2">
-                        Delivery Distribution by Region
+                        Completed Deliveries by Region
                       </h3>
                       <p className="text-gray-600">
-                        Breakdown of deliveries across different regions
+                        Breakdown of successfully completed deliveries across regions
                       </p>
                     </div>
                     <ResponsiveContainer width="100%" height={300}>
@@ -460,8 +461,8 @@ export const DeliveryAnalytics = () => {
                             boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
                           }}
                           formatter={(value, name, props) => [
-                            `${value} deliveries`,
-                            props.payload.region_name || "Unknown Region",
+                            `${value} completed deliveries`,
+                            props.payload.region_name || props.payload.name || "Unknown Region",
                           ]}
                         />
                         <Legend />
@@ -555,15 +556,15 @@ export const DeliveryAnalytics = () => {
                         ></div>
                       </div>
                       <h3 className="text-xl font-bold text-gray-800 mb-2">
-                        {region.region_name || "Unknown Region"}
+                        {region.region_name || region.name || "Unknown Region"}
                       </h3>
                       <div className="text-3xl font-bold text-gray-800 mb-1">
-                        {region.delivery_count}
+                        {region.delivery_count || region.count}
                       </div>
-                      <p className="text-sm text-gray-600">total deliveries</p>
+                      <p className="text-sm text-gray-600">completed deliveries</p>
                       {region.percentage && (
                         <p className="text-xs text-gray-500 mt-1">
-                          {region.percentage}% of all deliveries
+                          {region.percentage}% of all completed deliveries
                         </p>
                       )}
                     </div>
@@ -574,12 +575,35 @@ export const DeliveryAnalytics = () => {
               <TabsContent value="top-performers" className="space-y-6 mt-0">
                 <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                   <div className="mb-6">
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">
-                      Top Performing Delivery Boys
-                    </h3>
-                    <p className="text-gray-600">
-                      Monthly rankings based on deliveries and performance
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">
+                          Top Performing Delivery Boys
+                        </h3>
+                        <p className="text-gray-600">
+                          Monthly rankings based on deliveries and performance
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-gray-700">Sort by:</label>
+                        <Select value={sortBy} onValueChange={setSortBy}>
+                          <SelectTrigger className="w-40 bg-white text-gray-900">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white text-gray-900">
+                            <SelectItem value="deliveries" className="text-gray-900 hover:bg-gray-100">
+                              Deliveries
+                            </SelectItem>
+                            <SelectItem value="rating" className="text-gray-900 hover:bg-gray-100">
+                              Rating
+                            </SelectItem>
+                            <SelectItem value="onTime" className="text-gray-900 hover:bg-gray-100">
+                              On-Time Rate
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   </div>
                   <div className="space-y-4">
                     {topPerformers.map((performer, index) => (
@@ -597,10 +621,10 @@ export const DeliveryAnalytics = () => {
                           </div>
                           <div>
                             <p className="font-bold text-gray-800 text-lg">
-                              {performer.delivery_boy_name}
+                              {performer.delivery_boy_name || performer.name}
                             </p>
                             <p className="text-sm text-gray-600">
-                              {performer.total_deliveries} deliveries completed
+                              {performer.total_deliveries || performer.deliveries} total deliveries ({performer.completedDeliveries || performer.completed_deliveries || 'N/A'} completed)
                             </p>
                           </div>
                         </div>

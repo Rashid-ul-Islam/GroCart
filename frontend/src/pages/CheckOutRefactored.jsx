@@ -54,6 +54,7 @@ const CheckoutPage = () => {
     applyCoupon,
     removeCoupon,
     addNewAddress,
+    refreshAddresses,
     initializePayment,
     processOrder,
     goBackToReview,
@@ -150,6 +151,7 @@ const CheckoutPage = () => {
                   newAddress={newAddress}
                   setNewAddress={setNewAddress}
                   addNewAddress={addNewAddress}
+                  refreshAddresses={refreshAddresses}
                   goBackToReview={goBackToReview}
                   setCurrentStep={setCurrentStep}
                 />

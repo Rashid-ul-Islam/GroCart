@@ -373,27 +373,32 @@ export const getRegionalDistribution = async (req, res) => {
             WITH total_deliveries AS (
                 SELECT COUNT(*) as total_count
                 FROM "Delivery" d
-                WHERE 1=1 ${dateCondition}
+                WHERE d.actual_arrival IS NOT NULL 
+                AND (d.is_aborted = false OR d.is_aborted IS NULL)
+                ${dateCondition}
             ),
             regional_data AS (
                 SELECT 
                     dr.name as region_name,
-                    COUNT(d.delivery_id) as delivery_count
+                    COUNT(d.delivery_id) as delivery_count,
+                    COUNT(d.delivery_id) as completed_deliveries
                 FROM "Delivery" d
                 JOIN "Address" a ON a.address_id = d.address_id
                 JOIN "Region" r ON r.region_id = a.region_id
                 JOIN "DeliveryRegion" dr ON dr.delivery_region_id = r.delivery_region_id
-                WHERE 1=1 ${dateCondition}
+                WHERE d.actual_arrival IS NOT NULL 
+                AND (d.is_aborted = false OR d.is_aborted IS NULL)
+                ${dateCondition}
                 GROUP BY dr.name, dr.delivery_region_id
                 ORDER BY delivery_count DESC
             )
             SELECT 
                 rd.region_name as name,
                 rd.delivery_count as count,
-                ROUND((rd.delivery_count::DECIMAL / td.total_count) * 100, 1) as percentage
+                rd.completed_deliveries,
+                ROUND((rd.delivery_count::DECIMAL / NULLIF(td.total_count, 0)) * 100, 1) as percentage
             FROM regional_data rd
-            CROSS JOIN total_deliveries td
-            WHERE td.total_count > 0;
+            CROSS JOIN total_deliveries td;
         `;
 
         const result = await client.query(regionalQuery);
@@ -403,8 +408,11 @@ export const getRegionalDistribution = async (req, res) => {
 
         const regions = result.rows.map((row, index) => ({
             name: row.name,
-            value: parseFloat(row.percentage),
+            value: parseFloat(row.percentage) || 0,
             count: parseInt(row.count),
+            completed_deliveries: parseInt(row.completed_deliveries),
+            region_name: row.name,
+            delivery_count: parseInt(row.count),
             color: colors[index % colors.length]
         }));
 
@@ -518,7 +526,7 @@ export const getPerformanceTrends = async (req, res) => {
 export const getTopPerformers = async (req, res) => {
     const client = await pool.connect();
     try {
-        const { timeRange = '30d', limit = 5 } = req.query;
+        const { timeRange = '30d', limit = 5, sortBy = 'deliveries' } = req.query;
 
         let dateCondition = '';
         switch (timeRange) {
@@ -533,6 +541,96 @@ export const getTopPerformers = async (req, res) => {
                 break;
             case '1y':
                 dateCondition = "AND d.created_at >= CURRENT_DATE - INTERVAL '1 year'";
+                break;
+        }
+
+        // Build ORDER BY clause based on sortBy parameter
+        let orderByClause = '';
+        switch (sortBy) {
+            case 'rating':
+                orderByClause = `
+                    ORDER BY 
+                    AVG(dp.customer_rating) DESC NULLS LAST,
+                    COUNT(d.delivery_id) DESC,
+                    CASE 
+                        WHEN COUNT(CASE 
+                            WHEN d.actual_arrival IS NOT NULL 
+                            AND d.estimated_arrival IS NOT NULL
+                            AND (d.is_aborted = false OR d.is_aborted IS NULL)
+                            THEN 1 
+                        END) > 0
+                        THEN COUNT(CASE 
+                            WHEN d.actual_arrival IS NOT NULL 
+                            AND d.estimated_arrival IS NOT NULL
+                            AND (d.is_aborted = false OR d.is_aborted IS NULL)
+                            AND d.actual_arrival <= d.estimated_arrival 
+                            THEN 1 
+                        END)::DECIMAL / COUNT(CASE 
+                            WHEN d.actual_arrival IS NOT NULL 
+                            AND d.estimated_arrival IS NOT NULL
+                            AND (d.is_aborted = false OR d.is_aborted IS NULL)
+                            THEN 1 
+                        END)
+                        ELSE 0
+                    END DESC
+                `;
+                break;
+            case 'onTime':
+                orderByClause = `
+                    ORDER BY 
+                    CASE 
+                        WHEN COUNT(CASE 
+                            WHEN d.actual_arrival IS NOT NULL 
+                            AND d.estimated_arrival IS NOT NULL
+                            AND (d.is_aborted = false OR d.is_aborted IS NULL)
+                            THEN 1 
+                        END) > 0
+                        THEN COUNT(CASE 
+                            WHEN d.actual_arrival IS NOT NULL 
+                            AND d.estimated_arrival IS NOT NULL
+                            AND (d.is_aborted = false OR d.is_aborted IS NULL)
+                            AND d.actual_arrival <= d.estimated_arrival 
+                            THEN 1 
+                        END)::DECIMAL / COUNT(CASE 
+                            WHEN d.actual_arrival IS NOT NULL 
+                            AND d.estimated_arrival IS NOT NULL
+                            AND (d.is_aborted = false OR d.is_aborted IS NULL)
+                            THEN 1 
+                        END)
+                        ELSE 0
+                    END DESC,
+                    COUNT(d.delivery_id) DESC,
+                    AVG(dp.customer_rating) DESC NULLS LAST
+                `;
+                break;
+            case 'deliveries':
+            default:
+                orderByClause = `
+                    ORDER BY 
+                    COUNT(d.delivery_id) DESC,
+                    AVG(dp.customer_rating) DESC NULLS LAST,
+                    CASE 
+                        WHEN COUNT(CASE 
+                            WHEN d.actual_arrival IS NOT NULL 
+                            AND d.estimated_arrival IS NOT NULL
+                            AND (d.is_aborted = false OR d.is_aborted IS NULL)
+                            THEN 1 
+                        END) > 0
+                        THEN COUNT(CASE 
+                            WHEN d.actual_arrival IS NOT NULL 
+                            AND d.estimated_arrival IS NOT NULL
+                            AND (d.is_aborted = false OR d.is_aborted IS NULL)
+                            AND d.actual_arrival <= d.estimated_arrival 
+                            THEN 1 
+                        END)::DECIMAL / COUNT(CASE 
+                            WHEN d.actual_arrival IS NOT NULL 
+                            AND d.estimated_arrival IS NOT NULL
+                            AND (d.is_aborted = false OR d.is_aborted IS NULL)
+                            THEN 1 
+                        END)
+                        ELSE 0
+                    END DESC
+                `;
                 break;
         }
 
@@ -560,18 +658,8 @@ export const getTopPerformers = async (req, res) => {
                     AND (d.is_aborted = false OR d.is_aborted IS NULL)
                     THEN 1 
                 END) as deliveries_with_both_times,
-                AVG(dp.customer_rating)::DECIMAL(3,1) as avg_rating
-            FROM "User" u
-            JOIN "DeliveryBoy" db ON db.user_id = u.user_id
-            JOIN "Delivery" d ON d.delivery_boy_id = db.user_id
-            LEFT JOIN "DeliveryPerformance" dp ON dp.delivery_id = d.delivery_id AND dp.delivery_boy_id = db.user_id
-            WHERE 1=1 ${dateCondition}
-            GROUP BY u.user_id, u.first_name, u.last_name
-            HAVING COUNT(d.delivery_id) > 0
-            ORDER BY 
-                COUNT(d.delivery_id) DESC,
-                AVG(dp.customer_rating) DESC NULLS LAST,
-                -- Fixed on-time rate calculation for ordering
+                AVG(dp.customer_rating)::DECIMAL(3,1) as avg_rating,
+                -- Calculate on-time rate
                 CASE 
                     WHEN COUNT(CASE 
                         WHEN d.actual_arrival IS NOT NULL 
@@ -579,7 +667,7 @@ export const getTopPerformers = async (req, res) => {
                         AND (d.is_aborted = false OR d.is_aborted IS NULL)
                         THEN 1 
                     END) > 0
-                    THEN COUNT(CASE 
+                    THEN ROUND((COUNT(CASE 
                         WHEN d.actual_arrival IS NOT NULL 
                         AND d.estimated_arrival IS NOT NULL
                         AND (d.is_aborted = false OR d.is_aborted IS NULL)
@@ -590,9 +678,17 @@ export const getTopPerformers = async (req, res) => {
                         AND d.estimated_arrival IS NOT NULL
                         AND (d.is_aborted = false OR d.is_aborted IS NULL)
                         THEN 1 
-                    END)
+                    END)) * 100, 1)
                     ELSE 0
-                END DESC
+                END as on_time_rate_percentage
+            FROM "User" u
+            JOIN "DeliveryBoy" db ON db.user_id = u.user_id
+            JOIN "Delivery" d ON d.delivery_boy_id = db.user_id
+            LEFT JOIN "DeliveryPerformance" dp ON dp.delivery_id = d.delivery_id AND dp.delivery_boy_id = db.user_id
+            WHERE 1=1 ${dateCondition}
+            GROUP BY u.user_id, u.first_name, u.last_name
+            HAVING COUNT(d.delivery_id) > 0
+            ${orderByClause}
             LIMIT $1;
         `;
 
@@ -602,15 +698,21 @@ export const getTopPerformers = async (req, res) => {
             name: row.name,
             userId: parseInt(row.user_id),
             deliveries: parseInt(row.total_deliveries),
-            onTimeRate: parseInt(row.deliveries_with_both_times) > 0 
-                ? parseFloat(((parseInt(row.on_time_deliveries) / parseInt(row.deliveries_with_both_times)) * 100).toFixed(1))
-                : 0,
-            rating: parseFloat(row.avg_rating) || 0
+            completedDeliveries: parseInt(row.completed_deliveries),
+            onTimeRate: parseFloat(row.on_time_rate_percentage) || 0,
+            rating: parseFloat(row.avg_rating) || 0,
+            delivery_boy_id: parseInt(row.user_id),
+            delivery_boy_name: row.name,
+            total_deliveries: parseInt(row.total_deliveries),
+            avg_rating: parseFloat(row.avg_rating) || 0,
+            on_time_percentage: parseFloat(row.on_time_rate_percentage) || 0
         }));
 
         res.status(200).json({
             success: true,
-            data: performers
+            data: performers,
+            sortBy,
+            timeRange
         });
 
     } catch (error) {

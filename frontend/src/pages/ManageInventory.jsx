@@ -620,168 +620,239 @@ const InventoryManagement = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Inventory Management
-          </h1>
-          <p className="text-gray-600">
-            Manage warehouses, track stock levels, and optimize inventory
-          </p>
+          <div className="flex items-center space-x-4 mb-4">
+            <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+              <Package className="text-white" size={32} />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                Inventory Management
+              </h1>
+              <p className="text-lg text-gray-600 mt-1">
+                Manage warehouses, track stock levels, and optimize inventory with powerful insights
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* Enhanced Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <Package className="text-blue-500 mr-3" size={24} />
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Total Products
-                </p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {stats?.totalproducts ?? 0}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <Warehouse className="text-green-500 mr-3" size={24} />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Warehouses</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {stats?.totalwarehouses || 0}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="group bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Low Stock</p>
-                <p className="text-2xl font-bold text-red-600">
-                  {stats?.lowstockcount || 0}/{stats?.totalinventorycount || 0}
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                  Total Products
+                </p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">
+                  {stats?.totalproducts ?? 0}
+                </p>
+                <p className="text-sm text-green-600 mt-1 font-medium">
+                  +12% from last month
                 </p>
               </div>
-              <div className="p-3 bg-red-100 rounded-full">
-                <AlertTriangle className="w-6 h-6 text-red-600" />
+              <div className="p-4 bg-gradient-to-r from-blue-400 to-blue-600 rounded-xl shadow-lg group-hover:shadow-blue-200">
+                <Package className="text-white" size={28} />
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <BarChart3 className="text-purple-500 mr-3" size={24} />
+          <div className="group bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Value</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                  Warehouses
+                </p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">
+                  {stats?.totalwarehouses || 0}
+                </p>
+                <p className="text-sm text-blue-600 mt-1 font-medium">
+                  Active locations
+                </p>
+              </div>
+              <div className="p-4 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-xl shadow-lg group-hover:shadow-emerald-200">
+                <Warehouse className="text-white" size={28} />
+              </div>
+            </div>
+          </div>
+
+          <div className="group bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                  Low Stock Alert
+                </p>
+                <p className="text-3xl font-bold text-red-600 mt-2">
+                  {stats?.lowstockcount || 0}
+                </p>
+                <p className="text-sm text-gray-600 mt-1 font-medium">
+                  of {stats?.totalinventorycount || 0} items
+                </p>
+              </div>
+              <div className="p-4 bg-gradient-to-r from-red-400 to-red-600 rounded-xl shadow-lg group-hover:shadow-red-200">
+                <AlertTriangle className="text-white" size={28} />
+              </div>
+            </div>
+          </div>
+
+          <div className="group bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                  Total Value
+                </p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">
                   {formatCurrency(stats.totalvalue)}
                 </p>
+                <p className="text-sm text-purple-600 mt-1 font-medium">
+                  Inventory worth
+                </p>
+              </div>
+              <div className="p-4 bg-gradient-to-r from-purple-400 to-purple-600 rounded-xl shadow-lg group-hover:shadow-purple-200">
+                <BarChart3 className="text-white" size={28} />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 px-6">
+        {/* Enhanced Tab Navigation */}
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 mb-8 overflow-hidden">
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+            <nav className="flex space-x-1 px-6">
               <button
                 onClick={() => setActiveTab("warehouse")}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`py-4 px-6 border-b-3 font-semibold text-sm transition-all duration-300 flex items-center space-x-2 ${
                   activeTab === "warehouse"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    ? "border-blue-500 text-blue-600 bg-blue-50 rounded-t-lg"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50 rounded-t-lg"
                 }`}
               >
-                <Warehouse className="inline mr-2" size={16} />
-                Warehouses
+                <Warehouse size={18} />
+                <span>Warehouses</span>
+                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                  {stats?.totalwarehouses || 0}
+                </span>
               </button>
               <button
                 onClick={() => setActiveTab("products")}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`py-4 px-6 border-b-3 font-semibold text-sm transition-all duration-300 flex items-center space-x-2 ${
                   activeTab === "products"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    ? "border-blue-500 text-blue-600 bg-blue-50 rounded-t-lg"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50 rounded-t-lg"
                 }`}
               >
-                <Package className="inline mr-2" size={16} />
-                Products
+                <Package size={18} />
+                <span>Products</span>
+                <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
+                  {stats?.totalproducts ?? 0}
+                </span>
               </button>
               <button
                 onClick={() => setActiveTab("inventory")}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`py-4 px-6 border-b-3 font-semibold text-sm transition-all duration-300 flex items-center space-x-2 ${
                   activeTab === "inventory"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    ? "border-blue-500 text-blue-600 bg-blue-50 rounded-t-lg"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50 rounded-t-lg"
                 }`}
               >
-                <BarChart3 className="inline mr-2" size={16} />
-                Inventory
+                <BarChart3 size={18} />
+                <span>Inventory Logs</span>
+                <span className="bg-purple-100 text-purple-800 text-xs font-medium px-2 py-1 rounded-full">
+                  Live
+                </span>
               </button>
             </nav>
           </div>
 
           {/* Tab Content */}
-          <div className="p-6">
-            {/* Warehouses Tab */}
+          <div className="p-8">
+            {/* Enhanced Warehouses Tab */}
             {activeTab === "warehouse" && (
               <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    Warehouse Management
-                  </h2>
+                <div className="flex justify-between items-center mb-8">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      Warehouse Management
+                    </h2>
+                    <p className="text-gray-600 mt-1">
+                      Manage your warehouse locations and details
+                    </p>
+                  </div>
                   <button
                     onClick={() => setShowAddWarehouse(true)}
-                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2"
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-blue-700 flex items-center gap-3 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
                   >
-                    <Plus size={16} />
-                    Add Warehouse
+                    <Plus size={20} />
+                    <span className="font-semibold">Add Warehouse</span>
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {warehouses.map((warehouse) => (
                     <div
                       key={warehouse.warehouse_id}
-                      className="bg-gray-50 p-6 rounded-lg border border-gray-200"
+                      className="group bg-white p-6 rounded-2xl border border-gray-200 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 relative overflow-hidden"
                     >
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {warehouse.name}
-                          </h3>
-                          <p className="text-sm text-gray-600 flex items-center mt-1">
-                            <MapPin size={14} className="mr-1" />
-                            {warehouse.location}
-                          </p>
+                      {/* Background Pattern */}
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-200 rounded-full transform translate-x-8 -translate-y-8 opacity-50"></div>
+                      
+                      <div className="relative z-10">
+                        <div className="flex justify-between items-start mb-6">
+                          <div className="flex items-center space-x-3">
+                            <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+                              <Warehouse className="text-white" size={20} />
+                            </div>
+                            <div>
+                              <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                                {warehouse.name}
+                              </h3>
+                              <p className="text-sm text-gray-500 font-medium">
+                                Warehouse #{warehouse.warehouse_id}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleEditWarehouse(warehouse)}
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                          >
+                            <Edit3 size={18} />
+                          </button>
                         </div>
-                        <button
-                          onClick={() => handleEditWarehouse(warehouse)}
-                          className="text-gray-400 hover:text-gray-600"
-                        >
-                          <Edit3 size={16} />
-                        </button>
-                      </div>
 
-                      {warehouse.contact_info && (
-                        <p className="text-sm text-gray-600 flex items-center mb-2">
-                          <Phone size={14} className="mr-1" />
-                          {warehouse.contact_info}
-                        </p>
-                      )}
+                        <div className="space-y-4">
+                          <div className="flex items-start space-x-3">
+                            <div className="p-2 bg-gray-100 rounded-lg">
+                              <MapPin size={16} className="text-gray-600" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900">Location</p>
+                              <p className="text-sm text-gray-600">{warehouse.location}</p>
+                            </div>
+                          </div>
 
-                      <div className="mt-4 pt-4 border-t border-gray-200">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Coordinates:</span>
-                          <span className="text-gray-900">
-                            {warehouse.latitude}, {warehouse.longitude}
-                          </span>
+                          {warehouse.contact_info && (
+                            <div className="flex items-start space-x-3">
+                              <div className="p-2 bg-gray-100 rounded-lg">
+                                <Phone size={16} className="text-gray-600" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-900">Contact</p>
+                                <p className="text-sm text-gray-600">{warehouse.contact_info}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="pt-4 border-t border-gray-100">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium text-gray-600">Coordinates:</span>
+                              <span className="text-sm text-gray-900 font-mono bg-gray-50 px-2 py-1 rounded">
+                                {warehouse.latitude}, {warehouse.longitude}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -790,73 +861,80 @@ const InventoryManagement = () => {
               </div>
             )}
 
-            {/* Products Tab */}
+            {/* Enhanced Products Tab */}
             {activeTab === "products" && (
               <div>
-                {/* Search and Filters */}
-                <div className="mb-6">
+                {/* Enhanced Search and Filters */}
+                <div className="mb-8">
                   <div className="flex flex-col lg:flex-row gap-4">
-                    {/* Search */}
+                    {/* Enhanced Search */}
                     <div className="flex-1">
-                      <form onSubmit={handleSearch} className="flex gap-2">
+                      <form onSubmit={handleSearch} className="flex gap-3">
                         <div className="relative flex-1">
                           <Search
-                            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                            size={20}
+                            className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
+                            size={22}
                           />
                           <input
                             type="text"
-                            placeholder="Search products..."
+                            placeholder="Search products by name, category, or origin..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
+                            className="w-full pl-12 pr-12 py-4 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all placeholder-gray-400 font-medium shadow-lg"
                           />
                           {searchTerm && (
                             <button
                               type="button"
                               onClick={clearSearch}
-                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                             >
-                              <X size={16} />
+                              <X size={20} />
                             </button>
                           )}
                         </div>
                         <button
                           type="submit"
                           disabled={isSearching}
-                          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+                          className="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold flex items-center space-x-2"
                         >
                           {isSearching ? (
-                            <Loader className="animate-spin" size={16} />
+                            <Loader className="animate-spin" size={20} />
                           ) : (
-                            "Search"
+                            <>
+                              <Search size={20} />
+                              <span>Search</span>
+                            </>
                           )}
                         </button>
                       </form>
                     </div>
 
-                    {/* Filter Toggle */}
+                    {/* Enhanced Filter Toggle */}
                     <button
                       onClick={() => setShowFilters(!showFilters)}
-                      className="px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+                      className={`px-6 py-4 border-2 rounded-xl font-semibold flex items-center gap-3 transition-all duration-300 shadow-lg ${
+                        showFilters
+                          ? "border-blue-500 bg-blue-50 text-blue-700"
+                          : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                      }`}
                     >
-                      <Filter size={16} />
-                      Filters
+                      <Filter size={20} />
+                      <span>Filters</span>
                       {showFilters ? (
-                        <ChevronDown size={16} />
+                        <ChevronDown size={20} />
                       ) : (
-                        <ChevronRight size={16} />
+                        <ChevronRight size={20} />
                       )}
                     </button>
                   </div>
 
-                  {/* Filters Panel */}
+                  {/* Enhanced Filters Panel */}
                   {showFilters && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="mt-6 p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl border border-gray-200 shadow-inner">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {/* Category Filter */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-bold text-gray-700 mb-2">
                             Category
                           </label>
                           <select
@@ -864,7 +942,7 @@ const InventoryManagement = () => {
                             onChange={(e) =>
                               setSelectedCategory(e.target.value)
                             }
-                            className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            className="w-full p-3 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-medium shadow-sm"
                           >
                             <option value="">All Categories</option>
                             {leafCategories.map((category) => (
@@ -880,7 +958,7 @@ const InventoryManagement = () => {
 
                         {/* Warehouse Filter */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-bold text-gray-700 mb-2">
                             Warehouse
                           </label>
                           <select
@@ -888,7 +966,7 @@ const InventoryManagement = () => {
                             onChange={(e) =>
                               setSelectedWarehouse(e.target.value)
                             }
-                            className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            className="w-full p-3 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-medium shadow-sm"
                           >
                             <option value="">All Warehouses</option>
                             {warehouses.map((warehouse) => (
@@ -904,13 +982,13 @@ const InventoryManagement = () => {
 
                         {/* Stock Filter */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-bold text-gray-700 mb-2">
                             Stock Level
                           </label>
                           <select
                             value={stockFilter}
                             onChange={(e) => setStockFilter(e.target.value)}
-                            className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            className="w-full p-3 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-medium shadow-sm"
                           >
                             <option value="">All Levels</option>
                             <option value="low">Low Stock</option>
@@ -921,7 +999,7 @@ const InventoryManagement = () => {
 
                         {/* Price Range */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-bold text-gray-700 mb-2">
                             Price Range
                           </label>
                           <div className="flex gap-2">
@@ -936,7 +1014,7 @@ const InventoryManagement = () => {
                                   min: e.target.value,
                                 })
                               }
-                              className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
+                              className="w-full p-3 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 placeholder-gray-400 font-medium shadow-sm"
                             />
                             <input
                               type="number"
@@ -949,211 +1027,210 @@ const InventoryManagement = () => {
                                   max: e.target.value,
                                 })
                               }
-                              className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
+                              className="w-full p-3 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 placeholder-gray-400 font-medium shadow-sm"
                             />
                           </div>
                         </div>
                       </div>
 
                       {/* Clear Filters */}
-                      <div className="mt-4 flex justify-end">
+                      <div className="mt-6 flex justify-end">
                         <button
                           onClick={clearFilters}
-                          className="px-4 py-2 text-gray-600 hover:text-gray-800 flex items-center gap-2"
+                          className="px-6 py-3 text-gray-600 hover:text-gray-800 flex items-center gap-2 font-semibold hover:bg-white rounded-xl transition-all duration-200"
                         >
-                          <X size={16} />
-                          Clear Filters
+                          <X size={18} />
+                          Clear All Filters
                         </button>
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Main Products Table */}
-                <div className="overflow-x-auto">
-                  <table className="min-w-full bg-white border border-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Product
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Category
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Price
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Total Stock
-                        </th>
-                        {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Warehouse Distribution
-                        </th> */}
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {loading ? (
+                {/* Enhanced Products Table */}
+                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full">
+                      <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                         <tr>
-                          <td colSpan="6" className="px-6 py-4 text-center">
-                            <Loader className="animate-spin mx-auto" />
-                            Loading products...
-                          </td>
+                          <th className="px-8 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                            Product Details
+                          </th>
+                          <th className="px-8 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                            Category
+                          </th>
+                          <th className="px-8 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                            Price
+                          </th>
+                          <th className="px-8 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                            Stock Status
+                          </th>
+                          <th className="px-8 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                            Availability
+                          </th>
+                          <th className="px-8 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                            Actions
+                          </th>
                         </tr>
-                      ) : products.length === 0 ? (
-                        <tr>
-                          <td
-                            colSpan="6"
-                            className="px-6 py-4 text-center text-gray-500"
-                          >
-                            {searchTerm
-                              ? `No products found matching "${searchTerm}"`
-                              : "No products found"}
-                          </td>
-                        </tr>
-                      ) : (
-                        products.map((product) => {
-                          const totalStock = product.total_stock || 0;
-                          const hasLowStock = product.inventory?.some(
-                            (inv) => inv.quantity_in_stock <= inv.reorder_level
-                          );
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {loading ? (
+                          <tr>
+                            <td colSpan="6" className="px-8 py-12 text-center">
+                              <div className="flex flex-col items-center space-y-3">
+                                <Loader className="animate-spin text-blue-500" size={32} />
+                                <p className="text-gray-600 font-medium">Loading products...</p>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : products.length === 0 ? (
+                          <tr>
+                            <td colSpan="6" className="px-8 py-12 text-center">
+                              <div className="flex flex-col items-center space-y-3">
+                                <Package className="text-gray-300" size={48} />
+                                <p className="text-gray-500 font-medium">
+                                  {searchTerm
+                                    ? `No products found matching "${searchTerm}"`
+                                    : "No products found"}
+                                </p>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          products.map((product) => {
+                            const totalStock = product.total_stock || 0;
+                            const hasLowStock = product.inventory?.some(
+                              (inv) => inv.quantity_in_stock <= inv.reorder_level
+                            );
 
-                          return (
-                            <tr
-                              key={product.product_id}
-                              className="hover:bg-gray-50"
-                            >
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div>
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {product.name}
-                                  </div>
-                                  {product.origin && (
-                                    <div className="text-sm text-gray-500">
-                                      Origin: {product.origin}
+                            return (
+                              <tr
+                                key={product.product_id}
+                                className="hover:bg-blue-50 transition-colors duration-200"
+                              >
+                                <td className="px-8 py-6">
+                                  <div className="flex items-center space-x-4">
+                                    <div className="p-2 bg-blue-100 rounded-lg">
+                                      <Package className="text-blue-600" size={20} />
                                     </div>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {product.category_name}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {formatCurrency(product.price)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">
-                                  {totalStock}
-                                  {hasLowStock && (
-                                    <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                      Low Stock
+                                    <div>
+                                      <div className="text-lg font-bold text-gray-900">
+                                        {product.name}
+                                      </div>
+                                      {product.origin && (
+                                        <div className="text-sm text-gray-500 font-medium">
+                                          Origin: {product.origin}
+                                        </div>
+                                      )}
+                                      <div className="text-xs text-gray-400 font-medium">
+                                        ID: #{product.product_id}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-8 py-6">
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                                    {product.category_name}
+                                  </span>
+                                </td>
+                                <td className="px-8 py-6">
+                                  <span className="text-lg font-bold text-gray-900">
+                                    {formatCurrency(product.price)}
+                                  </span>
+                                </td>
+                                <td className="px-8 py-6">
+                                  <div className="flex items-center space-x-3">
+                                    <span className="text-lg font-bold text-gray-900">
+                                      {totalStock}
+                                    </span>
+                                    {hasLowStock && (
+                                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200">
+                                        <AlertTriangle size={12} className="mr-1" />
+                                        Low Stock
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-8 py-6">
+                                  {product.is_available ? (
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-800 border border-green-200">
+                                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                                      Available
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-red-100 text-red-800 border border-red-200">
+                                      <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
+                                      Unavailable
                                     </span>
                                   )}
-                                </div>
-                              </td>
-                              {/* <td className="px-6 py-4">
-                                <div className="text-sm">
-                                  {product.inventory?.map((inv) => (
-                                    <div
-                                      key={inv.warehouse_id}
-                                      className="mb-1"
+                                </td>
+                                <td className="px-8 py-6">
+                                  <div className="flex space-x-2">
+                                    <button
+                                      onClick={() => handleViewProduct(product)}
+                                      className="p-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-all duration-200"
+                                      title="View Details"
                                     >
-                                      {inv.warehouse_name}:{" "}
-                                      {inv.quantity_in_stock}{" "}
-                                      {product.unit_measure}
-                                    </div>
-                                  ))}
-                                </div>
-                              </td> */}
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                {product.is_available ? (
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    Available
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                    Not Available
-                                  </span>
-                                )}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <div className="flex space-x-2">
-                                  <button
-                                    onClick={() => handleViewProduct(product)}
-                                    className="text-indigo-600 hover:text-indigo-900"
-                                    title="View Details"
-                                  >
-                                    <Eye size={16} />
-                                  </button>
-                                  {/* <button
-                                    onClick={() => handleEditProduct(product)}
-                                    className="text-green-600 hover:text-green-900"
-                                    title="Edit Product"
-                                  >
-                                    <Edit3 size={16} />
-                                  </button> */}
-                                  <button
-                                    onClick={() => handleEditStock(product)}
-                                    className="text-blue-600 hover:text-blue-900"
-                                    title="Edit Stock"
-                                  >
-                                    <Package size={16} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
+                                      <Eye size={18} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleEditStock(product)}
+                                      className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                                      title="Edit Stock"
+                                    >
+                                      <Package size={18} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
-                {/* Pagination */}
+                {/* Enhanced Pagination */}
                 {totalPages > 1 && (
-                  <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                  <div className="bg-white px-6 py-4 flex items-center justify-between border-t border-gray-100 sm:px-8">
                     <div className="flex-1 flex justify-between sm:hidden">
                       <button
                         onClick={handlePrevPage}
                         disabled={currentPage === 1}
-                        className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                        className="relative inline-flex items-center px-6 py-3 border-2 border-gray-300 text-sm font-semibold rounded-xl text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                       >
                         Previous
                       </button>
                       <button
                         onClick={handleNextPage}
                         disabled={currentPage === totalPages}
-                        className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                        className="ml-3 relative inline-flex items-center px-6 py-3 border-2 border-gray-300 text-sm font-semibold rounded-xl text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                       >
                         Next
                       </button>
                     </div>
                     <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                       <div>
-                        <p className="text-sm text-gray-700">
+                        <p className="text-lg text-gray-700 font-medium">
                           Page{" "}
-                          <span className="font-medium">{currentPage}</span> of{" "}
-                          <span className="font-medium">{totalPages}</span>
+                          <span className="font-bold text-blue-600">{currentPage}</span> of{" "}
+                          <span className="font-bold text-blue-600">{totalPages}</span>
                         </p>
                       </div>
                       <div>
-                        <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                        <nav className="relative z-0 inline-flex rounded-xl shadow-lg overflow-hidden">
                           <button
                             onClick={handlePrevPage}
                             disabled={currentPage === 1}
-                            className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                            className="relative inline-flex items-center px-6 py-3 bg-white border border-gray-300 text-sm font-semibold text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                           >
                             Previous
                           </button>
                           <button
                             onClick={handleNextPage}
                             disabled={currentPage === totalPages}
-                            className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                            className="relative inline-flex items-center px-6 py-3 bg-white border-l border-gray-300 text-sm font-semibold text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                           >
                             Next
                           </button>
@@ -1165,28 +1242,33 @@ const InventoryManagement = () => {
               </div>
             )}
 
-            {/* Inventory Tab */}
-            {/* Replace the empty inventory tab content with this */}
+            {/* Enhanced Inventory Logs Tab */}
             {activeTab === "inventory" && (
-              <div className="space-y-6">
+              <div className="space-y-8">
                 <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    Inventory Transfer Logs
-                  </h2>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      Inventory Transfer Logs
+                    </h2>
+                    <p className="text-gray-600 mt-1">
+                      Track all inventory movements and transfers between warehouses
+                    </p>
+                  </div>
                   <button
                     onClick={() => fetchTransferLogs(1)}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold"
                   >
-                    <RefreshCw className="w-4 h-4" />
-                    Refresh
+                    <RefreshCw className="w-5 h-5" />
+                    Refresh Logs
                   </button>
                 </div>
 
-                {/* Filters */}
-                <div className="bg-white p-4 rounded-lg shadow-sm border">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Enhanced Filters */}
+                <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">Filter Transfer Logs</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-bold text-gray-700 mb-2">
                         Order ID
                       </label>
                       <input
@@ -1198,12 +1280,12 @@ const InventoryManagement = () => {
                             order_id: e.target.value,
                           })
                         }
-                        className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
-                        placeholder="Filter by Order ID"
+                        className="w-full px-4 py-3 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 placeholder-gray-400 font-medium"
+                        placeholder="Enter Order ID to filter"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-bold text-gray-700 mb-2">
                         Warehouse
                       </label>
                       <select
@@ -1214,7 +1296,7 @@ const InventoryManagement = () => {
                             warehouse_id: e.target.value,
                           })
                         }
-                        className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-3 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-medium"
                       >
                         <option value="">All Warehouses</option>
                         {warehouses.map((warehouse) => (
@@ -1227,10 +1309,10 @@ const InventoryManagement = () => {
                         ))}
                       </select>
                     </div>
-                    <div className="flex items-end">
+                    <div className="flex items-end space-x-3">
                       <button
                         onClick={() => fetchTransferLogs(1)}
-                        className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 mr-2"
+                        className="px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-xl hover:from-gray-700 hover:to-gray-800 font-semibold shadow-lg transition-all duration-300"
                       >
                         Apply Filters
                       </button>
@@ -1243,7 +1325,7 @@ const InventoryManagement = () => {
                           });
                           fetchTransferLogs(1);
                         }}
-                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                        className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 font-semibold transition-all duration-300"
                       >
                         Clear
                       </button>
@@ -1251,125 +1333,141 @@ const InventoryManagement = () => {
                   </div>
                 </div>
 
-                {/* Transfer Logs Table */}
-                <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+                {/* Enhanced Transfer Logs Table */}
+                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
                   {transferLogsLoading ? (
-                    <div className="flex items-center justify-center p-8">
-                      <Loader className="w-6 h-6 animate-spin text-blue-600" />
-                      <span className="ml-2 text-gray-600">
-                        Loading transfer logs...
-                      </span>
+                    <div className="flex items-center justify-center p-12">
+                      <div className="flex flex-col items-center space-y-4">
+                        <Loader className="w-8 h-8 animate-spin text-blue-600" />
+                        <span className="text-gray-600 font-medium text-lg">
+                          Loading transfer logs...
+                        </span>
+                      </div>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                      <table className="min-w-full">
+                        <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                           <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Transfer ID
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Order ID
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Product
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-8 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                               Transfer Details
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-8 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                              Product Info
+                            </th>
+                            <th className="px-8 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                              Warehouse Transfer
+                            </th>
+                            <th className="px-8 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                               Quantity
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-8 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                               Stock Changes
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Date
+                            <th className="px-8 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                              Date & Reason
                             </th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="divide-y divide-gray-100">
                           {transferLogs.length === 0 ? (
                             <tr>
-                              <td
-                                colSpan="7"
-                                className="px-6 py-8 text-center text-gray-500"
-                              >
-                                No transfer logs found
+                              <td colSpan="6" className="px-8 py-12 text-center">
+                                <div className="flex flex-col items-center space-y-3">
+                                  <BarChart3 className="text-gray-300" size={48} />
+                                  <p className="text-gray-500 font-medium text-lg">
+                                    No transfer logs found
+                                  </p>
+                                </div>
                               </td>
                             </tr>
                           ) : (
                             transferLogs.map((log) => (
                               <tr
                                 key={log.transfer_id}
-                                className="hover:bg-gray-50"
+                                className="hover:bg-blue-50 transition-colors duration-200"
                               >
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  #{log.transfer_id}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  #{log.order_id}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {log.product_name}
-                                  </div>
-                                  <div className="text-sm text-gray-500">
-                                    ID: {log.product_id}
+                                <td className="px-8 py-6">
+                                  <div className="space-y-1">
+                                    <div className="text-lg font-bold text-gray-900">
+                                      Transfer #{log.transfer_id}
+                                    </div>
+                                    <div className="text-sm font-medium text-blue-600">
+                                      Order #{log.order_id}
+                                    </div>
                                   </div>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-900">
-                                    <div className="flex items-center">
-                                      <span className="text-red-600 font-medium">
+                                <td className="px-8 py-6">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="p-2 bg-green-100 rounded-lg">
+                                      <Package className="text-green-600" size={16} />
+                                    </div>
+                                    <div>
+                                      <div className="text-lg font-bold text-gray-900">
+                                        {log.product_name}
+                                      </div>
+                                      <div className="text-sm text-gray-500">
+                                        Product ID: {log.product_id}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-8 py-6">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="flex flex-col items-center space-y-2">
+                                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-red-100 text-red-800 border border-red-200">
                                         {log.source_warehouse_name}
                                       </span>
-                                      <span className="mx-2">→</span>
-                                      <span className="text-green-600 font-medium">
+                                      <div className="text-gray-400">
+                                        ↓
+                                      </div>
+                                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-800 border border-green-200">
                                         {log.target_warehouse_name}
                                       </span>
                                     </div>
                                     {log.distance_km &&
                                       !isNaN(Number(log.distance_km)) && (
-                                        <div className="text-xs text-gray-500 mt-1">
-                                          Distance:{" "}
-                                          {Number(log.distance_km).toFixed(2)}{" "}
-                                          km
+                                        <div className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-lg">
+                                          <span className="font-medium">Distance:</span>{" "}
+                                          {Number(log.distance_km).toFixed(2)} km
                                         </div>
                                       )}
                                   </div>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  <span className="font-medium">
+                                <td className="px-8 py-6">
+                                  <span className="text-2xl font-bold text-gray-900">
                                     {log.quantity_transferred}
-                                  </span>{" "}
+                                  </span>
+                                  <span className="text-sm text-gray-500 ml-1">units</span>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                  <div className="space-y-1">
-                                    <div className="flex justify-between">
-                                      <span className="text-gray-500">
+                                <td className="px-8 py-6">
+                                  <div className="space-y-3">
+                                    <div className="flex items-center justify-between p-2 bg-red-50 rounded-lg border border-red-100">
+                                      <span className="text-sm font-medium text-gray-700">
                                         Source:
                                       </span>
-                                      <span className="text-red-600">
-                                        {log.source_stock_before} →{" "}
-                                        {log.source_stock_after}
+                                      <span className="text-sm font-bold text-red-600">
+                                        {log.source_stock_before} → {log.source_stock_after}
                                       </span>
                                     </div>
-                                    <div className="flex justify-between">
-                                      <span className="text-gray-500">
+                                    <div className="flex items-center justify-between p-2 bg-green-50 rounded-lg border border-green-100">
+                                      <span className="text-sm font-medium text-gray-700">
                                         Target:
                                       </span>
-                                      <span className="text-red-600">
-                                        {log.target_stock_before} →{" "}
-                                        {log.target_stock_after}
+                                      <span className="text-sm font-bold text-green-600">
+                                        {log.target_stock_before} → {log.target_stock_after}
                                       </span>
                                     </div>
                                   </div>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  <div>{formatDate(log.transfer_date)}</div>
-                                  <div className="text-xs text-gray-500">
-                                    {log.transfer_reason}
+                                <td className="px-8 py-6">
+                                  <div className="space-y-2">
+                                    <div className="text-lg font-bold text-gray-900">
+                                      {formatDate(log.transfer_date)}
+                                    </div>
+                                    <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                      {log.transfer_reason}
+                                    </div>
                                   </div>
                                 </td>
                               </tr>
@@ -1517,18 +1615,24 @@ const InventoryManagement = () => {
           </div>
         )}
 
-        {/* Add Warehouse Modal */}
+        {/* Enhanced Add Warehouse Modal */}
         {showAddWarehouse && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-              <div className="mt-3">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Add New Warehouse
-                </h3>
-                <div className="space-y-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+            <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-auto">
+              <div className="p-8">
+                <div className="flex items-center space-x-3 mb-6">
+                  <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+                    <Warehouse className="text-white" size={24} />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    Add New Warehouse
+                  </h3>
+                </div>
+                
+                <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Name *
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      Warehouse Name *
                     </label>
                     <input
                       type="text"
@@ -1539,12 +1643,13 @@ const InventoryManagement = () => {
                           name: e.target.value,
                         })
                       }
-                      className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-4 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-medium"
+                      placeholder="Enter warehouse name"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
                       Location *
                     </label>
                     <input
@@ -1556,13 +1661,14 @@ const InventoryManagement = () => {
                           location: e.target.value,
                         })
                       }
-                      className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-4 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-medium"
+                      placeholder="Enter warehouse location"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Contact Info
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      Contact Information
                     </label>
                     <input
                       type="text"
@@ -1573,12 +1679,13 @@ const InventoryManagement = () => {
                           contact_info: e.target.value,
                         })
                       }
-                      className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-4 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-medium"
+                      placeholder="Phone number or contact details"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-bold text-gray-700 mb-2">
                         Latitude
                       </label>
                       <input
@@ -1591,11 +1698,12 @@ const InventoryManagement = () => {
                             latitude: e.target.value,
                           })
                         }
-                        className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-4 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-medium"
+                        placeholder="23.7808"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-bold text-gray-700 mb-2">
                         Longitude
                       </label>
                       <input
@@ -1608,22 +1716,24 @@ const InventoryManagement = () => {
                             longitude: e.target.value,
                           })
                         }
-                        className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-4 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-medium"
+                        placeholder="90.2792"
                       />
                     </div>
                   </div>
                 </div>
-                <div className="mt-6 flex justify-end space-x-3">
+                
+                <div className="mt-8 flex justify-end space-x-4">
                   <button
                     onClick={() => setShowAddWarehouse(false)}
-                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                    className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 font-semibold transition-all duration-300"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleAddWarehouse}
                     disabled={loading}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 font-semibold shadow-lg transition-all duration-300"
                   >
                     {loading ? "Adding..." : "Add Warehouse"}
                   </button>
@@ -1633,18 +1743,24 @@ const InventoryManagement = () => {
           </div>
         )}
 
-        {/* Edit Warehouse Modal */}
+        {/* Enhanced Edit Warehouse Modal */}
         {showEditWarehouse && editingWarehouse && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-              <div className="mt-3">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Edit Warehouse
-                </h3>
-                <div className="space-y-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+            <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-auto">
+              <div className="p-8">
+                <div className="flex items-center space-x-3 mb-6">
+                  <div className="p-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-lg">
+                    <Edit3 className="text-white" size={24} />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    Edit Warehouse
+                  </h3>
+                </div>
+                
+                <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Name *
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      Warehouse Name *
                     </label>
                     <input
                       type="text"
@@ -1655,12 +1771,13 @@ const InventoryManagement = () => {
                           name: e.target.value,
                         })
                       }
-                      className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-4 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-medium"
+                      placeholder="Enter warehouse name"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
                       Location *
                     </label>
                     <input
@@ -1672,13 +1789,14 @@ const InventoryManagement = () => {
                           location: e.target.value,
                         })
                       }
-                      className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-4 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-medium"
+                      placeholder="Enter warehouse location"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Contact Info
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      Contact Information
                     </label>
                     <input
                       type="text"
@@ -1689,12 +1807,13 @@ const InventoryManagement = () => {
                           contact_info: e.target.value,
                         })
                       }
-                      className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-4 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-medium"
+                      placeholder="Phone number or contact details"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-bold text-gray-700 mb-2">
                         Latitude
                       </label>
                       <input
@@ -1707,11 +1826,12 @@ const InventoryManagement = () => {
                             latitude: e.target.value,
                           })
                         }
-                        className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-4 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-medium"
+                        placeholder="23.7808"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-bold text-gray-700 mb-2">
                         Longitude
                       </label>
                       <input
@@ -1724,22 +1844,24 @@ const InventoryManagement = () => {
                             longitude: e.target.value,
                           })
                         }
-                        className="w-full p-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-4 bg-white text-gray-900 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-medium"
+                        placeholder="90.2792"
                       />
                     </div>
                   </div>
                 </div>
-                <div className="mt-6 flex justify-end space-x-3">
+                
+                <div className="mt-8 flex justify-end space-x-4">
                   <button
                     onClick={() => setShowEditWarehouse(false)}
-                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                    className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 font-semibold transition-all duration-300"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleUpdateWarehouse}
                     disabled={loading}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+                    className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 font-semibold shadow-lg transition-all duration-300"
                   >
                     {loading ? "Updating..." : "Update Warehouse"}
                   </button>

@@ -47,9 +47,13 @@ const OrderReviewStep = ({
               className="flex items-center space-x-4 p-4 border border-gray-200 rounded-xl hover:shadow-md transition-shadow"
             >
               <img
-                src={item.image_url || "/placeholder-product.jpg"}
+                src={item.image_url || item.image || "https://via.placeholder.com/300x200"}
                 alt={item.name}
                 className="w-16 h-16 object-cover rounded-lg"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "https://via.placeholder.com/300x200";
+                }}
               />
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-900">{item.name}</h3>
