@@ -28,6 +28,8 @@ import {
   Pie,
   Cell,
   Legend,
+  ScatterChart,
+  Scatter,
 } from "recharts";
 import {
   TrendingUp,
@@ -40,11 +42,14 @@ import {
   Users,
   MapPin,
   Loader2,
+  DollarSign,
+  Truck,
 } from "lucide-react";
 
 export const DeliveryAnalytics = () => {
   const [timeRange, setTimeRange] = useState("30"); // Default to 30 days
   const [sortBy, setSortBy] = useState("deliveries"); // New state for sorting
+  const [scatterMode, setScatterMode] = useState("revenue"); // New state for scatter plot mode
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -64,9 +69,54 @@ export const DeliveryAnalytics = () => {
   const [regionalDistribution, setRegionalDistribution] = useState([]);
   const [performanceTrends, setPerformanceTrends] = useState([]);
   const [topPerformers, setTopPerformers] = useState([]);
+  const [scatterData, setScatterData] = useState([]);
 
   // API base URL
   const API_BASE = "http://localhost:3000/api/delivery-analytics";
+
+  // Fetch scatter plot data
+  const fetchScatterData = async () => {
+    try {
+      console.log(
+        `🔍 Fetching scatter data with timeRange: ${timeRange}, mode: ${scatterMode}`
+      );
+      const response = await fetch(
+        `${API_BASE}/regional-scatter?timeRange=${timeRange}&mode=${scatterMode}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        console.log("📊 Raw scatter data response:", data);
+        if (data.success) {
+          console.log(
+            `✅ Successfully fetched ${data.data.length} regions for scatter plot`
+          );
+          console.log(
+            "📋 Scatter data details:",
+            data.data.map((region, index) => ({
+              index: index + 1,
+              region_name: region.region_name,
+              x_deliveries: region.x,
+              y_value: region.y,
+              mode: scatterMode,
+            }))
+          );
+          setScatterData(data.data);
+        } else {
+          console.warn(
+            "⚠️ Scatter data fetch successful but response not successful:",
+            data
+          );
+        }
+      } else {
+        console.error(
+          "❌ Failed to fetch scatter data. Response status:",
+          response.status
+        );
+      }
+    } catch (error) {
+      console.error("💥 Error fetching scatter data:", error);
+    }
+  };
 
   // Fetch all analytics data
   const fetchAnalyticsData = async () => {
@@ -84,7 +134,9 @@ export const DeliveryAnalytics = () => {
               timeRange === "7d" ? "7d" : "6months"
             }`
           ),
-          fetch(`${API_BASE}/top-performers?timeRange=${timeRange}&limit=5&sortBy=${sortBy}`),
+          fetch(
+            `${API_BASE}/top-performers?timeRange=${timeRange}&limit=5&sortBy=${sortBy}`
+          ),
         ]);
 
       if (
@@ -116,6 +168,10 @@ export const DeliveryAnalytics = () => {
       if (regionsData.success) setRegionalDistribution(regionsData.data);
       if (performanceData.success) setPerformanceTrends(performanceData.data);
       if (performersData.success) setTopPerformers(performersData.data);
+
+      // Fetch scatter data
+      console.log("🚀 Initial data fetch - about to fetch scatter data");
+      await fetchScatterData();
     } catch (error) {
       console.error("Error fetching analytics data:", error);
       setError("Failed to load analytics data. Please try again.");
@@ -128,6 +184,16 @@ export const DeliveryAnalytics = () => {
   useEffect(() => {
     fetchAnalyticsData();
   }, [timeRange, sortBy]); // Add sortBy to dependencies
+
+  // Fetch scatter data when scatter mode changes
+  useEffect(() => {
+    if (!loading) {
+      console.log(
+        `🔄 Scatter mode or time range changed. Loading: ${loading}, ScatterMode: ${scatterMode}, TimeRange: ${timeRange}`
+      );
+      fetchScatterData();
+    }
+  }, [scatterMode, timeRange]);
 
   // Loading state
   if (loading) {
@@ -190,6 +256,32 @@ export const DeliveryAnalytics = () => {
     }
   };
 
+  // Custom scatter plot tooltip
+  const CustomScatterTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-lg">
+          <p className="font-semibold text-gray-800 mb-2">{data.region_name}</p>
+          <p className="text-sm text-gray-600">
+            <span className="font-medium">Total Deliveries:</span> {data.x}
+          </p>
+          {scatterMode === "revenue" ? (
+            <p className="text-sm text-gray-600">
+              <span className="font-medium">Total Revenue:</span> ৳
+              {data.y?.toLocaleString() || 0}
+            </p>
+          ) : (
+            <p className="text-sm text-gray-600">
+              <span className="font-medium">Delivery Boys:</span> {data.y}
+            </p>
+          )}
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400 p-8">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -209,10 +301,30 @@ export const DeliveryAnalytics = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-white text-gray-900">
-                <SelectItem value="7d" className="text-gray-900 hover:bg-gray-100">Last 7 days</SelectItem>
-                <SelectItem value="30d" className="text-gray-900 hover:bg-gray-100">Last 30 days</SelectItem>
-                <SelectItem value="90d" className="text-gray-900 hover:bg-gray-100">Last 90 days</SelectItem>
-                <SelectItem value="1y" className="text-gray-900 hover:bg-gray-100">Last year</SelectItem>
+                <SelectItem
+                  value="7d"
+                  className="text-gray-900 hover:bg-gray-100"
+                >
+                  Last 7 days
+                </SelectItem>
+                <SelectItem
+                  value="30d"
+                  className="text-gray-900 hover:bg-gray-100"
+                >
+                  Last 30 days
+                </SelectItem>
+                <SelectItem
+                  value="90d"
+                  className="text-gray-900 hover:bg-gray-100"
+                >
+                  Last 90 days
+                </SelectItem>
+                <SelectItem
+                  value="1y"
+                  className="text-gray-900 hover:bg-gray-100"
+                >
+                  Last year
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -432,7 +544,8 @@ export const DeliveryAnalytics = () => {
                         Completed Deliveries by Region
                       </h3>
                       <p className="text-gray-600">
-                        Breakdown of successfully completed deliveries across regions
+                        Breakdown of successfully completed deliveries across
+                        regions
                       </p>
                     </div>
                     <ResponsiveContainer width="100%" height={300}>
@@ -462,7 +575,9 @@ export const DeliveryAnalytics = () => {
                           }}
                           formatter={(value, name, props) => [
                             `${value} completed deliveries`,
-                            props.payload.region_name || props.payload.name || "Unknown Region",
+                            props.payload.region_name ||
+                              props.payload.name ||
+                              "Unknown Region",
                           ]}
                         />
                         <Legend />
@@ -536,6 +651,111 @@ export const DeliveryAnalytics = () => {
               </TabsContent>
 
               <TabsContent value="regions" className="space-y-6 mt-0">
+                {/* Scatter Plot Section */}
+                <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">
+                          Regional Performance Analysis
+                        </h3>
+                        <p className="text-gray-600">
+                          Scatter plot analysis of deliveries vs{" "}
+                          {scatterMode === "revenue"
+                            ? "revenue"
+                            : "delivery staff"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-gray-700">
+                          Analysis Mode:
+                        </label>
+                        <Select
+                          value={scatterMode}
+                          onValueChange={setScatterMode}
+                        >
+                          <SelectTrigger className="w-48 bg-white text-gray-900">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white text-gray-900">
+                            <SelectItem
+                              value="revenue"
+                              className="text-gray-900 hover:bg-gray-100"
+                            >
+                              <div className="flex items-center">
+                                <DollarSign className="w-4 h-4 mr-2" />
+                                Revenue vs Deliveries
+                              </div>
+                            </SelectItem>
+                            <SelectItem
+                              value="staff"
+                              className="text-gray-900 hover:bg-gray-100"
+                            >
+                              <div className="flex items-center">
+                                <Truck className="w-4 h-4 mr-2" />
+                                Staff vs Deliveries
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <ScatterChart data={scatterData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis
+                        type="number"
+                        dataKey="x"
+                        name="Total Deliveries"
+                        stroke="#6b7280"
+                        label={{
+                          value: "Total Deliveries",
+                          position: "insideBottom",
+                          offset: -5,
+                        }}
+                      />
+                      <YAxis
+                        type="number"
+                        dataKey="y"
+                        name={
+                          scatterMode === "revenue"
+                            ? "Total Revenue (৳)"
+                            : "Delivery Boys"
+                        }
+                        stroke="#6b7280"
+                        label={{
+                          value:
+                            scatterMode === "revenue"
+                              ? "Total Revenue (৳)"
+                              : "Delivery Boys",
+                          angle: -90,
+                          position: "insideLeft",
+                        }}
+                      />
+                      <Tooltip content={<CustomScatterTooltip />} />
+                      <Scatter name="Regions" fill="#8884d8">
+                        {scatterData.map((entry, index) => {
+                          // Debug log for each scatter point being rendered
+                          if (index === 0) {
+                            console.log(
+                              `🎯 Rendering ${scatterData.length} scatter points. First point:`,
+                              entry
+                            );
+                          }
+                          return (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={`hsl(${(index * 137.5) % 360}, 70%, 50%)`}
+                            />
+                          );
+                        })}
+                      </Scatter>
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Existing Regional Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {regionalDistribution.map((region, index) => (
                     <div
@@ -561,7 +781,9 @@ export const DeliveryAnalytics = () => {
                       <div className="text-3xl font-bold text-gray-800 mb-1">
                         {region.delivery_count || region.count}
                       </div>
-                      <p className="text-sm text-gray-600">completed deliveries</p>
+                      <p className="text-sm text-gray-600">
+                        completed deliveries
+                      </p>
                       {region.percentage && (
                         <p className="text-xs text-gray-500 mt-1">
                           {region.percentage}% of all completed deliveries
@@ -585,19 +807,30 @@ export const DeliveryAnalytics = () => {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium text-gray-700">Sort by:</label>
+                        <label className="text-sm font-medium text-gray-700">
+                          Sort by:
+                        </label>
                         <Select value={sortBy} onValueChange={setSortBy}>
                           <SelectTrigger className="w-40 bg-white text-gray-900">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="bg-white text-gray-900">
-                            <SelectItem value="deliveries" className="text-gray-900 hover:bg-gray-100">
+                            <SelectItem
+                              value="deliveries"
+                              className="text-gray-900 hover:bg-gray-100"
+                            >
                               Deliveries
                             </SelectItem>
-                            <SelectItem value="rating" className="text-gray-900 hover:bg-gray-100">
+                            <SelectItem
+                              value="rating"
+                              className="text-gray-900 hover:bg-gray-100"
+                            >
                               Rating
                             </SelectItem>
-                            <SelectItem value="onTime" className="text-gray-900 hover:bg-gray-100">
+                            <SelectItem
+                              value="onTime"
+                              className="text-gray-900 hover:bg-gray-100"
+                            >
                               On-Time Rate
                             </SelectItem>
                           </SelectContent>
@@ -624,7 +857,13 @@ export const DeliveryAnalytics = () => {
                               {performer.delivery_boy_name || performer.name}
                             </p>
                             <p className="text-sm text-gray-600">
-                              {performer.total_deliveries || performer.deliveries} total deliveries ({performer.completedDeliveries || performer.completed_deliveries || 'N/A'} completed)
+                              {performer.total_deliveries ||
+                                performer.deliveries}{" "}
+                              total deliveries (
+                              {performer.completedDeliveries ||
+                                performer.completed_deliveries ||
+                                "N/A"}{" "}
+                              completed)
                             </p>
                           </div>
                         </div>
