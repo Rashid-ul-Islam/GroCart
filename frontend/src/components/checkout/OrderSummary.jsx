@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from "react";
+import React from "react";
 import { motion } from "framer-motion";
-import { Tag, X, Lock, ChevronDown } from "lucide-react";
+import { Tag, X, Lock } from "lucide-react";
 
 const OrderSummary = ({
   orderData,
@@ -9,27 +9,9 @@ const OrderSummary = ({
   setCouponCode,
   applyCoupon,
   appliedCoupon,
-  availableCoupons,
-  isLoadingCoupons,
   removeCoupon,
   calculateTotal,
 }) => {
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowDropdown(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -70,74 +52,15 @@ const OrderSummary = ({
       {currentStep < 4 && orderData?.items?.length > 0 && (
         <div className="mb-6">
           <div className="flex space-x-2">
-            <div className="flex-1 relative" ref={dropdownRef}>
-              <input
-                type="text"
-                placeholder="Enter coupon code or select from available"
-                value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 placeholder-gray-500"
-              />
-              <button
-                onClick={() => setShowDropdown(!showDropdown)}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-              >
-                <ChevronDown className="w-4 h-4" />
-              </button>
-
-              {/* Dropdown */}
-              {showDropdown && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto"
-                >
-                  {isLoadingCoupons ? (
-                    <div className="p-4 text-center text-gray-500">
-                      Loading coupons...
-                    </div>
-                  ) : availableCoupons && availableCoupons.length > 0 ? (
-                    availableCoupons.map((coupon) => (
-                      <div
-                        key={coupon.coupon_id}
-                        onClick={() => {
-                          setCouponCode(coupon.code);
-                          setShowDropdown(false);
-                          applyCoupon(coupon.code);
-                        }}
-                        className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <p className="font-medium text-gray-900">
-                              {coupon.code}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {coupon.description}
-                            </p>
-                            <p className="text-xs text-blue-600 mt-1">
-                              {coupon.discount_type === "percentage"
-                                ? `${coupon.discount_value}% off`
-                                : `$${coupon.discount_value} off`}
-                              {coupon.min_purchase &&
-                                ` (Min: $${coupon.min_purchase})`}
-                              {coupon.max_discount &&
-                                ` (Max: $${coupon.max_discount})`}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-4 text-center text-gray-500">
-                      No coupons available for your tier
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </div>
+            <input
+              type="text"
+              placeholder="Coupon code"
+              value={couponCode}
+              onChange={(e) => setCouponCode(e.target.value)}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
             <motion.button
-              onClick={() => applyCoupon()}
+              onClick={applyCoupon}
               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -152,8 +75,7 @@ const OrderSummary = ({
               className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between"
             >
               <p className="text-sm text-green-800">
-                Coupon "{appliedCoupon.code}" applied! Saved $
-                {appliedCoupon.discount_amount}
+                Coupon "{appliedCoupon.code}" applied!
               </p>
               <button
                 onClick={removeCoupon}

@@ -29,13 +29,13 @@ export default function ProductEdit() {
   const { productId } = useParams();
   const navigate = useNavigate();
   const [images, setImages] = useState([]);
-
+  const [newImageUrl, setNewImageUrl] = useState("");
+  
   // File upload states
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [filePreviews, setFilePreviews] = useState([]);
   const [uploadLoading, setUploadLoading] = useState(false);
-  const [selectedPrimaryFileIndex, setSelectedPrimaryFileIndex] = useState(0); // Track which uploaded file should be primary
-
+  
   const [product, setProduct] = useState(null);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -107,29 +107,24 @@ export default function ProductEdit() {
   const uploadImage = async (file) => {
     try {
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append('image', file);
 
-      const response = await fetch(
-        "http://localhost:3000/api/products/upload-image",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const response = await fetch('http://localhost:3000/api/products/upload-image', {
+        method: 'POST',
+        body: formData,
+      });
 
       if (response.ok) {
         const data = await response.json();
         return data.imageUrl;
       } else {
         const errorData = await response.json();
-        console.error("Image upload failed:", errorData);
-        toast.error(
-          errorData.message || `Failed to upload image: ${response.statusText}`
-        );
+        console.error('Image upload failed:', errorData);
+        toast.error(errorData.message || `Failed to upload image: ${response.statusText}`);
         return null;
       }
     } catch (error) {
-      console.error("Error uploading image:", error);
+      console.error('Error uploading image:', error);
       toast.error(`Error uploading image: ${error.message}`);
       return null;
     }
@@ -140,29 +135,25 @@ export default function ProductEdit() {
     if (files.length === 0) return;
 
     // Validate files
-    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     const maxSize = 5 * 1024 * 1024; // 5MB
-
+    
     const validFiles = [];
     const previews = [];
 
-    files.forEach((file) => {
+    files.forEach(file => {
       if (!validTypes.includes(file.type)) {
-        toast.error(
-          `${file.name}: Invalid file type. Please select JPEG, PNG, or WebP images.`
-        );
+        toast.error(`${file.name}: Invalid file type. Please select JPEG, PNG, or WebP images.`);
         return;
       }
 
       if (file.size > maxSize) {
-        toast.error(
-          `${file.name}: File too large. Please select images smaller than 5MB.`
-        );
+        toast.error(`${file.name}: File too large. Please select images smaller than 5MB.`);
         return;
       }
 
       validFiles.push(file);
-
+      
       // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -170,30 +161,36 @@ export default function ProductEdit() {
           file: file,
           preview: e.target.result,
           name: file.name,
-          size: file.size,
+          size: file.size
         });
-
+        
         if (previews.length === validFiles.length) {
-          setSelectedFiles((prev) => [...prev, ...validFiles]);
-          setFilePreviews((prev) => [...prev, ...previews]);
+          setSelectedFiles(prev => [...prev, ...validFiles]);
+          setFilePreviews(prev => [...prev, ...previews]);
         }
       };
       reader.readAsDataURL(file);
     });
 
     // Reset file input
-    e.target.value = "";
+    e.target.value = '';
   };
 
   const removeSelectedFile = (index) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
-    setFilePreviews((prev) => prev.filter((_, i) => i !== index));
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setFilePreviews(prev => prev.filter((_, i) => i !== index));
+  };
 
-    // Adjust primary file index if needed
-    if (selectedPrimaryFileIndex === index) {
-      setSelectedPrimaryFileIndex(0); // Reset to first file
-    } else if (selectedPrimaryFileIndex > index) {
-      setSelectedPrimaryFileIndex(selectedPrimaryFileIndex - 1);
+  const handleAddImage = () => {
+    if (newImageUrl.trim()) {
+      const newImage = {
+        image_url: newImageUrl.trim(),
+        is_primary: images.length === 0,
+        display_order: images.length + 1,
+        isNew: true,
+      };
+      setImages([...images, newImage]);
+      setNewImageUrl("");
     }
   };
 
@@ -293,15 +290,15 @@ export default function ProductEdit() {
       const newImageUrls = [];
       if (selectedFiles.length > 0) {
         setUploadLoading(true);
-
+        
         for (let i = 0; i < selectedFiles.length; i++) {
           const file = selectedFiles[i];
           const uploadedUrl = await uploadImage(file);
-
+          
           if (uploadedUrl) {
             newImageUrls.push({
               image_url: uploadedUrl,
-              is_primary: images.length === 0 && i === selectedPrimaryFileIndex, // Set the selected file as primary if no existing images
+              is_primary: images.length === 0 && i === 0, // First uploaded image is primary if no existing primary
               display_order: images.length + i + 1,
               isNew: true,
             });
@@ -312,7 +309,7 @@ export default function ProductEdit() {
             return;
           }
         }
-
+        
         setUploadLoading(false);
       }
 
@@ -342,8 +339,7 @@ export default function ProductEdit() {
         // Clear file selections after successful update
         setSelectedFiles([]);
         setFilePreviews([]);
-        setSelectedPrimaryFileIndex(0);
-
+        
         setSuccess(true);
         toast.success("Product updated successfully!");
         setTimeout(() => {
@@ -404,23 +400,6 @@ export default function ProductEdit() {
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400 py-8">
-      <style jsx>{`
-        .scrollbar-thin::-webkit-scrollbar {
-          height: 6px;
-        }
-        .scrollbar-thumb-purple-300::-webkit-scrollbar-thumb {
-          background-color: #d8b4fe;
-          border-radius: 3px;
-        }
-        .scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
-          background-color: #d1d5db;
-          border-radius: 3px;
-        }
-        .scrollbar-track-gray-100::-webkit-scrollbar-track {
-          background-color: #f3f4f6;
-          border-radius: 3px;
-        }
-      `}</style>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header Section */}
         <div className="mb-8">
@@ -428,7 +407,7 @@ export default function ProductEdit() {
             {/* Background decoration */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-purple-100 to-transparent rounded-full -translate-y-32 translate-x-32 opacity-50"></div>
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-yellow-100 to-transparent rounded-full translate-y-24 -translate-x-24 opacity-50"></div>
-
+            
             <div className="space-y-4 relative z-10">
               <div className="flex items-center gap-4">
                 <div className="relative">
@@ -436,9 +415,7 @@ export default function ProductEdit() {
                     <Edit3 className="w-10 h-10 text-white" />
                   </div>
                   <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-bold text-purple-900">
-                      ✨
-                    </span>
+                    <span className="text-xs font-bold text-purple-900">✨</span>
                   </div>
                 </div>
                 <div>
@@ -466,7 +443,7 @@ export default function ProductEdit() {
                 </div>
               </div>
             </div>
-
+            
             <div className="relative z-10">
               <Button
                 onClick={handleCancel}
@@ -564,155 +541,112 @@ export default function ProductEdit() {
                         </label>
                       </div>
 
-                      {/* Selected Files Preview with Slider */}
+                      {/* Selected Files Preview */}
                       {filePreviews.length > 0 && (
                         <div className="space-y-2">
-                          <p className="text-sm text-gray-600 font-medium">
-                            Selected Files ({filePreviews.length}):
-                          </p>
-                          <div className="relative">
-                            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-purple-300 scrollbar-track-gray-100">
-                              {filePreviews.map((filePreview, index) => (
-                                <div
-                                  key={index}
-                                  className={`relative flex-shrink-0 w-48 border-2 rounded-xl p-3 transition-all duration-200 ${
-                                    selectedPrimaryFileIndex === index &&
-                                    images.length === 0
-                                      ? "border-yellow-400 bg-yellow-50"
-                                      : "border-purple-200 bg-purple-50"
-                                  }`}
-                                >
-                                  <div className="space-y-2">
-                                    <img
-                                      src={filePreview.preview}
-                                      alt={`Selected ${index + 1}`}
-                                      className="w-full h-24 object-cover rounded-lg border shadow-md"
-                                    />
-                                    <div className="space-y-1">
-                                      <p className="text-xs font-medium text-gray-900 truncate">
-                                        {filePreview.name}
-                                      </p>
-                                      <p className="text-xs text-gray-500">
-                                        {(
-                                          filePreview.size /
-                                          1024 /
-                                          1024
-                                        ).toFixed(2)}{" "}
-                                        MB
-                                      </p>
-                                    </div>
-                                    <div className="flex flex-col gap-1">
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setSelectedPrimaryFileIndex(index)
-                                        }
-                                        className={`w-full text-xs px-2 py-1 rounded-lg flex items-center justify-center gap-1 transition-colors ${
-                                          selectedPrimaryFileIndex === index &&
-                                          images.length === 0
-                                            ? "bg-yellow-200 text-yellow-800"
-                                            : "bg-purple-200 text-purple-700 hover:bg-purple-300"
-                                        }`}
-                                      >
-                                        <Star className="w-3 h-3" />
-                                        {selectedPrimaryFileIndex === index &&
-                                        images.length === 0
-                                          ? "Primary"
-                                          : "Set Primary"}
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          removeSelectedFile(index)
-                                        }
-                                        className="w-full text-xs px-2 py-1 bg-red-200 text-red-700 rounded-lg hover:bg-red-300 flex items-center justify-center gap-1"
-                                      >
-                                        <Trash2 className="w-3 h-3" />
-                                        Remove
-                                      </button>
-                                    </div>
-                                  </div>
-                                  {uploadLoading && (
-                                    <div className="absolute inset-0 bg-white/80 rounded-xl flex items-center justify-center">
-                                      <div className="flex items-center gap-2">
-                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
-                                        <span className="text-xs text-purple-600 font-medium">
-                                          Uploading...
-                                        </span>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Existing Images with Slider */}
-                    {images.length > 0 && (
-                      <div className="space-y-2 border-t border-gray-200 pt-4">
-                        <p className="text-sm text-gray-600 font-medium">
-                          Current Images ({images.length}):
-                        </p>
-                        <div className="relative">
-                          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                            {images.map((image, index) => (
+                          <p className="text-sm text-gray-600 font-medium">Selected Files ({filePreviews.length}):</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {filePreviews.map((filePreview, index) => (
                               <div
                                 key={index}
-                                className={`relative flex-shrink-0 w-48 border-2 rounded-xl p-3 transition-all duration-200 ${
-                                  image.is_primary
-                                    ? "border-yellow-400 bg-yellow-50"
-                                    : "border-gray-200 bg-gray-50"
-                                }`}
+                                className="relative border-2 border-purple-200 rounded-xl p-3 bg-purple-50"
                               >
-                                <div className="space-y-2">
+                                <div className="flex items-start gap-3">
                                   <img
-                                    src={image.image_url}
-                                    alt={`Product ${index + 1}`}
-                                    className="w-full h-24 object-cover rounded-lg border shadow-md"
-                                    onError={(e) => {
-                                      e.target.src = "/default-product.png";
-                                    }}
+                                    src={filePreview.preview}
+                                    alt={`Selected ${index + 1}`}
+                                    className="w-16 h-16 object-cover rounded-lg border shadow-md"
                                   />
-                                  <div className="space-y-1">
-                                    <p className="text-xs font-medium truncate">
-                                      Image {index + 1}
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                      {filePreview.name}
                                     </p>
                                     <p className="text-xs text-gray-500">
-                                      Order: {image.display_order || index + 1}
+                                      {(filePreview.size / 1024 / 1024).toFixed(2)} MB
                                     </p>
-                                  </div>
-                                  <div className="flex flex-col gap-1">
-                                    {image.is_primary ? (
-                                      <span className="w-full px-2 py-1 bg-yellow-200 text-yellow-800 text-xs rounded-lg flex items-center justify-center gap-1 font-medium">
-                                        <Star className="w-3 h-3" />
-                                        Primary
-                                      </span>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleSetPrimary(index)}
-                                        className="w-full px-2 py-1 bg-blue-200 text-blue-700 text-xs rounded-lg hover:bg-blue-300 flex items-center justify-center gap-1"
-                                      >
-                                        <Star className="w-3 h-3" />
-                                        Set Primary
-                                      </button>
-                                    )}
                                     <button
                                       type="button"
-                                      onClick={() => handleRemoveImage(index)}
-                                      className="w-full px-2 py-1 bg-red-200 text-red-700 text-xs rounded-lg hover:bg-red-300 flex items-center justify-center gap-1"
+                                      onClick={() => removeSelectedFile(index)}
+                                      className="mt-1 text-xs text-red-600 hover:text-red-800 underline flex items-center gap-1"
                                     >
                                       <Trash2 className="w-3 h-3" />
                                       Remove
                                     </button>
                                   </div>
                                 </div>
+                                {uploadLoading && (
+                                  <div className="absolute inset-0 bg-white/80 rounded-xl flex items-center justify-center">
+                                    <div className="flex items-center gap-2">
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                                      <span className="text-sm text-purple-600 font-medium">
+                                        Uploading...
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Existing Images */}
+                    {images.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm text-gray-600 font-medium">Current Images:</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {images.map((image, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200"
+                            >
+                              <img
+                                src={image.image_url}
+                                alt={`Product ${index + 1}`}
+                                className="w-16 h-16 object-cover rounded-lg border shadow-md"
+                                onError={(e) => {
+                                  e.target.src = "/default-product.png";
+                                }}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">
+                                  Image {index + 1}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  {image.is_primary && (
+                                    <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full flex items-center gap-1">
+                                      <Star className="w-3 h-3" />
+                                      Primary
+                                    </span>
+                                  )}
+                                  <span className="text-xs text-gray-500">
+                                    Order: {image.display_order || index + 1}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                {!image.is_primary && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSetPrimary(index)}
+                                    className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 flex items-center gap-1"
+                                  >
+                                    <Star className="w-3 h-3" />
+                                    Set Primary
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveImage(index)}
+                                  className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 flex items-center gap-1"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}

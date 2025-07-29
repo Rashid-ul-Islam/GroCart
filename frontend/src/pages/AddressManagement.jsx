@@ -12,19 +12,18 @@ import {
   Filter,
   RefreshCw,
 } from "lucide-react";
-import Notification from "../components/ui/Notification.jsx";
-import { useNotification } from "../hooks/useNotification.js";
 import { Button } from "../components/ui/button.jsx";
+import {
+  useNotification,
+  NotificationContainer,
+} from "../components/ui/notifications.jsx";
 
 const AddressManagement = () => {
   // State management
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(false);
-
-  // Use the notification hook
-  const { notification, showSuccess, showError, hideNotification } =
+  const { notifications, success, error, warning, info, removeNotification } =
     useNotification();
-
   // Data states
   const [divisions, setDivisions] = useState([]);
   const [districts, setDistricts] = useState([]);
@@ -183,9 +182,7 @@ const AddressManagement = () => {
   // Add this new fetch function
   const fetchWarehouses = async () => {
     try {
-      const response = await fetch(
-        "http://localhost:3000/api/address/warehouses"
-      );
+      const response = await fetch("http://localhost:3000/api/address/warehouses");
       if (response.ok) {
         const data = await response.json();
         setWarehouses(data);
@@ -323,9 +320,13 @@ const AddressManagement = () => {
             !creationIntent.createCity &&
             !creationIntent.createRegion
           ) {
-            showSuccess(
-              "Success",
-              `Division "${newAddress.newDivisionName}" created successfully!`
+            success(
+              `Division "${newAddress.newDivisionName}" created successfully!`,
+              {
+                title: "🎉 Success!",
+                duration: 4000,
+                animation: "bounce",
+              }
             );
             resetForm();
             fetchAllData();
@@ -333,10 +334,10 @@ const AddressManagement = () => {
             return;
           }
         } catch (err) {
-          showError(
-            "Error",
-            "Network error while creating division. Please try again."
-          );
+          error("Network error while creating division. Please try again.", {
+            title: "❌ Network Error!",
+            duration: 5000,
+          });
           setLoading(false);
           return;
         }
@@ -387,20 +388,21 @@ const AddressManagement = () => {
 
           // If user only wants to create up to district, stop here
           if (!creationIntent.createCity && !creationIntent.createRegion) {
-            showSuccess(
-              "Success",
-              `${createdItems.join(" and ")} created successfully!`
-            );
+            success(`${createdItems.join(" and ")} created successfully!`, {
+              title: "🎉 Success!",
+              duration: 4000,
+              animation: "bounce",
+            });
             resetForm();
             fetchAllData();
             setLoading(false);
             return;
           }
         } catch (err) {
-          showError(
-            "Error",
-            "Network error while creating district. Please try again."
-          );
+          error("Network error while creating district. Please try again.", {
+            title: "❌ Network Error!",
+            duration: 5000,
+          });
           setLoading(false);
           return;
         }
@@ -451,20 +453,21 @@ const AddressManagement = () => {
 
           // If user only wants to create up to city, stop here
           if (!creationIntent.createRegion) {
-            showSuccess(
-              "Success",
-              `${createdItems.join(", ")} created successfully!`
-            );
+            success(`${createdItems.join(", ")} created successfully!`, {
+              title: "🎉 Success!",
+              duration: 4000,
+              animation: "bounce",
+            });
             resetForm();
             fetchAllData();
             setLoading(false);
             return;
           }
         } catch (err) {
-          showError(
-            "Error",
-            "Network error while creating city. Please try again."
-          );
+          error("Network error while creating city. Please try again.", {
+            title: "❌ Network Error!",
+            duration: 5000,
+          });
           setLoading(false);
           return;
         }
@@ -505,24 +508,30 @@ const AddressManagement = () => {
           }
 
           createdItems.push("Region");
-          showSuccess(
-            "Success",
-            `${createdItems.join(", ")} created successfully!`
-          );
+          success(`${createdItems.join(", ")} created successfully!`, {
+            title: "🎉 Address Created!",
+            duration: 4000,
+            animation: "bounce",
+            position: "top-right",
+            size: "medium",
+          });
           resetForm();
           fetchAllData();
         } catch (err) {
-          showError(
-            "Error",
-            "Network error while creating region. Please try again."
-          );
+          error("Network error while creating region. Please try again.", {
+            title: "❌ Network Error!",
+            duration: 5000,
+          });
           setLoading(false);
           return;
         }
       }
     } catch (error) {
       console.error("Error creating address:", error);
-      showError("Error", "An unexpected error occurred. Please try again.");
+      error("An unexpected error occurred. Please try again.", {
+        title: "❌ Error!",
+        duration: 5000,
+      });
     } finally {
       setLoading(false);
     }
@@ -602,9 +611,13 @@ const AddressManagement = () => {
         throw new Error(data.error || "Failed to create delivery region");
       }
 
-      showSuccess(
-        "Success",
-        `Delivery region "${newDeliveryRegion.name}" created successfully!`
+      success(
+        `Delivery region "${newDeliveryRegion.name}" created successfully!`,
+        {
+          title: "🎉 Success!",
+          duration: 4000,
+          animation: "bounce",
+        }
       );
 
       // Reset form
@@ -618,7 +631,10 @@ const AddressManagement = () => {
       fetchAllData();
     } catch (error) {
       console.error("Error creating delivery region:", error);
-      showError("Error", "Failed to create delivery region. Please try again.");
+      error("Failed to create delivery region. Please try again.", {
+        title: "❌ Error!",
+        duration: 5000,
+      });
     } finally {
       setLoading(false);
     }
@@ -679,11 +695,14 @@ const AddressManagement = () => {
       );
 
       if (response.ok) {
-        showSuccess(
-          "Success",
+        success(
           `${
             type.charAt(0).toUpperCase() + type.slice(1)
-          } updated successfully!`
+          } updated successfully!`,
+          {
+            title: "✅ Updated!",
+            duration: 3000,
+          }
         );
         setEditMode({ type: "", id: null, name: "" });
         fetchAllData();
@@ -692,7 +711,10 @@ const AddressManagement = () => {
       }
     } catch (error) {
       console.error(`Error updating ${type}:`, error);
-      showError("Error", `Failed to update ${type}. Please try again.`);
+      error(`Failed to update ${type}. Please try again.`, {
+        title: "❌ Update Failed!",
+        duration: 5000,
+      });
     }
   };
 
@@ -709,17 +731,20 @@ const AddressManagement = () => {
       );
 
       if (response.ok) {
-        showSuccess("Success", "Delivery region assigned successfully!");
+        success("Delivery region assignment updated successfully!", {
+          title: "🚚 Assignment Updated!",
+          duration: 3000,
+        });
         fetchAllData();
       } else {
         throw new Error("Failed to update delivery region assignment");
       }
     } catch (error) {
       console.error("Error updating delivery region assignment:", error);
-      showError(
-        "Error",
-        "Failed to update delivery region assignment. Please try again."
-      );
+      error("Failed to update delivery region assignment. Please try again.", {
+        title: "❌ Assignment Failed!",
+        duration: 5000,
+      });
     }
   };
 
@@ -859,7 +884,7 @@ const AddressManagement = () => {
                   </div>
 
                   {/* Statistics Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-white">
                       <div className="flex items-center justify-between">
                         <div>
@@ -899,6 +924,20 @@ const AddressManagement = () => {
                         </div>
                       </div>
                     </div>
+
+                    <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg p-6 text-white">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-orange-100">Coverage</p>
+                          <p className="text-3xl font-bold">
+                            {regions.filter((r) => r.delivery_region_id).length}
+                          </p>
+                        </div>
+                        <div className="bg-orange-400 rounded-full p-3">
+                          <MapPin className="w-6 h-6" />
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Data Overview */}
@@ -915,6 +954,9 @@ const AddressManagement = () => {
                           >
                             <span className="font-medium text-black">
                               {division.name}
+                            </span>
+                            <span className="text-sm text-black">
+                              ID: {division.division_id}
                             </span>
                           </div>
                         ))}
@@ -940,10 +982,7 @@ const AddressManagement = () => {
                               </p>
                             </div>
                             <span className="text-sm text-black">
-                              Warehouse:{" "}
-                              {warehouses.find(
-                                (w) => w.warehouse_id === region.warehouse_id
-                              )?.name || region.warehouse_id}
+                              Warehouse: {region.warehouse_id}
                             </span>
                           </div>
                         ))}
@@ -1040,9 +1079,7 @@ const AddressManagement = () => {
                             }
                             className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                           />
-                          <span className="text-sm text-black font-medium">
-                            City
-                          </span>
+                          <span className="text-sm text-black font-medium">City</span>
                         </label>
 
                         <label className="flex items-center space-x-2 cursor-pointer">
@@ -1062,9 +1099,7 @@ const AddressManagement = () => {
                             }
                             className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                           />
-                          <span className="text-sm text-black font-medium">
-                            Region
-                          </span>
+                          <span className="text-sm text-black font-medium">Region</span>
                         </label>
                       </div>
                     </div>
@@ -1083,9 +1118,7 @@ const AddressManagement = () => {
                             }
                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white text-black"
                           >
-                            <option value="" className="text-black">
-                              Select Division
-                            </option>
+                            <option value="" className="text-black">Select Division</option>
                             {divisions.map((division) => (
                               <option
                                 key={division.division_id}
@@ -1095,9 +1128,7 @@ const AddressManagement = () => {
                                 {division.name}
                               </option>
                             ))}
-                            <option value="new" className="text-black">
-                              + Create New Division
-                            </option>
+                            <option value="new" className="text-black">+ Create New Division</option>
                           </select>
                           <ChevronDown
                             className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
@@ -1149,9 +1180,7 @@ const AddressManagement = () => {
                             disabled={!newAddress.selectedDivision}
                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white disabled:bg-gray-100 disabled:cursor-not-allowed text-black"
                           >
-                            <option value="" className="text-black">
-                              Select District
-                            </option>
+                            <option value="" className="text-black">Select District</option>
                             {districts.map((district) => (
                               <option
                                 key={district.district_id}
@@ -1162,9 +1191,7 @@ const AddressManagement = () => {
                               </option>
                             ))}
                             {newAddress.selectedDivision && (
-                              <option value="new" className="text-black">
-                                + Create New District
-                              </option>
+                              <option value="new" className="text-black">+ Create New District</option>
                             )}
                           </select>
                           <ChevronDown
@@ -1215,22 +1242,14 @@ const AddressManagement = () => {
                             disabled={!newAddress.selectedDistrict}
                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white disabled:bg-gray-100 disabled:cursor-not-allowed text-black"
                           >
-                            <option value="" className="text-black">
-                              Select City
-                            </option>
+                            <option value="" className="text-black">Select City</option>
                             {cities.map((city) => (
-                              <option
-                                key={city.city_id}
-                                value={city.city_id}
-                                className="text-black"
-                              >
+                              <option key={city.city_id} value={city.city_id} className="text-black">
                                 {city.name}
                               </option>
                             ))}
                             {newAddress.selectedDistrict && (
-                              <option value="new" className="text-black">
-                                + Create New City
-                              </option>
+                              <option value="new" className="text-black">+ Create New City</option>
                             )}
                           </select>
                           <ChevronDown
@@ -1315,9 +1334,7 @@ const AddressManagement = () => {
                               }
                               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white text-black"
                             >
-                              <option value="" className="text-black">
-                                Select Delivery Region
-                              </option>
+                              <option value="" className="text-black">Select Delivery Region</option>
                               {deliveryRegions.map((region) => (
                                 <option
                                   key={region.delivery_region_id}
@@ -1502,9 +1519,7 @@ const AddressManagement = () => {
                             : "border-gray-300"
                         }`}
                       >
-                        <option value="" className="text-black">
-                          Select a warehouse
-                        </option>
+                        <option value="" className="text-black">Select a warehouse</option>
                         {warehouses.map((warehouse) => (
                           <option
                             key={warehouse.warehouse_id}
@@ -1541,7 +1556,6 @@ const AddressManagement = () => {
                             warehouse_id: "",
                           });
                         }}
-                        className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-2"
                       >
                         <X className="mr-2 h-4 w-4" />
                         Reset
@@ -1549,7 +1563,7 @@ const AddressManagement = () => {
                       <Button
                         type="submit"
                         disabled={loading}
-                        className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300 flex items-center gap-2"
+                        className="bg-blue-600 hover:bg-blue-700"
                       >
                         {loading ? (
                           <>
@@ -1756,13 +1770,8 @@ const AddressManagement = () => {
                           onChange={(e) => setSearchType(e.target.value)}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-black"
                         >
-                          <option value="region" className="text-black">
-                            Search by Region
-                          </option>
-                          <option
-                            value="delivery_region"
-                            className="text-black"
-                          >
+                          <option value="region" className="text-black">Search by Region</option>
+                          <option value="delivery_region" className="text-black">
                             Search by Delivery Region
                           </option>
                         </select>
@@ -1847,11 +1856,7 @@ const AddressManagement = () => {
                               {deliveryRegion.name}
                             </h4>
                             <span className="text-sm text-black">
-                              Warehouse:{" "}
-                              {warehouses.find(
-                                (w) =>
-                                  w.warehouse_id === deliveryRegion.warehouse_id
-                              )?.name || deliveryRegion.warehouse_id}
+                              Warehouse: {deliveryRegion.warehouse_id}
                             </span>
                           </div>
 
@@ -1880,9 +1885,7 @@ const AddressManagement = () => {
                                     }
                                     className="text-xs border border-gray-300 rounded px-2 py-1 bg-white text-black"
                                   >
-                                    <option value="" className="text-black">
-                                      No Delivery Region
-                                    </option>
+                                    <option value="" className="text-black">No Delivery Region</option>
                                     {deliveryRegions.map((dr) => (
                                       <option
                                         key={dr.delivery_region_id}
@@ -1937,9 +1940,7 @@ const AddressManagement = () => {
                               }
                               className="text-xs border border-gray-300 rounded px-2 py-1 bg-white text-black"
                             >
-                              <option value="" className="text-black">
-                                Assign to...
-                              </option>
+                              <option value="" className="text-black">Assign to...</option>
                               {deliveryRegions.map((dr) => (
                                 <option
                                   key={dr.delivery_region_id}
@@ -1967,13 +1968,10 @@ const AddressManagement = () => {
           )}
         </div>
 
-        {/* Notification Component */}
-        <Notification
-          show={notification.show}
-          type={notification.type}
-          title={notification.title}
-          message={notification.message}
-          onClose={hideNotification}
+        {/* Notification Container */}
+        <NotificationContainer
+          notifications={notifications}
+          removeNotification={removeNotification}
         />
       </div>
     </div>

@@ -148,82 +148,6 @@ export const getUserTiers = async (req, res) => {
     }
 };
 
-// Get available coupons for a specific user based on their tier
-export const getAvailableCoupons = async (req, res) => {
-    try {
-        const { userId } = req.params;
-
-        if (!userId) {
-            return res.status(400).json({
-                message: 'User ID is required'
-            });
-        }
-
-        // Get user's tier
-        const userQuery = `
-            SELECT u.tier_id, ut.name as tier_name 
-            FROM "User" u
-            LEFT JOIN "UserTier" ut ON u.tier_id = ut.tier_id
-            WHERE u.user_id = $1
-        `;
-
-        const userResult = await pool.query(userQuery, [userId]);
-
-        if (userResult.rows.length === 0) {
-            return res.status(404).json({
-                message: 'User not found'
-            });
-        }
-
-        const user = userResult.rows[0];
-
-        // Get available coupons (active, not expired, has usage left, matches user tier or no tier restriction)
-        const couponsQuery = `
-            SELECT 
-                c.coupon_id,
-                c.code,
-                c.description,
-                c.discount_type,
-                c.discount_value,
-                c.min_purchase,
-                c.max_discount,
-                c.start_date,
-                c.end_date,
-                c.usage_limit,
-                c.usage_count,
-                c.applied_tiers,
-                ut.name as tier_name
-            FROM "Coupon" c
-            LEFT JOIN "UserTier" ut ON c.applied_tiers = ut.tier_id
-            WHERE c.is_active = true 
-                AND c.start_date <= NOW() 
-                AND c.end_date > NOW()
-                AND (c.usage_limit IS NULL OR c.usage_count < c.usage_limit)
-                AND (c.applied_tiers IS NULL OR c.applied_tiers = $1)
-            ORDER BY 
-                CASE 
-                    WHEN c.discount_type = 'percentage' THEN c.discount_value 
-                    ELSE c.discount_value 
-                END DESC
-        `;
-
-        const couponsResult = await pool.query(couponsQuery, [user.tier_id]);
-
-        res.json({
-            message: 'Available coupons retrieved successfully',
-            coupons: couponsResult.rows,
-            userTier: user.tier_name || 'No tier'
-        });
-
-    } catch (error) {
-        console.error('Error fetching available coupons:', error);
-        res.status(500).json({
-            message: 'Error fetching available coupons',
-            error: error.message
-        });
-    }
-};
-
 // Create new coupon
 export const createCoupon = async (req, res) => {
     try {
@@ -532,19 +456,9 @@ export const validateCoupon = async (req, res) => {
     try {
         const { code, userId, orderAmount } = req.body;
 
-        if (!code || !userId || orderAmount === undefined || orderAmount === null) {
+        if (!code || !userId || !orderAmount) {
             return res.status(400).json({
-                message: 'Coupon code, user ID, and order amount are required',
-                valid: false
-            });
-        }
-
-        // Validate orderAmount is a valid number
-        const numericOrderAmount = parseFloat(orderAmount);
-        if (isNaN(numericOrderAmount) || numericOrderAmount <= 0) {
-            return res.status(400).json({
-                message: 'Order amount must be a valid positive number',
-                valid: false
+                message: 'Coupon code, user ID, and order amount are required'
             });
         }
 
@@ -603,7 +517,7 @@ export const validateCoupon = async (req, res) => {
         }
 
         // Check minimum purchase requirement
-        if (coupon.min_purchase && numericOrderAmount < parseFloat(coupon.min_purchase)) {
+        if (coupon.min_purchase && orderAmount < coupon.min_purchase) {
             return res.status(400).json({
                 message: `Minimum purchase of $${coupon.min_purchase} required for this coupon`,
                 valid: false
@@ -636,24 +550,19 @@ export const validateCoupon = async (req, res) => {
         // Calculate discount amount
         let discountAmount;
         if (coupon.discount_type === 'percentage') {
-            discountAmount = (numericOrderAmount * parseFloat(coupon.discount_value)) / 100;
+            discountAmount = (orderAmount * coupon.discount_value) / 100;
         } else {
-            discountAmount = parseFloat(coupon.discount_value);
-        }
-
-        // Ensure discountAmount is a valid number
-        if (isNaN(discountAmount)) {
-            discountAmount = 0;
+            discountAmount = coupon.discount_value;
         }
 
         // Apply maximum discount limit if set
-        if (coupon.max_discount && discountAmount > parseFloat(coupon.max_discount)) {
-            discountAmount = parseFloat(coupon.max_discount);
+        if (coupon.max_discount && discountAmount > coupon.max_discount) {
+            discountAmount = coupon.max_discount;
         }
 
         // Ensure discount doesn't exceed order amount
-        if (discountAmount > numericOrderAmount) {
-            discountAmount = numericOrderAmount;
+        if (discountAmount > orderAmount) {
+            discountAmount = orderAmount;
         }
 
         res.json({
@@ -722,17 +631,78 @@ export const toggleCouponStatus = async (req, res) => {
     }
 };
 
-// Apply coupon to order (increment usage count and create OrderCoupon record)
+// Get available coupons for user based on tier
+export const getAvailableCoupons = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        // First get user's tier
+        const userQuery = `
+            SELECT tier FROM "User" WHERE user_id = $1
+        `;
+        const userResult = await pool.query(userQuery, [userId]);
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({
+                message: 'User not found'
+            });
+        }
+
+        const userTier = userResult.rows[0].tier;
+
+        // Get available coupons for user's tier
+        const query = `
+            SELECT 
+                coupon_id,
+                coupon_code,
+                description,
+                discount_type,
+                discount_value,
+                minimum_order_amount,
+                maximum_discount_amount,
+                usage_limit,
+                usage_count,
+                start_date,
+                end_date,
+                applied_tiers
+            FROM "Coupon"
+            WHERE is_active = true
+                AND start_date <= NOW()
+                AND end_date > NOW()
+                AND (applied_tiers = $1 OR applied_tiers = 'all')
+                AND usage_count < usage_limit
+            ORDER BY discount_value DESC
+        `;
+
+        const result = await pool.query(query, [userTier]);
+
+        res.status(200).json({
+            success: true,
+            coupons: result.rows,
+            userTier: userTier
+        });
+
+    } catch (error) {
+        console.error('Error fetching available coupons:', error);
+        res.status(500).json({
+            message: 'Error fetching available coupons',
+            error: error.message
+        });
+    }
+};
+
+// Apply coupon to order (increment usage and create OrderCoupon record)
 export const applyCouponToOrder = async (req, res) => {
     try {
         const { orderId, couponId, discountAmount } = req.body;
 
         if (!orderId || !couponId || discountAmount === undefined) {
             return res.status(400).json({
-                message: 'Order ID, coupon ID, and discount amount are required'
+                message: 'Order ID, Coupon ID, and discount amount are required'
             });
         }
 
+        // Start transaction
         const client = await pool.connect();
 
         try {
@@ -741,11 +711,10 @@ export const applyCouponToOrder = async (req, res) => {
             // Increment coupon usage count
             const updateCouponQuery = `
                 UPDATE "Coupon" 
-                SET usage_count = usage_count + 1 
-                WHERE coupon_id = $1 
-                RETURNING *
+                SET usage_count = usage_count + 1
+                WHERE coupon_id = $1
+                RETURNING usage_count, usage_limit
             `;
-
             const couponResult = await client.query(updateCouponQuery, [couponId]);
 
             if (couponResult.rows.length === 0) {
@@ -753,13 +722,12 @@ export const applyCouponToOrder = async (req, res) => {
             }
 
             // Create OrderCoupon record
-            const insertOrderCouponQuery = `
-                INSERT INTO "OrderCoupon" (order_id, coupon_id, discount_amount)
-                VALUES ($1, $2, $3)
+            const createOrderCouponQuery = `
+                INSERT INTO "OrderCoupon" (order_id, coupon_id, discount_amount, applied_at)
+                VALUES ($1, $2, $3, NOW())
                 RETURNING *
             `;
-
-            const orderCouponResult = await client.query(insertOrderCouponQuery, [
+            const orderCouponResult = await client.query(createOrderCouponQuery, [
                 orderId,
                 couponId,
                 discountAmount
@@ -767,10 +735,11 @@ export const applyCouponToOrder = async (req, res) => {
 
             await client.query('COMMIT');
 
-            res.json({
+            res.status(200).json({
+                success: true,
                 message: 'Coupon applied to order successfully',
-                updatedCoupon: couponResult.rows[0],
-                orderCoupon: orderCouponResult.rows[0]
+                orderCoupon: orderCouponResult.rows[0],
+                updatedUsageCount: couponResult.rows[0].usage_count
             });
 
         } catch (error) {
