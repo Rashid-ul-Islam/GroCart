@@ -52,6 +52,7 @@ export const DeliveryAnalytics = () => {
   const [scatterMode, setScatterMode] = useState("revenue"); // New state for scatter plot mode
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [scatterLoading, setScatterLoading] = useState(false);
 
   // State for API data
   const [metrics, setMetrics] = useState({
@@ -77,6 +78,7 @@ export const DeliveryAnalytics = () => {
   // Fetch scatter plot data
   const fetchScatterData = async () => {
     try {
+      setScatterLoading(true);
       console.log(
         `🔍 Fetching scatter data with timeRange: ${timeRange}, mode: ${scatterMode}`
       );
@@ -106,15 +108,20 @@ export const DeliveryAnalytics = () => {
             "⚠️ Scatter data fetch successful but response not successful:",
             data
           );
+          setScatterData([]);
         }
       } else {
         console.error(
           "❌ Failed to fetch scatter data. Response status:",
           response.status
         );
+        setScatterData([]);
       }
     } catch (error) {
       console.error("💥 Error fetching scatter data:", error);
+      setScatterData([]);
+    } finally {
+      setScatterLoading(false);
     }
   };
 
@@ -193,7 +200,7 @@ export const DeliveryAnalytics = () => {
       );
       fetchScatterData();
     }
-  }, [scatterMode, timeRange]);
+  }, [scatterMode]);
 
   // Loading state
   if (loading) {
@@ -261,21 +268,37 @@ export const DeliveryAnalytics = () => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-semibold text-gray-800 mb-2">{data.region_name}</p>
-          <p className="text-sm text-gray-600">
-            <span className="font-medium">Total Deliveries:</span> {data.x}
-          </p>
-          {scatterMode === "revenue" ? (
-            <p className="text-sm text-gray-600">
-              <span className="font-medium">Total Revenue:</span> ৳
-              {data.y?.toLocaleString() || 0}
-            </p>
-          ) : (
-            <p className="text-sm text-gray-600">
-              <span className="font-medium">Delivery Boys:</span> {data.y}
-            </p>
-          )}
+        <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-xl min-w-[200px]">
+          <div className="border-b border-gray-100 pb-2 mb-3">
+            <p className="font-bold text-gray-800 text-lg">{data.region_name}</p>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium text-gray-600">Total Deliveries:</span>
+              <span className="text-sm font-bold text-blue-600">{data.x || 0}</span>
+            </div>
+            {scatterMode === "revenue" ? (
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-600">Total Revenue:</span>
+                <span className="text-sm font-bold text-green-600">
+                  ৳{(data.y || 0).toLocaleString()}
+                </span>
+              </div>
+            ) : (
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-600">Delivery Boys:</span>
+                <span className="text-sm font-bold text-purple-600">{data.y || 0}</span>
+              </div>
+            )}
+            {scatterMode === "revenue" && data.x > 0 && (
+              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                <span className="text-xs font-medium text-gray-500">Avg per Delivery:</span>
+                <span className="text-xs font-semibold text-gray-700">
+                  ৳{((data.y || 0) / data.x).toFixed(0)}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       );
     }
@@ -659,11 +682,17 @@ export const DeliveryAnalytics = () => {
                         <h3 className="text-xl font-bold text-gray-800 mb-2">
                           Regional Performance Analysis
                         </h3>
-                        <p className="text-gray-600">
-                          Scatter plot analysis of deliveries vs{" "}
+                        <p className="text-gray-600 mb-1">
+                          Compare regions by total deliveries vs{" "}
                           {scatterMode === "revenue"
-                            ? "revenue"
-                            : "delivery staff"}
+                            ? "revenue generated"
+                            : "available delivery staff"}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {scatterMode === "revenue" 
+                            ? "Each point represents a region - larger circles indicate higher delivery volume"
+                            : "Analyze delivery capacity vs actual deliveries to identify resource allocation opportunities"
+                          }
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -674,26 +703,26 @@ export const DeliveryAnalytics = () => {
                           value={scatterMode}
                           onValueChange={setScatterMode}
                         >
-                          <SelectTrigger className="w-48 bg-white text-gray-900">
+                          <SelectTrigger className="w-48 bg-white text-gray-900 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-white text-gray-900">
+                          <SelectContent className="bg-white text-gray-900 border border-gray-300 rounded-lg shadow-lg">
                             <SelectItem
                               value="revenue"
-                              className="text-gray-900 hover:bg-gray-100"
+                              className="text-gray-900 hover:bg-purple-50 cursor-pointer"
                             >
                               <div className="flex items-center">
-                                <DollarSign className="w-4 h-4 mr-2" />
-                                Revenue vs Deliveries
+                                <DollarSign className="w-4 h-4 mr-2 text-green-600" />
+                                Revenue Analysis
                               </div>
                             </SelectItem>
                             <SelectItem
                               value="staff"
-                              className="text-gray-900 hover:bg-gray-100"
+                              className="text-gray-900 hover:bg-purple-50 cursor-pointer"
                             >
                               <div className="flex items-center">
-                                <Truck className="w-4 h-4 mr-2" />
-                                Staff vs Deliveries
+                                <Truck className="w-4 h-4 mr-2 text-blue-600" />
+                                Staff Analysis
                               </div>
                             </SelectItem>
                           </SelectContent>
@@ -701,58 +730,85 @@ export const DeliveryAnalytics = () => {
                       </div>
                     </div>
                   </div>
-                  <ResponsiveContainer width="100%" height={400}>
-                    <ScatterChart data={scatterData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis
-                        type="number"
-                        dataKey="x"
-                        name="Total Deliveries"
-                        stroke="#6b7280"
-                        label={{
-                          value: "Total Deliveries",
-                          position: "insideBottom",
-                          offset: -5,
-                        }}
-                      />
-                      <YAxis
-                        type="number"
-                        dataKey="y"
-                        name={
-                          scatterMode === "revenue"
-                            ? "Total Revenue (৳)"
-                            : "Delivery Boys"
-                        }
-                        stroke="#6b7280"
-                        label={{
-                          value:
-                            scatterMode === "revenue"
-                              ? "Total Revenue (৳)"
-                              : "Delivery Boys",
-                          angle: -90,
-                          position: "insideLeft",
-                        }}
-                      />
-                      <Tooltip content={<CustomScatterTooltip />} />
-                      <Scatter name="Regions" fill="#8884d8">
-                        {scatterData.map((entry, index) => {
-                          // Debug log for each scatter point being rendered
-                          if (index === 0) {
-                            console.log(
-                              `🎯 Rendering ${scatterData.length} scatter points. First point:`,
-                              entry
-                            );
-                          }
-                          return (
+                  
+                  {scatterLoading ? (
+                    <div className="flex items-center justify-center h-400 bg-gray-100 rounded-lg">
+                      <div className="text-center">
+                        <Loader2 className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-4" />
+                        <h4 className="text-lg font-semibold text-gray-600 mb-2">Loading Regional Data...</h4>
+                        <p className="text-gray-500">Analyzing {scatterMode === "revenue" ? "revenue" : "staffing"} performance across regions</p>
+                      </div>
+                    </div>
+                  ) : scatterData && scatterData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={400}>
+                      <ScatterChart 
+                        data={scatterData}
+                        margin={{ top: 20, right: 20, bottom: 60, left: 80 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.7} />
+                        <XAxis
+                          type="number"
+                          dataKey="x"
+                          name="Total Deliveries"
+                          stroke="#6b7280"
+                          fontSize={12}
+                          tickCount={8}
+                          label={{
+                            value: "Total Deliveries",
+                            position: "insideBottom",
+                            offset: -40,
+                            style: { textAnchor: 'middle', fill: '#374151', fontSize: '14px', fontWeight: '600' }
+                          }}
+                        />
+                        <YAxis
+                          type="number"
+                          dataKey="y"
+                          name={scatterMode === "revenue" ? "Revenue" : "Staff Count"}
+                          stroke="#6b7280"
+                          fontSize={12}
+                          tickCount={6}
+                          tickFormatter={(value) => {
+                            if (scatterMode === "revenue") {
+                              return value >= 1000 ? `৳${(value/1000).toFixed(0)}k` : `৳${value}`;
+                            }
+                            return value.toString();
+                          }}
+                          label={{
+                            value: scatterMode === "revenue" ? "Total Revenue (৳)" : "Delivery Boys Count",
+                            angle: -90,
+                            position: "insideLeft",
+                            style: { textAnchor: 'middle', fill: '#374151', fontSize: '14px', fontWeight: '600' }
+                          }}
+                        />
+                        <Tooltip content={<CustomScatterTooltip />} />
+                        <Scatter 
+                          name="Regions" 
+                          fill="#8b5cf6"
+                          stroke="#7c3aed"
+                          strokeWidth={2}
+                          r={6}
+                        >
+                          {scatterData.map((entry, index) => (
                             <Cell
-                              key={`cell-${index}`}
-                              fill={`hsl(${(index * 137.5) % 360}, 70%, 50%)`}
+                              key={`scatter-${index}`}
+                              fill={`hsl(${(index * 137.5) % 360}, 65%, 55%)`}
+                              stroke={`hsl(${(index * 137.5) % 360}, 65%, 45%)`}
+                              strokeWidth={2}
+                              r={Math.max(6, Math.min(12, entry.x / 5))} // Dynamic size based on deliveries
                             />
-                          );
-                        })}
-                      </Scatter>
-                    </ScatterChart>
-                  </ResponsiveContainer>
+                          ))}
+                        </Scatter>
+                      </ScatterChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-400 bg-gray-100 rounded-lg">
+                      <div className="text-center">
+                        <MapPin className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                        <h4 className="text-lg font-semibold text-gray-600 mb-2">No Regional Data Available</h4>
+                        <p className="text-gray-500">No delivery data found for the selected time period.</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Existing Regional Cards */}

@@ -8,7 +8,9 @@ import {
     updateUserAddress,
     deleteUserAddress,
     setPrimaryAddress,
-    getRegions
+    getRegions,
+    getDeliveryBoyAvailability,
+    updateDeliveryBoyAvailability
 } from "../controllers/userProfileController.js";
 
 const router = express.Router();
@@ -27,5 +29,9 @@ router.put("/addresses/primary/:addressId", setPrimaryAddress);
 
 // Utility routes
 router.get("/regions", getRegions);
+
+// Delivery boy availability routes
+router.get("/delivery-boy-availability/:userId", getDeliveryBoyAvailability);
+router.put("/delivery-boy-availability/:userId", updateDeliveryBoyAvailability);
 
 export default router;

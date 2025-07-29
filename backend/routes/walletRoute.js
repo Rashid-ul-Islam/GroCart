@@ -4,6 +4,8 @@ import { getUserWalletBalance, getUserWalletWithTransactions, addWalletBalance, 
 const router = express.Router();
 
 // Get user wallet balance only
+router.get('/balance/:userId', getUserWalletBalance);
+
 router.get('/:userId', getUserWalletWithTransactions);
 
 // Add balance to wallet (topup)

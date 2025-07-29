@@ -78,6 +78,10 @@ export default function UserProfile() {
   });
   const [validationErrors, setValidationErrors] = useState({});
 
+  // Delivery boy availability state
+  const [deliveryBoyAvailability, setDeliveryBoyAvailability] = useState(null);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+
   // Check authentication
   useEffect(() => {
     if (!isLoggedIn) {
@@ -89,6 +93,13 @@ export default function UserProfile() {
     fetchUserStats();
     fetchDivisions();
   }, [isLoggedIn, user]);
+
+  // Fetch delivery boy availability when profile data is loaded
+  useEffect(() => {
+    if (profileData && profileData.role_id === 'delivery_boy') {
+      fetchDeliveryBoyAvailability();
+    }
+  }, [profileData]);
 
   const fetchProfileData = async () => {
     try {
@@ -174,6 +185,82 @@ export default function UserProfile() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Fetch delivery boy availability status
+  const fetchDeliveryBoyAvailability = async () => {
+    if (!profileData || profileData.role_id !== 'delivery_boy') {
+      return;
+    }
+
+    try {
+      setAvailabilityLoading(true);
+      const response = await fetch(
+        `http://localhost:3000/api/user/delivery-boy-availability/${user.user_id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setDeliveryBoyAvailability(data);
+      } else {
+        console.error("Failed to fetch delivery boy availability:", response.status);
+      }
+    } catch (error) {
+      console.error("Error fetching delivery boy availability:", error);
+    } finally {
+      setAvailabilityLoading(false);
+    }
+  };
+
+  // Update delivery boy availability status
+  const updateDeliveryBoyAvailability = async (newStatus) => {
+    try {
+      setAvailabilityLoading(true);
+      const response = await fetch(
+        `http://localhost:3000/api/user/delivery-boy-availability/${user.user_id}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({ availability_status: newStatus }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setDeliveryBoyAvailability(prev => ({
+          ...prev,
+          availability_status: data.availability_status
+        }));
+        showSuccess(
+          "Status Updated", 
+          `You are now ${newStatus === 'available' ? 'available for deliveries' : 'offline'}`
+        );
+      } else {
+        const errorData = await response.json();
+        showError("Update Failed", errorData.error || "Failed to update availability status");
+      }
+    } catch (error) {
+      console.error("Error updating delivery boy availability:", error);
+      showError("Error", "Failed to update availability status. Please try again.");
+    } finally {
+      setAvailabilityLoading(false);
+    }
+  };
+
+  // Toggle delivery boy availability
+  const handleAvailabilityToggle = () => {
+    if (!deliveryBoyAvailability) return;
+    
+    const newStatus = deliveryBoyAvailability.availability_status === 'available' ? 'offline' : 'available';
+    updateDeliveryBoyAvailability(newStatus);
   };
 
   const fetchDivisions = async () => {
@@ -602,6 +689,64 @@ export default function UserProfile() {
                     Member since {new Date(profileData.created_at).toLocaleDateString()}
                   </p>
                 </div>
+
+                {/* Delivery Boy Availability Toggle */}
+                {profileData.role_id === 'delivery_boy' && (
+                  <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border border-green-200">
+                    <div className="text-center">
+                      <h4 className="text-sm font-bold text-gray-800 mb-3">
+                        Delivery Status
+                      </h4>
+                      {availabilityLoading ? (
+                        <div className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                          <span className="ml-2 text-sm text-gray-600">Loading...</span>
+                        </div>
+                      ) : deliveryBoyAvailability ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-center space-x-3">
+                            <div className={`w-3 h-3 rounded-full ${
+                              deliveryBoyAvailability.availability_status === 'available' 
+                                ? 'bg-green-500 animate-pulse' 
+                                : 'bg-gray-400'
+                            }`}></div>
+                            <span className={`text-sm font-semibold ${
+                              deliveryBoyAvailability.availability_status === 'available'
+                                ? 'text-green-700'
+                                : 'text-gray-600'
+                            }`}>
+                              {deliveryBoyAvailability.availability_status === 'available' 
+                                ? 'Available for Deliveries' 
+                                : 'Currently Offline'
+                              }
+                            </span>
+                          </div>
+                          <button
+                            onClick={handleAvailabilityToggle}
+                            disabled={availabilityLoading}
+                            className={`w-full py-2 px-4 rounded-lg font-semibold text-sm transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${
+                              deliveryBoyAvailability.availability_status === 'available'
+                                ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg hover:shadow-xl'
+                                : 'bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl'
+                            }`}
+                          >
+                            {deliveryBoyAvailability.availability_status === 'available' 
+                              ? 'Go Offline' 
+                              : 'Go Online'
+                            }
+                          </button>
+                          {deliveryBoyAvailability.region_name && (
+                            <p className="text-xs text-gray-600 mt-2">
+                              Assigned to: {deliveryBoyAvailability.region_name}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-600">Status unavailable</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

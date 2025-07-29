@@ -395,3 +395,110 @@ export const getRegions = async (req, res) => {
         res.status(500).json({ error: "Failed to fetch regions" });
     }
 };
+
+// Get delivery boy availability status
+export const getDeliveryBoyAvailability = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        // First check if user is a delivery boy
+        const userQuery = `
+            SELECT role_id 
+            FROM "User" 
+            WHERE user_id = $1
+        `;
+        const userResult = await pool.query(userQuery, [userId]);
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        if (userResult.rows[0].role_id !== 'delivery_boy') {
+            return res.status(403).json({ error: "User is not a delivery boy" });
+        }
+
+        // Get delivery boy availability status
+        const deliveryBoyQuery = `
+            SELECT 
+                db.availability_status,
+                db.current_load,
+                db.delivery_region_id,
+                dr.name as region_name
+            FROM "DeliveryBoy" db
+            LEFT JOIN "DeliveryRegion" dr ON db.delivery_region_id = dr.delivery_region_id
+            WHERE db.user_id = $1
+        `;
+
+        const deliveryBoyResult = await pool.query(deliveryBoyQuery, [userId]);
+
+        if (deliveryBoyResult.rows.length === 0) {
+            return res.status(404).json({ error: "Delivery boy record not found" });
+        }
+
+        res.status(200).json({
+            availability_status: deliveryBoyResult.rows[0].availability_status,
+            current_load: deliveryBoyResult.rows[0].current_load,
+            delivery_region_id: deliveryBoyResult.rows[0].delivery_region_id,
+            region_name: deliveryBoyResult.rows[0].region_name
+        });
+
+    } catch (error) {
+        console.error("Error fetching delivery boy availability:", error);
+        res.status(500).json({ error: "Failed to fetch delivery boy availability" });
+    }
+};
+
+// Update delivery boy availability status
+export const updateDeliveryBoyAvailability = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { availability_status } = req.body;
+
+        // Validate availability_status
+        const validStatuses = ['available', 'offline', 'busy', 'on_delivery'];
+        if (!validStatuses.includes(availability_status)) {
+            return res.status(400).json({ 
+                error: "Invalid availability status. Must be one of: " + validStatuses.join(', ')
+            });
+        }
+
+        // First check if user is a delivery boy
+        const userQuery = `
+            SELECT role_id 
+            FROM "User" 
+            WHERE user_id = $1
+        `;
+        const userResult = await pool.query(userQuery, [userId]);
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        if (userResult.rows[0].role_id !== 'delivery_boy') {
+            return res.status(403).json({ error: "User is not a delivery boy" });
+        }
+
+        // Update delivery boy availability status
+        const updateQuery = `
+            UPDATE "DeliveryBoy" 
+            SET availability_status = $1
+            WHERE user_id = $2
+            RETURNING availability_status
+        `;
+
+        const updateResult = await pool.query(updateQuery, [availability_status, userId]);
+
+        if (updateResult.rows.length === 0) {
+            return res.status(404).json({ error: "Delivery boy record not found" });
+        }
+
+        res.status(200).json({
+            message: "Availability status updated successfully",
+            availability_status: updateResult.rows[0].availability_status
+        });
+
+    } catch (error) {
+        console.error("Error updating delivery boy availability:", error);
+        res.status(500).json({ error: "Failed to update delivery boy availability" });
+    }
+};

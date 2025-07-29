@@ -7,6 +7,7 @@ import {
   AlertCircle,
   RefreshCw,
 } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 const PaymentStep = ({
   paymentMethod,
@@ -20,14 +21,14 @@ const PaymentStep = ({
   paymentProcessing,
   paymentError,
 }) => {
+  const { user, isLoggedIn } = useAuth();
   const [walletBalance, setWalletBalance] = useState(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
 
   // Function to fetch wallet balance
   const fetchWalletBalance = async () => {
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (!user) {
-      console.log("No user found in localStorage");
+    if (!user || !isLoggedIn) {
+      console.log("No user found or not logged in");
       return;
     }
 
@@ -35,15 +36,15 @@ const PaymentStep = ({
     try {
       console.log("Fetching wallet balance for user:", user.user_id);
       const response = await fetch(
-        `http://localhost:3000/api/wallet/${user.user_id}`,
+        `http://localhost:3000/api/wallet/balance/${user.user_id}`,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
           },
         }
       );
       const data = await response.json();
-
+      console.log("User id:", user.user_id);
       console.log("Wallet API response:", data);
 
       if (data.success && data.wallet) {
@@ -62,10 +63,12 @@ const PaymentStep = ({
     }
   };
 
-  // Fetch wallet balance when component mounts
+  // Fetch wallet balance when component mounts or user changes
   useEffect(() => {
-    fetchWalletBalance();
-  }, []);
+    if (user && isLoggedIn) {
+      fetchWalletBalance();
+    }
+  }, [user, isLoggedIn]);
 
   const handlePaymentClick = async () => {
     if (paymentMethod === "cod") {
