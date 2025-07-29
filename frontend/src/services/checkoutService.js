@@ -63,18 +63,8 @@ export const checkoutService = {
   },
 
   // Coupon operations
-  getAvailableCoupons: async (userId) => {
-    const response = await fetch(`${API_BASE}/api/coupons/available/${userId}`, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-      },
-    });
-    return response.json();
-  },
-
-  validateCoupon: async (code, userId, orderAmount) => {
-    const response = await fetch(`${API_BASE}/api/coupons/validate`, {
+  validateCoupon: async (code, orderTotal) => {
+    const response = await fetch(`${API_BASE}/api/coupon/validate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -82,24 +72,7 @@ export const checkoutService = {
       },
       body: JSON.stringify({
         code,
-        userId,
-        orderAmount,
-      }),
-    });
-    return response.json();
-  },
-
-  applyCouponToOrder: async (orderId, couponId, discountAmount) => {
-    const response = await fetch(`${API_BASE}/api/coupons/apply-to-order`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-      },
-      body: JSON.stringify({
-        orderId,
-        couponId,
-        discountAmount,
+        orderTotal,
       }),
     });
     return response.json();

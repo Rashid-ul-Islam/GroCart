@@ -365,7 +365,7 @@ export const createOrder = async (req, res) => {
     // Create initial order status based on payment method
     if (payment_method === 'bkash' || payment_method === 'wallet') {
       // For bKash and wallet, payment is already completed, so start with confirmed status
-      await updateOrderStatus(order_id, 'payment_received', user_id,
+      await updateOrderStatus(order_id, 'payment_received', user_id, 
         payment_method === 'wallet' ? 'Wallet payment completed' : 'bKash payment completed', client);
       await updateOrderStatus(order_id, 'confirmed', user_id, 'Order confirmed after payment', client);
     } else {
@@ -411,10 +411,10 @@ export const createOrder = async (req, res) => {
     await client.query('COMMIT');
 
     // Success response
-    const responseMessage = payment_method === 'bkash'
+    const responseMessage = payment_method === 'bkash' 
       ? 'Order created with confirmed payment and delivery boy assigned successfully'
       : 'Order created and delivery boy assigned successfully';
-
+    
     res.status(201).json({
       success: true,
       message: responseMessage,
