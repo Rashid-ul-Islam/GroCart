@@ -74,6 +74,51 @@ export default function AdminPanel() {
     dateRange,
   ]);
 
+  // Check for return parameters and restore states
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    const returnPage = urlParams.get('returnPage');
+    const category = urlParams.get('category');
+    const minPrice = urlParams.get('minPrice');
+    const maxPrice = urlParams.get('maxPrice');
+    const origin = urlParams.get('origin');
+    const refundable = urlParams.get('refundable');
+    const available = urlParams.get('available');
+    const startDate = urlParams.get('startDate');
+    const endDate = urlParams.get('endDate');
+
+    if (returnPage) {
+      setCurrentPage(parseInt(returnPage, 10));
+    }
+    if (category) {
+      setSelectedCategory(category);
+    }
+    if (minPrice || maxPrice) {
+      setPriceRange({ min: minPrice || "", max: maxPrice || "" });
+    }
+    if (origin) {
+      setSelectedOrigin(origin);
+    }
+    if (refundable) {
+      setIsRefundableFilter(refundable);
+    }
+    if (available) {
+      setIsAvailableFilter(available);
+    }
+    if (startDate || endDate) {
+      setDateRange({ start: startDate || "", end: endDate || "" });
+    }
+    if (category || minPrice || maxPrice || origin || refundable || available || startDate || endDate) {
+      setShowFilters(true);
+    }
+
+    // Clear URL parameters
+    if (urlParams.toString()) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
   const fetchDashboardStats = async () => {
     setStatsLoading(true);
     setStatsError(null);
@@ -264,7 +309,18 @@ export default function AdminPanel() {
   };
 
   const handleEditProduct = (productId) => {
-    navigate(`/admin/product-edit/${productId}`);
+    const params = new URLSearchParams({
+      returnPage: currentPage,
+      ...(selectedCategory && { category: selectedCategory }),
+      ...(priceRange.min && { minPrice: priceRange.min }),
+      ...(priceRange.max && { maxPrice: priceRange.max }),
+      ...(selectedOrigin && { origin: selectedOrigin }),
+      ...(isRefundableFilter !== "" && { refundable: isRefundableFilter }),
+      ...(isAvailableFilter !== "" && { available: isAvailableFilter }),
+      ...(dateRange.start && { startDate: dateRange.start }),
+      ...(dateRange.end && { endDate: dateRange.end }),
+    });
+    navigate(`/admin/product-edit/${productId}?${params}`);
   };
 
   const handleDeleteProduct = async (productId) => {
@@ -873,25 +929,59 @@ export default function AdminPanel() {
                 <Button
                   onClick={goToPreviousPage}
                   disabled={currentPage === 1}
-                  className={`px-4 py-2 rounded-lg shadow transition duration-200 flex items-center gap-2 ${
+                  className={`px-3 py-2 rounded-lg shadow transition duration-200 flex items-center gap-2 ${
                     currentPage === 1
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                       : "bg-purple-600 hover:bg-purple-700 text-white transform hover:scale-105"
                   }`}
                 >
                   <ChevronLeft className="w-4 h-4" />
-                  Previous
                 </Button>
+                
+                {/* Page Numbers */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => {
+                  // Show first page, last page, current page, and pages around current page
+                  const showPage = pageNumber === 1 || 
+                                  pageNumber === totalPages || 
+                                  pageNumber === currentPage ||
+                                  pageNumber === currentPage - 1 ||
+                                  pageNumber === currentPage + 1;
+                  
+                  if (!showPage) {
+                    // Show dots for gaps
+                    if (pageNumber === currentPage - 2 && currentPage > 3) {
+                      return <span key={pageNumber} className="px-2 py-2 text-gray-500">...</span>;
+                    }
+                    if (pageNumber === currentPage + 2 && currentPage < totalPages - 2) {
+                      return <span key={pageNumber} className="px-2 py-2 text-gray-500">...</span>;
+                    }
+                    return null;
+                  }
+                  
+                  return (
+                    <Button
+                      key={pageNumber}
+                      onClick={() => setCurrentPage(pageNumber)}
+                      className={`px-3 py-2 rounded-lg shadow transition duration-200 min-w-[40px] ${
+                        currentPage === pageNumber
+                          ? "bg-purple-600 text-white font-bold hover:bg-purple-700 transform hover:scale-105"
+                          : "bg-purple-600 text-white hover:bg-purple-700 transform hover:scale-105"
+                      }`}
+                    >
+                      {pageNumber}
+                    </Button>
+                  );
+                })}
+                
                 <Button
                   onClick={goToNextPage}
                   disabled={currentPage === totalPages}
-                  className={`px-4 py-2 rounded-lg shadow transition duration-200 flex items-center gap-2 ${
+                  className={`px-3 py-2 rounded-lg shadow transition duration-200 flex items-center gap-2 ${
                     currentPage === totalPages
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      ? "bg-gray-300 text-black cursor-not-allowed"
                       : "bg-purple-600 hover:bg-purple-700 text-white transform hover:scale-105"
                   }`}
                 >
-                  Next
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
