@@ -556,9 +556,11 @@ export const getUserOrders = async (req, res) => {
             oi.product_id,
             oi.quantity,
             oi.price,
-            p.name as product_name
+            p.name as product_name,
+            pi.image_url
           FROM "OrderItem" oi
           JOIN "Product" p ON oi.product_id = p.product_id
+          LEFT JOIN "ProductImage" pi ON p.product_id = pi.product_id AND pi.is_primary = true
           WHERE oi.order_id = $1
         `;
         const itemsResult = await pool.query(itemsQuery, [order.order_id]);
@@ -566,7 +568,10 @@ export const getUserOrders = async (req, res) => {
         return {
           ...order,
           order_id: `ORD-${String(order.order_id).padStart(6, '0')}`,
-          items: itemsResult.rows,
+          items: itemsResult.rows.map(item => ({
+            ...item,
+            image_url: item.image_url || '/api/placeholder/80/80'
+          })),
           estimated_arrival: order.estimated_arrival,
           actual_arrival: order.actual_arrival,
           return_window_expired: order.return_window_expired,
@@ -1135,9 +1140,11 @@ export const getActiveOrders = async (req, res) => {
             oi.product_id,
             oi.quantity,
             oi.price,
-            p.name as product_name
+            p.name as product_name,
+            pi.image_url
           FROM "OrderItem" oi
           JOIN "Product" p ON oi.product_id = p.product_id
+          LEFT JOIN "ProductImage" pi ON p.product_id = pi.product_id AND pi.is_primary = true
           WHERE oi.order_id = $1
         `;
         const itemsResult = await pool.query(itemsQuery, [order.order_id]);
@@ -1145,7 +1152,10 @@ export const getActiveOrders = async (req, res) => {
         return {
           ...order,
           order_id: `ORD-${String(order.order_id).padStart(6, '0')}`,
-          items: itemsResult.rows,
+          items: itemsResult.rows.map(item => ({
+            ...item,
+            image_url: item.image_url || '/api/placeholder/80/80'
+          })),
           estimated_arrival: order.estimated_arrival,
           actual_arrival: order.actual_arrival,
           reorder_data: {
@@ -1241,9 +1251,11 @@ export const getCompletedOrders = async (req, res) => {
             oi.quantity,
             oi.price,
             p.name as product_name,
-            p.is_refundable
+            p.is_refundable,
+            pi.image_url
           FROM "OrderItem" oi
           JOIN "Product" p ON oi.product_id = p.product_id
+          LEFT JOIN "ProductImage" pi ON p.product_id = pi.product_id AND pi.is_primary = true
           WHERE oi.order_id = $1
         `;
         const itemsResult = await pool.query(itemsQuery, [order.order_id]);
@@ -1251,7 +1263,10 @@ export const getCompletedOrders = async (req, res) => {
         return {
           ...order,
           order_id: `ORD-${String(order.order_id).padStart(6, '0')}`,
-          items: itemsResult.rows,
+          items: itemsResult.rows.map(item => ({
+            ...item,
+            image_url: item.image_url || '/api/placeholder/80/80'
+          })),
           estimated_arrival: order.estimated_arrival,
           actual_arrival: order.actual_arrival,
           return_window_expired: order.return_window_expired,

@@ -954,7 +954,7 @@ const CancelOrderModal = React.memo(
                 onChange={handleReasonChange}
                 onKeyDown={handleKeyDown}
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 bg-white"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 bg-white text-black"
                 placeholder="Please tell us why you want to cancel this order..."
                 required
                 autoFocus
@@ -1053,11 +1053,11 @@ function OrderDetailsModal({ order, onClose }) {
                   >
                     <div className="flex-shrink-0">
                       <img
-                        src={item?.image_url || item?.image || "https://via.placeholder.com/60x60"}
+                        src={item?.image_url || item?.image || "https://via.placeholder.com/80x80"}
                         alt={item?.product_name || "Product"}
                         className="w-12 h-12 object-cover rounded-lg border border-gray-200"
                         onError={(e) => {
-                          e.target.src = "https://via.placeholder.com/60x60";
+                          e.target.src = "https://via.placeholder.com/80x80";
                         }}
                       />
                     </div>

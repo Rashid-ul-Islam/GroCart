@@ -138,9 +138,9 @@ const InventoryManagement = () => {
   const fetchCategories = async () => {
     try {
       const hierarchyData = await apiCall("/categories/getCategoriesHierarchy");
-      const leafData = await apiCall("/products/getLeafCategories");
+      const categoriesData = await apiCall("/adminDashboard/categories");
       setCategoryHierarchy(hierarchyData.categories || []);
-      setLeafCategories(leafData.categories || []);
+      setLeafCategories(categoriesData.categories || []);
     } catch (error) {
       setError("Failed to fetch categories");
     }

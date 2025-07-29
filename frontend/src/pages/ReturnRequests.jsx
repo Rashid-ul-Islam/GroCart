@@ -224,7 +224,7 @@ const ReturnRequests = () => {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate("/admin")}
-                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+                className="p-2 rounded-lg bg-indigo-800 hover:bg-indigo-500 transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
@@ -252,13 +252,13 @@ const ReturnRequests = () => {
           <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
             <div className="flex items-center gap-4 flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-black w-5 h-5" />
                 <input
                   type="text"
                   placeholder="Search by product, order ID, or customer..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-80 bg-white"
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-80 bg-white text-black"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -266,7 +266,7 @@ const ReturnRequests = () => {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-black"
                 >
                   <option value="all">All Status</option>
                   <option value="Requested">Pending</option>
@@ -479,7 +479,7 @@ const ReturnRequests = () => {
                       max={selectedRequest.price}
                       value={refundAmount}
                       onChange={(e) => setRefundAmount(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-black"
                       placeholder="Enter refund amount"
                     />
                     <p className="text-xs text-gray-500 mt-1">
@@ -497,7 +497,7 @@ const ReturnRequests = () => {
                       value={rejectReason}
                       onChange={(e) => setRejectReason(e.target.value)}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white text-black"
                       placeholder="Please provide a reason for rejecting this return request..."
                     />
                   </div>

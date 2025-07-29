@@ -517,7 +517,7 @@ export const validateCoupon = async (req, res) => {
         }
 
         // Check minimum purchase requirement
-        if (coupon.min_purchase && orderAmount < coupon.min_purchase) {
+        if (coupon.min_purchase && parseFloat(orderAmount) < parseFloat(coupon.min_purchase)) {
             return res.status(400).json({
                 message: `Minimum purchase of $${coupon.min_purchase} required for this coupon`,
                 valid: false
@@ -550,19 +550,24 @@ export const validateCoupon = async (req, res) => {
         // Calculate discount amount
         let discountAmount;
         if (coupon.discount_type === 'percentage') {
-            discountAmount = (orderAmount * coupon.discount_value) / 100;
+            discountAmount = (parseFloat(orderAmount) * parseFloat(coupon.discount_value)) / 100;
+        } else if (coupon.discount_type === 'fixed') {
+            discountAmount = parseFloat(coupon.discount_value);
         } else {
-            discountAmount = coupon.discount_value;
+            return res.status(400).json({
+                message: 'Invalid discount type',
+                valid: false
+            });
         }
 
         // Apply maximum discount limit if set
-        if (coupon.max_discount && discountAmount > coupon.max_discount) {
-            discountAmount = coupon.max_discount;
+        if (coupon.max_discount && discountAmount > parseFloat(coupon.max_discount)) {
+            discountAmount = parseFloat(coupon.max_discount);
         }
 
         // Ensure discount doesn't exceed order amount
-        if (discountAmount > orderAmount) {
-            discountAmount = orderAmount;
+        if (discountAmount > parseFloat(orderAmount)) {
+            discountAmount = parseFloat(orderAmount);
         }
 
         res.json({

@@ -1,4 +1,3 @@
-// src/components/AddressManagement.jsx
 import React, { useState, useEffect } from "react";
 import {
   Plus,
@@ -13,16 +12,16 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { Button } from "../components/ui/button.jsx";
-import {
-  useNotification,
-  NotificationContainer,
-} from "../components/ui/notifications.jsx";
+import Notification from "../components/ui/Notification.jsx";
+import { useNotification } from "../hooks/useNotification.js";
 
 const AddressManagement = () => {
   // State management
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(false);
-  const { notifications, success, error, warning, info, removeNotification } =
+  
+  // Use the notification hook
+  const { notification, showSuccess, showError, hideNotification } =
     useNotification();
   // Data states
   const [divisions, setDivisions] = useState([]);
@@ -320,13 +319,9 @@ const AddressManagement = () => {
             !creationIntent.createCity &&
             !creationIntent.createRegion
           ) {
-            success(
-              `Division "${newAddress.newDivisionName}" created successfully!`,
-              {
-                title: "🎉 Success!",
-                duration: 4000,
-                animation: "bounce",
-              }
+            showSuccess(
+              "Success",
+              `Division "${newAddress.newDivisionName}" created successfully!`
             );
             resetForm();
             fetchAllData();
@@ -334,10 +329,7 @@ const AddressManagement = () => {
             return;
           }
         } catch (err) {
-          error("Network error while creating division. Please try again.", {
-            title: "❌ Network Error!",
-            duration: 5000,
-          });
+          showError("Network Error", "Network error while creating division. Please try again.");
           setLoading(false);
           return;
         }
@@ -388,21 +380,17 @@ const AddressManagement = () => {
 
           // If user only wants to create up to district, stop here
           if (!creationIntent.createCity && !creationIntent.createRegion) {
-            success(`${createdItems.join(" and ")} created successfully!`, {
-              title: "🎉 Success!",
-              duration: 4000,
-              animation: "bounce",
-            });
+            showSuccess(
+              "Success",
+              `${createdItems.join(" and ")} created successfully!`
+            );
             resetForm();
             fetchAllData();
             setLoading(false);
             return;
           }
         } catch (err) {
-          error("Network error while creating district. Please try again.", {
-            title: "❌ Network Error!",
-            duration: 5000,
-          });
+          showError("Network Error", "Network error while creating district. Please try again.");
           setLoading(false);
           return;
         }
@@ -453,21 +441,17 @@ const AddressManagement = () => {
 
           // If user only wants to create up to city, stop here
           if (!creationIntent.createRegion) {
-            success(`${createdItems.join(", ")} created successfully!`, {
-              title: "🎉 Success!",
-              duration: 4000,
-              animation: "bounce",
-            });
+            showSuccess(
+              "Success",
+              `${createdItems.join(", ")} created successfully!`
+            );
             resetForm();
             fetchAllData();
             setLoading(false);
             return;
           }
         } catch (err) {
-          error("Network error while creating city. Please try again.", {
-            title: "❌ Network Error!",
-            duration: 5000,
-          });
+          showError("Network Error", "Network error while creating city. Please try again.");
           setLoading(false);
           return;
         }
@@ -508,30 +492,21 @@ const AddressManagement = () => {
           }
 
           createdItems.push("Region");
-          success(`${createdItems.join(", ")} created successfully!`, {
-            title: "🎉 Address Created!",
-            duration: 4000,
-            animation: "bounce",
-            position: "top-right",
-            size: "medium",
-          });
+          showSuccess(
+            "Address Created",
+            `${createdItems.join(", ")} created successfully!`
+          );
           resetForm();
           fetchAllData();
         } catch (err) {
-          error("Network error while creating region. Please try again.", {
-            title: "❌ Network Error!",
-            duration: 5000,
-          });
+          showError("Network Error", "Network error while creating region. Please try again.");
           setLoading(false);
           return;
         }
       }
     } catch (error) {
       console.error("Error creating address:", error);
-      error("An unexpected error occurred. Please try again.", {
-        title: "❌ Error!",
-        duration: 5000,
-      });
+      showError("Error", "An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -611,13 +586,9 @@ const AddressManagement = () => {
         throw new Error(data.error || "Failed to create delivery region");
       }
 
-      success(
-        `Delivery region "${newDeliveryRegion.name}" created successfully!`,
-        {
-          title: "🎉 Success!",
-          duration: 4000,
-          animation: "bounce",
-        }
+      showSuccess(
+        "Success",
+        `Delivery region "${newDeliveryRegion.name}" created successfully!`
       );
 
       // Reset form
@@ -631,10 +602,7 @@ const AddressManagement = () => {
       fetchAllData();
     } catch (error) {
       console.error("Error creating delivery region:", error);
-      error("Failed to create delivery region. Please try again.", {
-        title: "❌ Error!",
-        duration: 5000,
-      });
+      showError("Error", "Failed to create delivery region. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -695,14 +663,11 @@ const AddressManagement = () => {
       );
 
       if (response.ok) {
-        success(
+        showSuccess(
+          "Updated",
           `${
             type.charAt(0).toUpperCase() + type.slice(1)
-          } updated successfully!`,
-          {
-            title: "✅ Updated!",
-            duration: 3000,
-          }
+          } updated successfully!`
         );
         setEditMode({ type: "", id: null, name: "" });
         fetchAllData();
@@ -711,10 +676,7 @@ const AddressManagement = () => {
       }
     } catch (error) {
       console.error(`Error updating ${type}:`, error);
-      error(`Failed to update ${type}. Please try again.`, {
-        title: "❌ Update Failed!",
-        duration: 5000,
-      });
+      showError("Update Failed", `Failed to update ${type}. Please try again.`);
     }
   };
 
@@ -731,20 +693,14 @@ const AddressManagement = () => {
       );
 
       if (response.ok) {
-        success("Delivery region assignment updated successfully!", {
-          title: "🚚 Assignment Updated!",
-          duration: 3000,
-        });
+        showSuccess("Assignment Updated", "Delivery region assignment updated successfully!");
         fetchAllData();
       } else {
         throw new Error("Failed to update delivery region assignment");
       }
     } catch (error) {
       console.error("Error updating delivery region assignment:", error);
-      error("Failed to update delivery region assignment. Please try again.", {
-        title: "❌ Assignment Failed!",
-        duration: 5000,
-      });
+      showError("Assignment Failed", "Failed to update delivery region assignment. Please try again.");
     }
   };
 
@@ -1613,7 +1569,7 @@ const AddressManagement = () => {
                                       name: e.target.value,
                                     }))
                                   }
-                                  className="flex-1 px-3 py-1 border border-gray-300 rounded bg-white"
+                                  className="flex-1 px-3 py-1 border border-gray-300 rounded bg-white text-black"
                                 />
                                 <Button
                                   onClick={() =>
@@ -1687,7 +1643,7 @@ const AddressManagement = () => {
                                       name: e.target.value,
                                     }))
                                   }
-                                  className="flex-1 px-3 py-1 border border-gray-300 rounded bg-white"
+                                  className="flex-1 px-3 py-1 border border-gray-300 rounded bg-white text-black"
                                 />
                                 <Button
                                   onClick={() =>
@@ -1968,10 +1924,13 @@ const AddressManagement = () => {
           )}
         </div>
 
-        {/* Notification Container */}
-        <NotificationContainer
-          notifications={notifications}
-          removeNotification={removeNotification}
+        {/* Notification Component */}
+        <Notification
+          show={notification.show}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+          onClose={hideNotification}
         />
       </div>
     </div>
