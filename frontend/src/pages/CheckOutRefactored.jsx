@@ -1,11 +1,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  ShoppingBag,
-  MapPin,
-  CreditCard,
-  CheckCircle,
-} from "lucide-react";
+import { ShoppingBag, MapPin, CreditCard, CheckCircle } from "lucide-react";
 
 // Import components
 import OrderReviewStep from "../components/checkout/OrderReviewStep";
@@ -33,6 +28,8 @@ const CheckoutPage = () => {
     couponCode,
     setCouponCode,
     appliedCoupon,
+    availableCoupons,
+    isLoadingCoupons,
     showAddressForm,
     setShowAddressForm,
     isProcessingOrder,
@@ -194,6 +191,8 @@ const CheckoutPage = () => {
               appliedCoupon={appliedCoupon}
               removeCoupon={removeCoupon}
               calculateTotal={calculateTotal}
+              availableCoupons={availableCoupons}
+              isLoadingCoupons={isLoadingCoupons}
             />
           </div>
         </div>
