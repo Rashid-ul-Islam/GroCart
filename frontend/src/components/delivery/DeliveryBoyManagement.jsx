@@ -612,10 +612,10 @@ export const DeliveryBoyManagement = () => {
                       value={selectedRegionId.toString()}
                       onValueChange={(value) => setSelectedRegionId(value)}
                     >
-                      <SelectTrigger className="h-12 bg-white text-gray-900 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                      <SelectTrigger className="h-12 bg-white text-black border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         <SelectValue placeholder="Select delivery region" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="text-black bg-white border-2 border-gray-600 rounded-lg">
                         {deliveryRegions.map((region) => (
                           <SelectItem
                             key={region.delivery_region_id}
