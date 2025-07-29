@@ -223,15 +223,21 @@ export const useCheckout = () => {
   // Coupon management
   const applyCoupon = useCallback(async (selectedCouponCode = null) => {
     const codeToValidate = selectedCouponCode || couponCode.trim();
+    console.log('Applying coupon:', codeToValidate);
     if (!codeToValidate) return;
 
     try {
       const user = authUtils.getCurrentUser();
+      console.log('User ID:', user.user_id);
+      console.log('Order subtotal:', orderData.subtotal);
+
       const couponData = await checkoutService.validateCoupon(
         codeToValidate,
         user.user_id,
-        orderData.subtotal
+        orderData.subtotal // Only apply discount to subtotal, not shipping
       );
+
+      console.log('Coupon validation response:', couponData);
 
       if (couponData.valid) {
         setAppliedCoupon(couponData.coupon);
@@ -241,7 +247,9 @@ export const useCheckout = () => {
           ...prev,
           discount: couponData.coupon.discount_amount,
         }));
+        console.log('Coupon applied successfully:', couponData.coupon);
       } else {
+        console.log('Coupon validation failed:', couponData.message);
         alert(couponData.message || 'Invalid coupon');
       }
     } catch (error) {

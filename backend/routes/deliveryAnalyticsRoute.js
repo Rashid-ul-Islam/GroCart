@@ -4,7 +4,8 @@ import {
     getDailyDeliveryTrends,
     getRegionalDistribution,
     getPerformanceTrends,
-    getTopPerformers
+    getTopPerformers,
+    getRegionalScatterData
 } from "../controllers/deliveryAnalyticsController.js";
 
 const router = express.Router();
@@ -15,5 +16,6 @@ router.get("/daily-trends", getDailyDeliveryTrends);
 router.get("/regional-distribution", getRegionalDistribution);
 router.get("/performance-trends", getPerformanceTrends);
 router.get("/top-performers", getTopPerformers);
+router.get('/regional-scatter', getRegionalScatterData);
 
 export default router;

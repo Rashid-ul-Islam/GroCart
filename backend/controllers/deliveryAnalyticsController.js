@@ -53,7 +53,7 @@ export const debugOnTimeDeliveries = async (req, res) => {
         `;
 
         const debugResult = await client.query(debugQuery);
-        
+
         // Also get a few sample records for manual inspection
         const sampleQuery = `
             SELECT 
@@ -224,7 +224,7 @@ export const getDeliveryMetrics = async (req, res) => {
             : metrics.failed_deliveries === 0 ? -100 : 0;
 
         // Fixed on-time rate change calculation
-        const prevOnTimeRate = metrics.prev_deliveries_with_both_times > 0 
+        const prevOnTimeRate = metrics.prev_deliveries_with_both_times > 0
             ? (metrics.prev_on_time_deliveries / metrics.prev_deliveries_with_both_times * 100)
             : 0;
         const onTimeRateChange = prevOnTimeRate > 0
@@ -724,5 +724,117 @@ export const getTopPerformers = async (req, res) => {
         });
     } finally {
         client.release();
+    }
+};
+
+export const getRegionalScatterData = async (req, res) => {
+    try {
+        const { timeRange = '30d', mode = 'revenue' } = req.query;
+
+        // Calculate date range based on timeRange parameter
+        let dateCondition = '';
+        const now = new Date();
+
+        switch (timeRange) {
+            case '7d':
+                const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                dateCondition = `AND d.created_at >= '${sevenDaysAgo.toISOString()}'`;
+                break;
+            case '30d':
+                const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                dateCondition = `AND d.created_at >= '${thirtyDaysAgo.toISOString()}'`;
+                break;
+            case '90d':
+                const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                dateCondition = `AND d.created_at >= '${ninetyDaysAgo.toISOString()}'`;
+                break;
+            case '1y':
+                const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                dateCondition = `AND d.created_at >= '${oneYearAgo.toISOString()}'`;
+                break;
+            default:
+                // Default to 30 days
+                const defaultDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                dateCondition = `AND d.created_at >= '${defaultDaysAgo.toISOString()}'`;
+        }
+
+        let query;
+
+        if (mode === 'revenue') {
+            // Query for deliveries vs revenue by region using proper relationships:
+            // Region -> Address -> Delivery -> Order
+            query = `
+                SELECT 
+                    r.name as region_name,
+                    COUNT(DISTINCT d.delivery_id) as total_deliveries,
+                    COALESCE(SUM(o.product_total), 0) as total_revenue
+                FROM "Region" r
+                LEFT JOIN "Address" a ON a.region_id = r.region_id
+                LEFT JOIN "Delivery" d ON d.address_id = a.address_id 
+                    AND (d.is_aborted = false OR d.is_aborted IS NULL)
+                    AND d.actual_arrival IS NOT NULL
+                    ${dateCondition}
+                LEFT JOIN "Order" o ON o.order_id = d.order_id
+                GROUP BY r.region_id, r.name
+                HAVING COUNT(DISTINCT d.delivery_id) > 0
+                ORDER BY total_deliveries DESC;
+            `;
+        } else {
+            // Query for deliveries vs delivery boys by region using proper relationships
+            query = `
+                SELECT 
+                    r.name as region_name,
+                    COUNT(DISTINCT d.delivery_id) as total_deliveries,
+                    COUNT(DISTINCT CASE 
+                        WHEN dr.delivery_region_id IS NOT NULL 
+                        THEN db.user_id 
+                        ELSE NULL 
+                    END) as delivery_boy_count
+                FROM "Region" r
+                LEFT JOIN "Address" a ON a.region_id = r.region_id
+                LEFT JOIN "Delivery" d ON d.address_id = a.address_id 
+                    AND (d.is_aborted = false OR d.is_aborted IS NULL)
+                    AND d.actual_arrival IS NOT NULL
+                    ${dateCondition}
+                LEFT JOIN "DeliveryRegion" dr ON r.delivery_region_id = dr.delivery_region_id
+                LEFT JOIN "DeliveryBoy" db ON db.delivery_region_id = dr.delivery_region_id
+                GROUP BY r.region_id, r.name
+                HAVING COUNT(DISTINCT d.delivery_id) > 0 OR COUNT(DISTINCT db.user_id) > 0
+                ORDER BY total_deliveries DESC;
+            `;
+        }
+
+        console.log('Executing regional scatter plot query:', query);
+        const result = await pool.query(query);
+
+        // Transform the data for the scatter plot
+        const scatterData = result.rows.map(row => ({
+            region_name: row.region_name,
+            x: parseInt(row.total_deliveries) || 0, // X-axis: total deliveries
+            y: mode === 'revenue'
+                ? parseFloat(row.total_revenue) || 0  // Y-axis: revenue
+                : parseInt(row.delivery_boy_count) || 0, // Y-axis: delivery boys
+            total_deliveries: parseInt(row.total_deliveries) || 0,
+            total_revenue: parseFloat(row.total_revenue) || 0,
+            delivery_boy_count: parseInt(row.delivery_boy_count) || 0
+        }));
+
+        console.log(`Found ${scatterData.length} regions for scatter plot (${mode} mode)`);
+
+        res.status(200).json({
+            success: true,
+            data: scatterData,
+            mode: mode,
+            timeRange: timeRange,
+            message: `Regional scatter data retrieved successfully for ${mode} analysis`
+        });
+
+    } catch (error) {
+        console.error('Error fetching regional scatter data:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch regional scatter data',
+            error: error.message
+        });
     }
 };

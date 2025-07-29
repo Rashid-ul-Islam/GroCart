@@ -638,7 +638,7 @@ export const getAvailableCoupons = async (req, res) => {
 
         // First get user's tier
         const userQuery = `
-            SELECT tier FROM "User" WHERE user_id = $1
+            SELECT tier_id FROM "User" WHERE user_id = $1
         `;
         const userResult = await pool.query(userQuery, [userId]);
 
@@ -648,18 +648,18 @@ export const getAvailableCoupons = async (req, res) => {
             });
         }
 
-        const userTier = userResult.rows[0].tier;
+        const userTier = userResult.rows[0].tier_id;
 
         // Get available coupons for user's tier
         const query = `
             SELECT 
                 coupon_id,
-                coupon_code,
+                code,
                 description,
                 discount_type,
                 discount_value,
-                minimum_order_amount,
-                maximum_discount_amount,
+                min_purchase,
+                max_discount,
                 usage_limit,
                 usage_count,
                 start_date,
@@ -669,8 +669,8 @@ export const getAvailableCoupons = async (req, res) => {
             WHERE is_active = true
                 AND start_date <= NOW()
                 AND end_date > NOW()
-                AND (applied_tiers = $1 OR applied_tiers = 'all')
-                AND usage_count < usage_limit
+                AND (applied_tiers = $1 OR applied_tiers IS NULL)
+                AND (usage_limit IS NULL OR usage_count < usage_limit)
             ORDER BY discount_value DESC
         `;
 
