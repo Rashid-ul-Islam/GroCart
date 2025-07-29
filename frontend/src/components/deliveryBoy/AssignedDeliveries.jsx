@@ -2,6 +2,15 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card.jsx";
 import { Button } from "../ui/button.jsx";
 import { Badge } from "../ui/badge.jsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "../ui/dialog.jsx";
+import { Label } from "../ui/label.jsx";
 import useNotification from "../../hooks/useNotification";
 import Notification from "../ui/Notification";
 import {
@@ -20,6 +29,8 @@ import {
   ArrowDown,
   CreditCard,
   MapPin,
+  X,
+  XCircle,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { WarehouseInventory } from "./WarehouseInventory.jsx";
@@ -40,6 +51,8 @@ const getStatusColor = (status) => {
       return "bg-gradient-to-r from-green-600 to-green-700 text-white";
     case "cancelled":
       return "bg-gradient-to-r from-red-500 to-red-600 text-white";
+    case "failed":
+      return "bg-gradient-to-r from-red-600 to-red-700 text-white";
     default:
       return "bg-gradient-to-r from-gray-500 to-gray-600 text-white";
   }
@@ -59,6 +72,8 @@ const getStatusDisplay = (status) => {
       return "Payment Received";
     case "cancelled":
       return "Cancelled";
+    case "failed":
+      return "Failed";
     default:
       return status;
   }
@@ -263,6 +278,8 @@ export const AssignedDeliveries = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
+  const [showAbortModal, setShowAbortModal] = useState(false);
+  const [abortReason, setAbortReason] = useState("");
 
   // Fetch assigned deliveries from API
   const fetchDeliveries = async (isRefresh = false) => {
@@ -296,11 +313,11 @@ export const AssignedDeliveries = () => {
       console.log("Deliveries API response:", data);
 
       if (data.success) {
-        // Filter out cancelled deliveries from the dashboard
+        // Filter out cancelled and failed deliveries from the dashboard
         const activeDeliveries = (data.data || []).filter((delivery) => {
           const status =
             delivery.currentStatus || delivery.status || "assigned";
-          return status !== "cancelled";
+          return status !== "cancelled" && status !== "failed";
         });
         setDeliveries(activeDeliveries);
       } else {
@@ -474,6 +491,73 @@ export const AssignedDeliveries = () => {
       console.error("Error submitting customer rating:", error);
       showError("Error", error.message);
       throw error;
+    } finally {
+      setProcessingDelivery(null);
+    }
+  };
+
+  // Handle abort delivery
+  const handleAbortDelivery = async (delivery) => {
+    if (!delivery.delivery_id) {
+      showError("Invalid Delivery", "Invalid delivery ID provided.");
+      return;
+    }
+
+    setSelectedDelivery(delivery);
+    setShowAbortModal(true);
+  };
+
+  // Handle abort confirmation
+  const handleAbortConfirm = async () => {
+    if (!selectedDelivery?.delivery_id) {
+      showError("Invalid Delivery", "Invalid delivery ID provided.");
+      return;
+    }
+
+    setProcessingDelivery(selectedDelivery.id || selectedDelivery.delivery_id);
+
+    try {
+      console.log("Aborting delivery:", selectedDelivery.delivery_id);
+
+      const response = await fetch(
+        `http://localhost:3000/api/delivery/abortDelivery/${selectedDelivery.delivery_id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            delivery_boy_id: user.user_id,
+            reason: abortReason || "Delivery aborted by delivery boy",
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Abort delivery response:", data);
+
+      if (data.success) {
+        await fetchDeliveries(true);
+        setShowAbortModal(false);
+        setSelectedDelivery(null);
+        setAbortReason("");
+
+        const customerName =
+          selectedDelivery?.first_name && selectedDelivery?.last_name
+            ? `${selectedDelivery.first_name} ${selectedDelivery.last_name}`
+            : "Customer";
+        showSuccess("Delivery Aborted", `Delivery for ${customerName} has been marked as failed.`);
+      } else {
+        throw new Error(data.message || "Failed to abort delivery");
+      }
+    } catch (error) {
+      console.error("Error aborting delivery:", error);
+      showError("Network Error", error.message || "Network error. Please try again.");
     } finally {
       setProcessingDelivery(null);
     }
@@ -754,6 +838,34 @@ export const AssignedDeliveries = () => {
                 </p>
               </div>
 
+              {/* Abort Delivery Button - Only show for active deliveries */}
+              {(delivery.currentStatus === "assigned" || 
+                delivery.currentStatus === "left_warehouse" || 
+                delivery.currentStatus === "in_transit") && (
+                <div className="bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-500 rounded-xl p-4 mb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-red-800">
+                      <XCircle className="h-5 w-5" />
+                      <span className="font-medium">
+                        Unable to complete this delivery?
+                      </span>
+                    </div>
+                    <Button
+                      onClick={() => handleAbortDelivery(delivery)}
+                      disabled={processingDelivery === (delivery.id || delivery.delivery_id)}
+                      className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-4 py-2 rounded-lg shadow-md transform hover:scale-105 transition duration-300 font-bold flex items-center gap-2"
+                    >
+                      {processingDelivery === (delivery.id || delivery.delivery_id) ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <XCircle className="h-4 w-4" />
+                      )}
+                      Abort Delivery
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Status message for delivery completed */}
               {delivery.currentStatus === "delivery_completed" && (
                 <div className="bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-500 rounded-xl p-4 mb-4">
@@ -782,6 +894,77 @@ export const AssignedDeliveries = () => {
         onSubmit={handleRatingSubmit}
       />
       
+      {/* Abort Delivery Modal */}
+      <Dialog open={showAbortModal} onOpenChange={setShowAbortModal}>
+        <DialogContent className="max-w-md bg-white rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-black flex items-center gap-2">
+              <XCircle className="h-6 w-6 text-red-600" />
+              Abort Delivery
+            </DialogTitle>
+            <DialogDescription className="text-black">
+              Are you sure you want to abort this delivery? This will mark the delivery as failed.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {selectedDelivery && (
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-sm text-black">
+                  <strong>Order ID:</strong> #{selectedDelivery.id || selectedDelivery.order_id}
+                </p>
+                <p className="text-sm text-black">
+                  <strong>Customer:</strong> {selectedDelivery.customerName || `${selectedDelivery.first_name} ${selectedDelivery.last_name}`}
+                </p>
+                <p className="text-sm text-black">
+                  <strong>Address:</strong> {selectedDelivery.address}
+                </p>
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor="abort-reason" className="text-sm font-medium text-black">
+                Reason for aborting (Optional)
+              </Label>
+              <input
+                type="text"
+                id="abort-reason"
+                placeholder="Please provide a reason for aborting this delivery..."
+                value={abortReason}
+                onChange={(e) => setAbortReason(e.target.value)}
+                className="mt-1 flex w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-black placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAbortModal(false);
+                setSelectedDelivery(null);
+                setAbortReason("");
+              }}
+              disabled={processingDelivery}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAbortConfirm}
+              disabled={processingDelivery}
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+            >
+              {processingDelivery ? (
+                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <XCircle className="h-4 w-4 mr-2" />
+              )}
+              Abort Delivery
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Notification Component */}
       <Notification
         show={notification.show}

@@ -20,10 +20,11 @@ import {
   TrendingDown,
   Loader2,
 } from "lucide-react";
+import { MalfunctionedOrders } from "./MalfunctionedOrders.jsx";
 
 const API_BASE_URL = "http://localhost:3000/api";
 
-export const DeliveryOverview = ({ searchTerm, filterRegion }) => {
+export const DeliveryOverview = () => {
   const [stats, setStats] = useState({
     totalDeliveries: 0,
     activeDeliveries: 0,
@@ -59,12 +60,10 @@ export const DeliveryOverview = ({ searchTerm, filterRegion }) => {
     }
   };
 
-  // Fetch recent orders with filters
+  // Fetch recent orders
   const fetchRecentOrders = async () => {
     try {
       const params = new URLSearchParams();
-      if (searchTerm) params.append("searchTerm", searchTerm);
-      if (filterRegion) params.append("filterRegion", filterRegion);
       params.append("limit", "10");
 
       const response = await fetch(
@@ -99,13 +98,6 @@ export const DeliveryOverview = ({ searchTerm, filterRegion }) => {
 
     fetchData();
   }, []);
-
-  // Refetch orders when search term or filter region changes
-  useEffect(() => {
-    if (!loading) {
-      fetchRecentOrders();
-    }
-  }, [searchTerm, filterRegion]);
 
   // Helper function to format percentage change
   const formatPercentageChange = (change) => {
@@ -362,6 +354,9 @@ export const DeliveryOverview = ({ searchTerm, filterRegion }) => {
             )}
           </div>
         </div>
+
+        {/* Malfunctioned Orders Section */}
+        <MalfunctionedOrders />
       </div>
     </div>
   );

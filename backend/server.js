@@ -40,6 +40,7 @@ import couponRoute from "./routes/couponRoute.js";
 import statsRoute from "./routes/statsRoute.js";
 import notificationRoute from "./routes/notificationRoute.js";
 import deliveryPerformanceRoute from "./routes/deliveryPerformanceRoute.js";
+import malfunctionedDeliveryRoute from "./routes/malfunctionedDeliveryRoute.js";
 
 const app = express();
 const server = createServer(app);
@@ -101,6 +102,7 @@ app.use("/api/coupons", couponRoute);
 app.use("/api/stats", statsRoute);
 app.use("/api/notifications", notificationRoute);
 app.use("/api/delivery-performance", deliveryPerformanceRoute);
+app.use("/api/malfunctioned-deliveries", malfunctionedDeliveryRoute);
 
 server.listen(port, () => {
   console.log(`Server running on ${port}`);

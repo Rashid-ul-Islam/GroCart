@@ -27,7 +27,6 @@ import {
 import {
   MapPin,
   Clock,
-  Phone,
   Eye,
   Navigation,
   CheckCircle,
@@ -71,7 +70,7 @@ const deliveryApi = {
   },
 };
 
-export const ActiveDeliveries = ({ searchTerm, filterRegion }) => {
+export const ActiveDeliveries = () => {
   const [deliveries, setDeliveries] = useState([]);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -204,17 +203,6 @@ export const ActiveDeliveries = ({ searchTerm, filterRegion }) => {
     }
   };
 
-  const filteredDeliveries = deliveries.filter((delivery) => {
-    const matchesSearch =
-      delivery.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      delivery.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      delivery.deliveryBoy.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRegion =
-      filterRegion === "all" ||
-      delivery.region.toLowerCase() === filterRegion.toLowerCase();
-    return matchesSearch && matchesRegion;
-  });
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400 flex items-center justify-center">
@@ -323,7 +311,7 @@ export const ActiveDeliveries = ({ searchTerm, filterRegion }) => {
           </div>
           
           <div className="p-6">
-            {filteredDeliveries.length === 0 ? (
+            {deliveries.length === 0 ? (
               <div className="text-center py-12">
                 <Truck className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500 text-lg">No active deliveries found.</p>
@@ -344,7 +332,7 @@ export const ActiveDeliveries = ({ searchTerm, filterRegion }) => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredDeliveries.map((delivery) => (
+                    {deliveries.map((delivery) => (
                       <TableRow key={delivery.deliveryId} className="hover:bg-gray-50 transition duration-200">
                         <TableCell className="font-medium text-gray-800">
                           {delivery.orderId}
@@ -397,7 +385,7 @@ export const ActiveDeliveries = ({ searchTerm, filterRegion }) => {
                                   <Eye className="h-4 w-4" />
                                 </Button>
                               </DialogTrigger>
-                              <DialogContent className="max-w-2xl bg-white rounded-2xl">
+                              <DialogContent className="max-w-2xl bg-white rounded-2xl [&>button]:hidden">
                                 <DialogHeader>
                                   <DialogTitle className="text-2xl font-bold text-gray-800">
                                     Delivery Details - {delivery.orderId}
@@ -410,71 +398,35 @@ export const ActiveDeliveries = ({ searchTerm, filterRegion }) => {
                                   <div className="space-y-6">
                                     <div className="grid grid-cols-2 gap-6">
                                       <div className="bg-gray-50 rounded-lg p-4">
-                                        <h4 className="font-bold text-gray-800 mb-3">
+                                        <h4 className="font-bold text-black mb-3">
                                           Customer Information
                                         </h4>
-                                        <p className="mb-2">
+                                        <p className="mb-2 text-black">
                                           <strong>Name:</strong> {selectedDelivery.customerName}
                                         </p>
-                                        <p className="mb-2">
+                                        <p className="mb-2 text-black">
                                           <strong>Phone:</strong> {selectedDelivery.customerPhone}
                                         </p>
-                                        <p>
+                                        <p className="text-black">
                                           <strong>Address:</strong> {selectedDelivery.address}
                                         </p>
                                       </div>
                                       <div className="bg-gray-50 rounded-lg p-4">
-                                        <h4 className="font-bold text-gray-800 mb-3">
+                                        <h4 className="font-bold text-black mb-3">
                                           Delivery Information
                                         </h4>
-                                        <p className="mb-2">
+                                        <p className="mb-2 text-black">
                                           <strong>Delivery Boy:</strong> {selectedDelivery.deliveryBoy}
                                         </p>
-                                        <p className="mb-2">
+                                        <p className="mb-2 text-black">
                                           <strong>Phone:</strong> {selectedDelivery.deliveryBoyPhone}
                                         </p>
-                                        <p>
-                                          <strong>Distance:</strong> {selectedDelivery.distance}
-                                        </p>
                                       </div>
-                                    </div>
-                                    <div className="flex space-x-4">
-                                      <Button
-                                        onClick={() =>
-                                          handleStatusUpdate(selectedDelivery.deliveryId, "delivered")
-                                        }
-                                        className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300"
-                                        disabled={updatingStatus === selectedDelivery.deliveryId}
-                                      >
-                                        {updatingStatus === selectedDelivery.deliveryId ? (
-                                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        ) : (
-                                          <CheckCircle className="mr-2 h-4 w-4" />
-                                        )}
-                                        Mark Delivered
-                                      </Button>
-                                      <Button
-                                        onClick={() =>
-                                          handleStatusUpdate(selectedDelivery.deliveryId, "failed")
-                                        }
-                                        className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white py-3 rounded-lg shadow-lg transform hover:scale-105 transition duration-300"
-                                        disabled={updatingStatus === selectedDelivery.deliveryId}
-                                      >
-                                        {updatingStatus === selectedDelivery.deliveryId ? (
-                                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        ) : (
-                                          <XCircle className="mr-2 h-4 w-4" />
-                                        )}
-                                        Mark Failed
-                                      </Button>
                                     </div>
                                   </div>
                                 )}
                               </DialogContent>
                             </Dialog>
-                            <Button className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-3 py-2 rounded-lg shadow-md transform hover:scale-105 transition duration-200">
-                              <Phone className="h-4 w-4" />
-                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>

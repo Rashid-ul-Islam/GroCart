@@ -292,7 +292,7 @@ export default function AddProduct() {
         imageUrl,
         categoryId: parseInt(formData.categoryId),
         price: parseFloat(formData.price),
-        quantity: parseInt(formData.quantity),
+        quantity: parseInt(formData.quantity, 10),
         isRefundable: formData.isRefundable === "true",
         warehouseDistribution: showWarehouseDistribution
           ? warehouseDistribution
@@ -442,10 +442,30 @@ export default function AddProduct() {
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    
+    let processedValue = value;
+    
+    // Handle number inputs to preserve exact values
+    if (type === "number" && value !== "") {
+      if (name === "price") {
+        // For price, allow decimals but preserve exact input
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          processedValue = value; // Keep the original string value to preserve user input
+        }
+      } else if (name === "quantity") {
+        // For quantity, ensure it's an integer
+        const numValue = parseInt(value, 10);
+        if (!isNaN(numValue)) {
+          processedValue = numValue.toString(); // Convert back to string to maintain exact value
+        }
+      }
+    }
+    
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: processedValue,
     }));
 
     if (errors[name]) {
@@ -463,10 +483,27 @@ export default function AddProduct() {
       newErrors.productName = "Product name is required";
     if (!formData.categoryId)
       newErrors.categoryId = "Please select a final category";
-    if (!formData.price || parseFloat(formData.price) <= 0)
-      newErrors.price = "Valid price is required";
-    if (!formData.quantity || parseInt(formData.quantity) < 0)
-      newErrors.quantity = "Valid quantity is required";
+    
+    // Enhanced validation for price with type checking
+    if (!formData.price || String(formData.price).trim() === "") {
+      newErrors.price = "Price is required";
+    } else {
+      const priceValue = parseFloat(formData.price);
+      if (isNaN(priceValue) || priceValue <= 0) {
+        newErrors.price = "Valid price is required";
+      }
+    }
+    
+    // Enhanced validation for quantity with type checking
+    if (!formData.quantity || String(formData.quantity).trim() === "") {
+      newErrors.quantity = "Quantity is required";
+    } else {
+      const quantityValue = parseInt(formData.quantity, 10);
+      if (isNaN(quantityValue) || quantityValue < 0 || !Number.isInteger(quantityValue)) {
+        newErrors.quantity = "Valid quantity is required";
+      }
+    }
+    
     if (!formData.unitMeasure)
       newErrors.unitMeasure = "Unit measure is required";
 
@@ -660,6 +697,7 @@ export default function AddProduct() {
                   placeholder="0.00"
                   step="0.01"
                   min="0"
+                  inputMode="decimal"
                   className={`w-full h-12 text-lg rounded-xl border-2 px-4 bg-white text-gray-900 transition-all duration-300 focus:scale-105 focus:outline-none ${
                     errors.price
                       ? "border-red-400 focus:border-red-500 focus:ring-red-200"
@@ -686,7 +724,9 @@ export default function AddProduct() {
                   value={formData.quantity}
                   onChange={handleInputChange}
                   placeholder="0"
+                  step="1"
                   min="0"
+                  inputMode="numeric"
                   className={`w-full h-12 text-lg rounded-xl border-2 px-4 bg-white text-gray-900 transition-all duration-300 focus:scale-105 focus:outline-none ${
                     errors.quantity
                       ? "border-red-400 focus:border-red-500 focus:ring-red-200"

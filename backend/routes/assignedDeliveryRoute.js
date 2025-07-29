@@ -14,7 +14,8 @@ import {
     searchDeliveries,
     getWeeklyPerformance,
     getRealTimePerformanceMetrics,
-    getPerformanceByPeriod
+    getPerformanceByPeriod,
+    abortDelivery
 } from "../controllers/assignedDeliveryController.js";
 
 import {
@@ -53,6 +54,9 @@ router.get("/search/:delivery_boy_id", searchDeliveries);
 router.get("/weeklyPerformance/:delivery_boy_id", getWeeklyPerformance);
 router.get("/realTimePerformance/:delivery_boy_id", getRealTimePerformanceMetrics);
 router.get("/performanceByPeriod/:delivery_boy_id", getPerformanceByPeriod);
+
+// Abort delivery
+router.put("/abortDelivery/:delivery_id", abortDelivery);
 
 // Utility routes
 router.post("/fixDeliveryStatusHistory", fixDeliveryStatusHistory);

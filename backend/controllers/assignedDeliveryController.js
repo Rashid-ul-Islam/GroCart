@@ -1169,4 +1169,140 @@ export const getRealTimePerformanceMetrics = async (req, res) => {
   }
 };
 
+// Abort delivery - marks delivery as failed and updates delivery boy load
+export const abortDelivery = async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+
+    const { delivery_id } = req.params;
+    const { delivery_boy_id, reason } = req.body;
+
+    // Validate required parameters
+    if (!delivery_id || !delivery_boy_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'delivery_id and delivery_boy_id are required'
+      });
+    }
+
+    // Check if delivery exists and belongs to the delivery boy
+    const checkQuery = `
+      SELECT d.*, o.user_id as customer_id, o.order_id
+      FROM "Delivery" d 
+      INNER JOIN "Order" o ON d.order_id = o.order_id
+      WHERE d.delivery_id = $1 AND d.delivery_boy_id = $2 
+      AND d.current_status NOT IN ('delivered', 'failed', 'cancelled')
+    `;
+    const checkResult = await client.query(checkQuery, [delivery_id, delivery_boy_id]);
+
+    if (checkResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: 'Delivery not found, not assigned to you, or already completed/cancelled'
+      });
+    }
+
+    const delivery = checkResult.rows[0];
+
+    // Update delivery status to failed and mark as aborted
+    const updateDeliveryQuery = `
+      UPDATE "Delivery" 
+      SET 
+        current_status = 'failed',
+        is_aborted = true,
+        updated_at = NOW()
+      WHERE delivery_id = $1
+      RETURNING *
+    `;
+    
+    await client.query(updateDeliveryQuery, [delivery_id]);
+
+    // Update delivery boy's current load (decrease by 1)
+    const updateDeliveryBoyQuery = `
+      UPDATE "DeliveryBoy" 
+      SET current_load = GREATEST(0, current_load - 1)
+      WHERE user_id = $1
+    `;
+    
+    await client.query(updateDeliveryBoyQuery, [delivery_boy_id]);
+
+    // Add status history
+    const statusHistoryQuery = `
+      INSERT INTO "StatusHistory" (entity_type, entity_id, status, updated_by, notes)
+      VALUES ('delivery', $1, 'failed', $2, $3)
+    `;
+    
+    await client.query(statusHistoryQuery, [
+      delivery_id, 
+      delivery_boy_id, 
+      reason || 'Delivery aborted by delivery boy'
+    ]);
+
+    // Create notification for customer
+    const notificationQuery = `
+      INSERT INTO "Notification" (
+        user_id, notification_type, title, message, 
+        reference_type, reference_id, priority
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `;
+    
+    await client.query(notificationQuery, [
+      delivery.customer_id,
+      'delivery_update',
+      'Delivery Failed',
+      `Unfortunately, your delivery for order #${delivery.order_id} could not be completed. We will contact you shortly to resolve this issue.`,
+      'delivery',
+      delivery_id,
+      'high'
+    ]);
+
+    // Create notification for admin/management
+    const adminNotificationQuery = `
+      INSERT INTO "Notification" (
+        user_id, notification_type, title, message, 
+        reference_type, reference_id, priority
+      ) VALUES (
+        (SELECT user_id FROM "User" WHERE role_id = 'admin' LIMIT 1),
+        'delivery_update',
+        'Delivery Aborted',
+        $1,
+        'delivery',
+        $2,
+        'high'
+      )
+    `;
+    
+    await client.query(adminNotificationQuery, [
+      `Delivery #${delivery_id} for order #${delivery.order_id} was aborted by delivery boy. Reason: ${reason || 'No reason provided'}`,
+      delivery_id
+    ]);
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: 'Delivery aborted successfully',
+      data: {
+        delivery_id,
+        status: 'failed',
+        aborted: true
+      }
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error aborting delivery:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to abort delivery',
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+};
+
 

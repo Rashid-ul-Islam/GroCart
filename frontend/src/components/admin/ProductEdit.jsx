@@ -239,9 +239,29 @@ export default function ProductEdit() {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
+    
+    let processedValue = value;
+    
+    // Handle number inputs to preserve exact values
+    if (type === "number" && value !== "") {
+      if (name === "price") {
+        // For price, allow decimals but preserve exact input
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          processedValue = value; // Keep the original string value to preserve user input
+        }
+      } else if (name === "quantity") {
+        // For quantity, ensure it's an integer
+        const numValue = parseInt(value, 10);
+        if (!isNaN(numValue)) {
+          processedValue = numValue.toString(); // Convert back to string to maintain exact value
+        }
+      }
+    }
+    
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: type === "checkbox" ? checked : processedValue,
     }));
 
     // Clear validation error when user starts typing
@@ -257,21 +277,21 @@ export default function ProductEdit() {
     const errors = {};
 
     // Only validate if fields are provided (since all are optional)
-    if (
-      formData.price &&
-      (isNaN(formData.price) || parseFloat(formData.price) < 0)
-    ) {
-      errors.price = "Price must be a valid positive number";
+    if (formData.price && String(formData.price).trim() !== "") {
+      const priceValue = parseFloat(formData.price);
+      if (isNaN(priceValue) || priceValue < 0) {
+        errors.price = "Price must be a valid positive number";
+      }
     }
 
-    if (
-      formData.quantity &&
-      (isNaN(formData.quantity) || parseInt(formData.quantity) < 0)
-    ) {
-      errors.quantity = "Quantity must be a valid positive number";
+    if (formData.quantity && String(formData.quantity).trim() !== "") {
+      const quantityValue = parseInt(formData.quantity, 10);
+      if (isNaN(quantityValue) || quantityValue < 0 || !Number.isInteger(quantityValue)) {
+        errors.quantity = "Quantity must be a valid positive whole number";
+      }
     }
 
-    if (formData.name && formData.name.trim().length < 2) {
+    if (formData.name && String(formData.name).trim().length < 2) {
       errors.name = "Product name must be at least 2 characters long";
     }
 
@@ -320,7 +340,23 @@ export default function ProductEdit() {
       Object.keys(formData).forEach((key) => {
         const value = formData[key];
         if (value !== "" && value !== null && value !== undefined) {
-          updateData[key] = value;
+          // Handle number fields specifically to preserve exact values
+          if (key === "price" && String(value).trim() !== "") {
+            const priceValue = parseFloat(value);
+            updateData[key] = priceValue;
+          } else if (key === "quantity" && String(value).trim() !== "") {
+            const quantityValue = parseInt(value, 10);
+            updateData[key] = quantityValue;
+          } else if (key === "category_id" && String(value).trim() !== "") {
+            const categoryValue = parseInt(value, 10);
+            updateData[key] = categoryValue;
+          } else if (typeof value === "string" && value.trim() !== "") {
+            updateData[key] = value.trim();
+          } else if (typeof value === "boolean") {
+            updateData[key] = value;
+          } else if (typeof value === "number") {
+            updateData[key] = value;
+          }
         }
       });
 
@@ -864,6 +900,7 @@ export default function ProductEdit() {
                         step="0.01"
                         min="0"
                         placeholder="0.00"
+                        inputMode="decimal"
                         className={`w-full px-4 py-3 bg-white border-2 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-gray-900 placeholder-gray-500 font-medium ${
                           validationErrors.price
                             ? "border-red-500 bg-red-50"
@@ -887,8 +924,10 @@ export default function ProductEdit() {
                         name="quantity"
                         value={formData.quantity}
                         onChange={handleInputChange}
+                        step="1"
                         min="0"
                         placeholder="0"
+                        inputMode="numeric"
                         className={`w-full px-4 py-3 bg-white border-2 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-gray-900 placeholder-gray-500 font-medium ${
                           validationErrors.quantity
                             ? "border-red-500 bg-red-50"
