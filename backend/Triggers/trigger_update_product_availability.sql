@@ -34,3 +34,9 @@ BEGIN
     END IF;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_update_product_availability
+AFTER INSERT OR UPDATE OR DELETE
+ON "Inventory"
+FOR EACH ROW
+EXECUTE FUNCTION update_product_availability();

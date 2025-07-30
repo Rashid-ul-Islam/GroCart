@@ -1782,14 +1782,6 @@ const AddressManagement = () => {
                                 {result.description}
                               </p>
                             </div>
-                            <Button
-                              onClick={() => {
-                                /* Handle edit */
-                              }}
-                              className="px-3 py-1 bg-blue-600 text-black rounded text-sm"
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </Button>
                           </div>
                         ))}
                       </div>
@@ -1812,7 +1804,7 @@ const AddressManagement = () => {
                               {deliveryRegion.name}
                             </h4>
                             <span className="text-sm text-black">
-                              Warehouse: {deliveryRegion.warehouse_id}
+                              Warehouse: {deliveryRegion.name}
                             </span>
                           </div>
 
