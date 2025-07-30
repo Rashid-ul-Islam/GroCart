@@ -911,9 +911,6 @@ const AddressManagement = () => {
                             <span className="font-medium text-black">
                               {division.name}
                             </span>
-                            <span className="text-sm text-black">
-                              ID: {division.division_id}
-                            </span>
                           </div>
                         ))}
                       </div>
@@ -938,7 +935,7 @@ const AddressManagement = () => {
                               </p>
                             </div>
                             <span className="text-sm text-black">
-                              Warehouse: {region.warehouse_id}
+                              Warehouse: {region.name}
                             </span>
                           </div>
                         ))}
