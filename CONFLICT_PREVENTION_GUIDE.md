@@ -1,7 +1,9 @@
 # 🚨 CONFLICT PREVENTION GUIDE
+
 # ================================
 
 ## 📋 What We Did:
+
 1. Created a separate branch: `fix/vite-charts-compatibility`
 2. Isolated package changes from other changes
 3. Included backup files and recovery script
@@ -10,6 +12,7 @@
 ## 🔄 For Your Team Members:
 
 ### Before Pulling Changes:
+
 ```bash
 # 1. Check current status
 git status
@@ -30,6 +33,7 @@ git checkout main
 ```
 
 ### If Package Conflicts Occur:
+
 ```bash
 # Use our recovery script
 ./frontend/RECOVERY_SCRIPT.bat
@@ -43,6 +47,7 @@ npm install
 ## 🎯 Merge Strategy Options:
 
 ### Option 1: Merge to Main (Recommended after testing)
+
 ```bash
 git checkout main
 git merge fix/vite-charts-compatibility
@@ -50,6 +55,7 @@ git push origin main
 ```
 
 ### Option 2: Keep as Feature Branch (Safest)
+
 ```bash
 # Keep branch separate until everyone tests
 # Each developer can choose which version to use
@@ -58,6 +64,7 @@ git checkout main                           # Use original versions
 ```
 
 ### Option 3: Cherry-pick Only Component Changes
+
 ```bash
 git checkout main
 git cherry-pick b1687ce  # Only the component improvements
@@ -67,22 +74,27 @@ git cherry-pick b1687ce  # Only the component improvements
 ## 🛡️ Conflict Resolution:
 
 ### For package.json conflicts:
+
 1. Keep the working version (either original or fixed)
 2. Don't merge conflicting package.json files
 3. Let each developer choose their preferred setup
 
 ### For component files:
+
 1. These should merge cleanly
 2. If conflicts occur, they're usually minor styling changes
 3. Can be resolved normally through standard git merge
 
 ## 📞 Emergency Recovery:
+
 If anything goes wrong:
+
 1. Run `./frontend/RECOVERY_SCRIPT.bat`
 2. Or restore from backup files
 3. Or checkout main branch and start fresh
 
 ## ✅ Testing Checklist:
+
 - [ ] Charts render properly
 - [ ] No console errors
 - [ ] All components load correctly
@@ -90,5 +102,6 @@ If anything goes wrong:
 - [ ] Development server starts (`npm run dev`)
 
 ## 🎯 Recommendation:
+
 Keep this as a feature branch until submission is complete.
 After successful submission, decide as a team whether to merge to main.
