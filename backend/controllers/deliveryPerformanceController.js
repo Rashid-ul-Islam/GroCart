@@ -144,26 +144,26 @@ export const getRatingDistribution = async (req, res) => {
     const distributionQuery = `
       SELECT 
         CASE 
-          WHEN dr.rating = 5 THEN 'Excellent (5★)'
-          WHEN dr.rating = 4 THEN 'Good (4★)'
-          WHEN dr.rating = 3 THEN 'Average (3★)'
-          WHEN dr.rating <= 2 THEN 'Poor (≤2★)'
-          ELSE 'No Rating'
+          WHEN dp.customer_rating = 5 THEN 'Excellent (5★)'
+          WHEN dp.customer_rating = 4 THEN 'Good (4★)'
+          WHEN dp.customer_rating = 3 THEN 'Average (3★)'
+          WHEN dp.customer_rating <= 2 THEN 'Poor (≤2★)'
+          ELSE 'No customer_rating'
         END as name,
         COUNT(*) as value
       FROM "Delivery" d
-      LEFT JOIN "DeliveryReview" dr ON d.delivery_id = dr.delivery_id
+      LEFT JOIN "DeliveryPerformance" dp ON d.delivery_id = dp.delivery_id
       WHERE d.delivery_boy_id = $1 
         AND d.created_at >= $2 
         AND d.created_at <= $3
         AND d.actual_arrival IS NOT NULL
       GROUP BY 
         CASE 
-          WHEN dr.rating = 5 THEN 'Excellent (5★)'
-          WHEN dr.rating = 4 THEN 'Good (4★)'
-          WHEN dr.rating = 3 THEN 'Average (3★)'
-          WHEN dr.rating <= 2 THEN 'Poor (≤2★)'
-          ELSE 'No Rating'
+          WHEN dp.customer_rating = 5 THEN 'Excellent (5★)'
+          WHEN dp.customer_rating = 4 THEN 'Good (4★)'
+          WHEN dp.customer_rating = 3 THEN 'Average (3★)'
+          WHEN dp.customer_rating <= 2 THEN 'Poor (≤2★)'
+          ELSE 'No customer_rating'
         END
       ORDER BY value DESC;
     `;

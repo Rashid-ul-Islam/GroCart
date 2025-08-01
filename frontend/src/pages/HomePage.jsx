@@ -272,6 +272,7 @@ const HomePage = () => {
       "https://via.placeholder.com/300x200",
     isAvailable: apiProduct.is_available,
     isRefundable: apiProduct.is_refundable,
+    categoryId: apiProduct.category_id,
     // Handle both transformed and raw database fields
     rating: parseFloat(apiProduct.rating || apiProduct.avg_rating) || 4,
     reviews: parseInt(apiProduct.reviews || apiProduct.review_count) || 0,
@@ -298,91 +299,51 @@ const HomePage = () => {
           throw new Error(apiResponse.message || "Failed to fetch products");
         }
 
-        // Handle the response structure
-        let transformedData;
+        // Get raw data and transform products
+        const allProducts = (
+          Array.isArray(apiResponse.data) ? apiResponse.data : []
+        ).map(transformProduct);
 
-        if (
-          apiResponse.data &&
-          typeof apiResponse.data === "object" &&
-          !Array.isArray(apiResponse.data)
-        ) {
-          // If data is already categorized
-          transformedData = {
-            mostPopular: (apiResponse.data.mostPopular || []).map(
-              transformProduct
-            ),
-            freshFromFarm: (apiResponse.data.freshFromFarm || []).map(
-              transformProduct
-            ),
-            trendingNow: (apiResponse.data.trendingNow || []).map(
-              transformProduct
-            ),
-            dairyAndMeatProducts: (
-              apiResponse.data.dairyAndMeatProducts || []
-            ).map(transformProduct),
-            dealsCantMiss: (apiResponse.data.dealsCantMiss || []).map(
-              transformProduct
-            ),
-            beverages: (apiResponse.data.beverages || []).map(transformProduct),
-          };
-        } else {
-          // If data is a flat array, distribute products across categories
-          const allProducts = (
-            Array.isArray(apiResponse.data) ? apiResponse.data : []
-          ).map(transformProduct);
+        // Filter products with category_id 10 or 11 for Fresh From Farm section
+        const freshFromFarmProducts = allProducts.filter(
+          (product) => product.categoryId === 10 || product.categoryId === 11
+        );
 
-          transformedData = {
-            mostPopular: allProducts.slice(0, 20),
-            freshFromFarm: allProducts
-              .filter(
-                (p) =>
-                  p.category && p.category.toLowerCase().includes("vegetable")
-              )
-              .slice(0, 20),
-            trendingNow: allProducts
-              .filter(
-                (p) => p.category && p.category.toLowerCase().includes("fruit")
-              )
-              .slice(0, 20),
-            dairyAndMeatProducts: allProducts
-              .filter(
-                (p) =>
-                  p.category &&
-                  (p.category.toLowerCase().includes("dairy") ||
-                    p.category.toLowerCase().includes("milk") ||
-                    p.category.toLowerCase().includes("cheese"))
-              )
-              .slice(0, 20),
-            dealsCantMiss: allProducts
-              .filter(
-                (p) =>
-                  p.category &&
-                  (p.category.toLowerCase().includes("meat") ||
-                    p.category.toLowerCase().includes("chicken") ||
-                    p.category.toLowerCase().includes("beef") ||
-                    p.category.toLowerCase().includes("fish"))
-              )
-              .slice(0, 20),
-            beverages: allProducts
-              .filter(
-                (p) =>
-                  p.category &&
-                  (p.category.toLowerCase().includes("beverage") ||
-                    p.category.toLowerCase().includes("drink") ||
-                    p.category.toLowerCase().includes("juice"))
-              )
-              .slice(0, 20),
-          };
+        // Simply distribute all products across sections without any filtering (except Fresh From Farm)
+        const productsPerSection = Math.ceil(allProducts.length / 6) || 20;
 
-          // Fill empty categories with random products
-          Object.keys(transformedData).forEach((key) => {
-            if (key !== "mostPopular" && transformedData[key].length === 0) {
-              transformedData[key] = allProducts.slice(0, 20);
-            }
-          });
-        }
+        const transformedData = {
+          mostPopular: allProducts.slice(0, productsPerSection),
+          freshFromFarm:
+            freshFromFarmProducts.length > 0
+              ? freshFromFarmProducts
+              : allProducts.slice(productsPerSection, productsPerSection * 2),
+          trendingNow: allProducts.slice(
+            productsPerSection * 2,
+            productsPerSection * 3
+          ),
+          dairyAndMeatProducts: allProducts.slice(
+            productsPerSection * 3,
+            productsPerSection * 4
+          ),
+          dealsCantMiss: allProducts.slice(
+            productsPerSection * 4,
+            productsPerSection * 5
+          ),
+          beverages: allProducts.slice(productsPerSection * 5),
+        };
 
-        console.log("Transformed data:", transformedData);
+        // If we don't have enough products for all sections, repeat products
+        Object.keys(transformedData).forEach((key) => {
+          if (transformedData[key].length === 0) {
+            transformedData[key] = allProducts.slice(
+              0,
+              Math.min(20, allProducts.length)
+            );
+          }
+        });
+
+        console.log("Raw data distributed across sections:", transformedData);
         setHomepageData(transformedData);
       } catch (error) {
         console.error("Error fetching homepage products:", error);

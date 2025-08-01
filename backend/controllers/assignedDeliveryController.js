@@ -727,10 +727,9 @@ export const getDeliverySchedule = async (req, res) => {
     const scheduleQuery = `
       SELECT
         DATE(d.estimated_arrival) as delivery_date,
-        COUNT(*) as total_deliveries,
-        SUM(CASE WHEN d.actual_arrival IS NOT NULL THEN 1 ELSE 0 END) as completed,
-        SUM(CASE WHEN d.is_aborted = true THEN 1 ELSE 0 END) as cancelled,
-        SUM(CASE WHEN d.actual_arrival IS NULL AND d.is_aborted = false THEN 1 ELSE 0 END) as pending
+        SUM(CASE WHEN d.actual_arrival IS NULL AND d.is_aborted = false THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN d.actual_arrival IS NULL AND d.is_aborted = false AND EXTRACT(HOUR FROM d.estimated_arrival) < 12 THEN 1 ELSE 0 END) as morning_deliveries,
+        SUM(CASE WHEN d.actual_arrival IS NULL AND d.is_aborted = false AND EXTRACT(HOUR FROM d.estimated_arrival) >= 12 THEN 1 ELSE 0 END) as evening_deliveries
       FROM "Delivery" d
       WHERE d.delivery_boy_id = $1
       AND DATE(d.estimated_arrival) BETWEEN $2 AND $3
@@ -741,20 +740,34 @@ export const getDeliverySchedule = async (req, res) => {
     const result = await client.query(scheduleQuery, [
       delivery_boy_id,
       start_date || new Date().toISOString().split('T')[0],
-      end_date || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      end_date || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     ]);
 
-    const schedule = result.rows.map(row => ({
-      date: row.delivery_date,
-      totalDeliveries: parseInt(row.total_deliveries),
-      completed: parseInt(row.completed),
-      cancelled: parseInt(row.cancelled),
-      pending: parseInt(row.pending)
-    }));
+    let scheduleData = {};
+
+    if (result.rows.length > 0) {
+      const todayData = result.rows[0]; // First day (today or next day)
+      scheduleData = {
+        morningShift: {
+          deliveries: parseInt(todayData.morning_deliveries) || 0,
+          time: "8:00 AM - 2:00 PM"
+        },
+        eveningShift: {
+          deliveries: parseInt(todayData.evening_deliveries) || 0,
+          time: "2:00 PM - 8:00 PM"
+        }
+      };
+    } else {
+      // No pending deliveries
+      scheduleData = {
+        morningShift: { deliveries: 0, time: "8:00 AM - 2:00 PM" },
+        eveningShift: { deliveries: 0, time: "2:00 PM - 8:00 PM" }
+      };
+    }
 
     res.status(200).json({
       success: true,
-      data: schedule
+      data: [scheduleData]
     });
 
   } catch (error) {
@@ -768,6 +781,7 @@ export const getDeliverySchedule = async (req, res) => {
     client.release();
   }
 };
+
 
 // Search deliveries with filters
 export const searchDeliveries = async (req, res) => {

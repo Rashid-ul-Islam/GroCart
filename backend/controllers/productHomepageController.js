@@ -12,8 +12,8 @@ const getProductsWithDetails = async (query, params = []) => {
 
 export const getProductsForHomepage = async (req, res) => {
   try {
-    // Base query to get products with category info, primary image, and review stats
-    const baseQuery = `
+    // Simple query to get all available products with their details
+    const query = `
       SELECT DISTINCT
         p.product_id,
         p.name AS product_name,
@@ -24,151 +24,40 @@ export const getProductsForHomepage = async (req, res) => {
         p.description,
         p.is_available,
         p.is_refundable,
+        p.category_id,
         c.name AS category_name,
         pi.image_url,
         COALESCE(AVG(r.rating), 4.0) AS avg_rating,
-        COALESCE(COUNT(r.review_id), 0) AS review_count,
-        p.created_at
+        COALESCE(COUNT(r.review_id), 0) AS review_count
       FROM "Product" p
       LEFT JOIN "Category" c ON p.category_id = c.category_id
       LEFT JOIN "ProductImage" pi ON p.product_id = pi.product_id AND pi.is_primary = true
       LEFT JOIN "Review" r ON p.product_id = r.product_id
       WHERE p.is_available = true
       GROUP BY p.product_id, p.name, p.price, p.quantity, p.unit_measure, p.origin, 
-               p.description, p.is_available, p.is_refundable, c.name, pi.image_url, p.created_at
+               p.description, p.is_available, p.is_refundable, p.category_id, c.name, pi.image_url
+      ORDER BY p.product_id
     `;
 
-    // Get most popular products (based on review count and rating)
-    const mostPopularQuery = `
-      ${baseQuery}
-      ORDER BY COALESCE(AVG(r.rating), 4.0) DESC, COALESCE(COUNT(r.review_id), 0) DESC
-    `;
+    // Get all products
+    const allProducts = await getProductsWithDetails(query);
 
-    // Get fresh vegetables (Fresh From Farm section)
-    const freshFromFarmQuery = `
-      ${baseQuery}
-      HAVING LOWER(c.name) LIKE '%vegetable%' OR LOWER(c.name) LIKE '%fresh%' OR LOWER(c.name) LIKE '%organic%'
-      ORDER BY p.created_at DESC
-    `;
-
-    // Get fruits (Trending Now section) - using a subquery approach for randomization
-    const trendingNowQuery = `
-      SELECT 
-        product_id,
-        product_name,
-        price,
-        unit_measure,
-        origin,
-        description,
-        is_available,
-        is_refundable,
-        category_name,
-        image_url,
-        avg_rating,
-        review_count
-      FROM (
-        ${baseQuery}
-        HAVING LOWER(c.name) LIKE '%fruit%' OR LOWER(c.name) LIKE '%berry%'
-      ) AS fruits_subquery
-      ORDER BY RANDOM()
-    `;
-
-    // Get dairy and milk products
-    const dairyAndMeatQuery = `
-      ${baseQuery}
-      HAVING LOWER(c.name) LIKE '%dairy%' OR LOWER(c.name) LIKE '%milk%' OR 
-             LOWER(c.name) LIKE '%cheese%' OR LOWER(c.name) LIKE '%yogurt%'
-      ORDER BY price ASC
-    `;
-
-    // Get meat products for deals section
-    const dealsCantMissQuery = `
-      ${baseQuery}
-      HAVING LOWER(c.name) LIKE '%meat%' OR LOWER(c.name) LIKE '%chicken%' OR 
-             LOWER(c.name) LIKE '%beef%' OR LOWER(c.name) LIKE '%fish%' OR
-             LOWER(c.name) LIKE '%seafood%'
-      ORDER BY price DESC
-    `;
-
-    // Get beverages
-    const beveragesQuery = `
-      ${baseQuery}
-      HAVING LOWER(c.name) LIKE '%beverage%' OR LOWER(c.name) LIKE '%drink%' OR 
-             LOWER(c.name) LIKE '%juice%' OR LOWER(c.name) LIKE '%water%'
-      ORDER BY COALESCE(AVG(r.rating), 4.0) DESC
-    `;
-
-    // Execute all queries
-    const [
-      mostPopular,
-      freshFromFarm,
-      trendingNow,
-      dairyAndMeatProducts,
-      dealsCantMiss,
-      beverages
-    ] = await Promise.all([
-      getProductsWithDetails(mostPopularQuery),
-      getProductsWithDetails(freshFromFarmQuery),
-      getProductsWithDetails(trendingNowQuery),
-      getProductsWithDetails(dairyAndMeatQuery),
-      getProductsWithDetails(dealsCantMissQuery),
-      getProductsWithDetails(beveragesQuery)
-    ]);
-
-    // If any section is empty, fill with general products
-    const fallbackQuery = `
-      SELECT 
-        product_id,
-        product_name,
-        price,
-        quantity,
-        unit_measure,
-        origin,
-        description,
-        is_available,
-        is_refundable,
-        category_name,
-        image_url,
-        avg_rating,
-        review_count
-      FROM (
-        ${baseQuery}
-      ) AS fallback_subquery
-      ORDER BY RANDOM()
-    `;
-
-    const fallbackProducts = await getProductsWithDetails(fallbackQuery);
-
-    // Prepare response data - remove created_at and transform review data for consistency
-    const cleanupProducts = (products) =>
-      products.map(({ created_at, avg_rating, review_count, ...product }) => ({
-        ...product,
-        // Transform for ProductCard compatibility
-        id: product.product_id,
-        name: product.product_name,
-        unit: product.unit_measure,
-        image: product.image_url, // For backward compatibility
-        // Transform review data to match ProductCard expectations
-        rating: parseFloat(avg_rating) || 0,
-        reviews: parseInt(review_count) || 0,
-        // Keep original fields for backward compatibility
-        avg_rating: parseFloat(avg_rating) || 0,
-        review_count: parseInt(review_count) || 0
-      }));
-
-    const homepageData = {
-      mostPopular: cleanupProducts(mostPopular.length > 0 ? mostPopular : fallbackProducts.slice(0, 20)),
-      freshFromFarm: cleanupProducts(freshFromFarm.length > 0 ? freshFromFarm : fallbackProducts.slice(0, 20)),
-      trendingNow: cleanupProducts(trendingNow.length > 0 ? trendingNow : fallbackProducts.slice(0, 20)),
-      dairyAndMeatProducts: cleanupProducts(dairyAndMeatProducts.length > 0 ? dairyAndMeatProducts : fallbackProducts.slice(0, 20)),
-      dealsCantMiss: cleanupProducts(dealsCantMiss.length > 0 ? dealsCantMiss : fallbackProducts.slice(0, 20)),
-      beverages: cleanupProducts(beverages.length > 0 ? beverages : fallbackProducts.slice(0, 20))
-    };
+    // Transform data for frontend compatibility
+    const transformedProducts = allProducts.map(product => ({
+      ...product,
+      // Transform for ProductCard compatibility
+      id: product.product_id,
+      name: product.product_name,
+      unit: product.unit_measure,
+      image: product.image_url,
+      rating: parseFloat(product.avg_rating) || 0,
+      reviews: parseInt(product.review_count) || 0
+    }));
 
     res.status(200).json({
       success: true,
       message: 'Homepage products fetched successfully',
-      data: homepageData
+      data: transformedProducts
     });
 
   } catch (error) {

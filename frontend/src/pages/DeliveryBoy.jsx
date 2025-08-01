@@ -714,7 +714,7 @@ const DeliveryBoy = () => {
                           </Badge>
                         </div>
                         <p className="text-sm text-gray-800 font-medium">
-                          {scheduleData.morningShift.deliveries} deliveries
+                          {scheduleData.morningShift.deliveries || "0"} deliveries
                           scheduled
                         </p>
                       </div>
@@ -731,7 +731,7 @@ const DeliveryBoy = () => {
                           </Badge>
                         </div>
                         <p className="text-sm text-gray-800 font-medium">
-                          {scheduleData.eveningShift.deliveries} deliveries
+                          {scheduleData.eveningShift.deliveries || "0"} deliveries
                           scheduled
                         </p>
                       </div>
